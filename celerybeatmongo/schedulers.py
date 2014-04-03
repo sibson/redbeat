@@ -4,6 +4,7 @@ import datetime
 from models import *
 from celery.beat import Scheduler, ScheduleEntry
 from celery.utils.log import get_logger
+from celery import current_app
 
 class MongoScheduleEntry(ScheduleEntry):
     
@@ -72,12 +73,17 @@ class MongoScheduler(Scheduler):
     # from the backend mongo database
     UPDATE_INTERVAL = datetime.timedelta(seconds=60)
     
-    DATABASE = "search"
     Entry = MongoScheduleEntry
    
     def __init__(self, *args, **kwargs):
-        
-        self._mongo = mongoengine.connect('search')
+        if hasattr(current_app.conf, "CELERY_MONGODB_SCHEDULER_DB"):
+            db = current_app.conf.CELERY_MONGODB_SCHEDULER_DB
+        else:
+            db = "celery"
+        if hasattr(current_app.conf, "CELERY_MONGODB_SCHEDULER_URL"):
+            self._mongo = mongoengine.connect(db, current_app.conf.CELERY_MONGODB_SCHEDULER_URL)
+        else:
+            self._mongo = mongoengine.connect(db)
         
         self._schedule = {}
         self._last_updated = None

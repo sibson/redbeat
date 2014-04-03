@@ -15,8 +15,11 @@ And specifying the scheduler when running Celery Beat, e.g.::
 Settings for the scheduler are defined in your celery configuration file
 similar to how other aspects of Celery are configured::
 
-    CELERY_MONGODB_SCHEDULER_URL = "mongodb://userid:password@hostname:port/database_name"
+    CELERY_MONGODB_SCHEDULER_DB = "celery"
     CELERY_MONGODB_SCHEDULER_COLLECTION = "schedules"
+    CELERY_MONGODB_SCHEDULER_URL = "mongodb://userid:password@hostname:port/database_name"
+
+If not settings are specified, the library will attempt to use the schedules collection in the local celery database.
 
 Schedules can be manipulated in the Mongo database using the
 mongoengine models in celerybeatmongo.models or through
