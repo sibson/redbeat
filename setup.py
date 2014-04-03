@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name = "celery-mongo-scheduler",
+    name = "celerybeat-mongo",
     description = "A Celery Beat Scheduler that uses MongoDB to store both schedule definitions and status information",
     version = "0.0.0",
     license = "Apache License, Version 2.0",
@@ -13,7 +13,7 @@ setup(
     keywords = "python celery beat mongo",
 
     packages = [
-        "celerymongoscheduler"
+        "celerybeatmongo"
     ],
 
     install_requires=[
