@@ -1,7 +1,7 @@
 import mongoengine
 import datetime
 
-from models import *
+from celerybeatmongo.models import *
 from celery.beat import Scheduler, ScheduleEntry
 from celery.utils.log import get_logger
 from celery import current_app
