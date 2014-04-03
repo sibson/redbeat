@@ -15,10 +15,15 @@ And specifying the scheduler when running Celery Beat, e.g.::
 Settings for the scheduler are defined in your celery configuration file
 similar to how other aspects of Celery are configured::
 
+    CELERY_MONGODB_SCHEDULER_URL = "mongodb://userid:password@hostname:port/database_name"
+    CELERY_MONGODB_SCHEDULER_COLLECTION = "schedules"
+
 Schedules can be manipulated in the Mongo database using the
 mongoengine models in celerybeatmongo.models or through
 direct database manipulation. There exist two types of schedules,
-interval and crontab::
+interval and crontab.
+
+Interval::
 
     {
         "_id" : ObjectId("533c5b29b45a2092bffceb13"),
@@ -36,6 +41,9 @@ interval and crontab::
         "total_run_count" : 5
         "last_run_at" : ISODate("2014-04-03T02:19:22.666Z"),
     }
+
+
+Crontab::
 
     {
         "_id" : ObjectId("533c5b29b45a2092bffceb13"),
