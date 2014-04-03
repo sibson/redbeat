@@ -1,18 +1,21 @@
-from mongoengine import Document, EmbeddedDocument
+import datetime
+from mongoengine import *
+from celery import current_app
+import celery.schedules
 
 class PeriodicTask(Document):
     """mongo database model that represents a periodic task"""
 
-    meta = {'collection': COLLECTION}
+    meta = {'collection': 'schedules'}
     
     class Interval(EmbeddedDocument):
     
-        every = IntegerField(min=0)
+        every = IntField(min_value=0)
         period = StringField()
     
         @property
         def schedule(self):
-            return schedules.schedule(timedelta(**{self.period: self.every}))
+            return celery.schedules.schedule(datetime.timedelta(**{self.period: self.every}))
     
         @property
         def period_singular(self):
@@ -32,9 +35,9 @@ class PeriodicTask(Document):
         day_of_month = StringField()
         day_of_year = StringField()
     
-        @property()
+        @property
         def schedule(self):
-            return schedules.crontab(minute=self.minute,
+            return celery.schedules.crontab(minute=self.minute,
                                      hour=self.hour,
                                      day_of_week=self.day_of_week,
                                      day_of_month=self.day_of_month,
@@ -51,8 +54,8 @@ class PeriodicTask(Document):
     task = StringField()
 
     type_ = StringField()
-    interval = EmbeddedDocument(Interval)
-    crontab = EmbeddedDocument(Crontab)
+    interval = EmbeddedDocumentField(Interval)
+    crontab = EmbeddedDocumentField(Crontab)
     
     args = ListField(StringField())
     kwargs = DictField()
@@ -66,12 +69,12 @@ class PeriodicTask(Document):
     
     last_run_at = DateTimeField()
     
-    total_run_count = IntField(min=0)
+    total_run_count = IntField(min_value=0)
     
     date_changed = DateTimeField()
     description = StringField()
 
-    objects = managers.PeriodicTaskManager()
+    #objects = managers.PeriodicTaskManager()
     no_changes = False
     
     def clean(self):
