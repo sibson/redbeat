@@ -4,7 +4,7 @@ from celery import current_app
 import celery.schedules
 
 
-def _get_periodic_task_collection():
+def get_periodic_task_collection():
     if hasattr(current_app.conf, "CELERY_MONGODB_SCHEDULER_COLLECTION") \
             and current_app.conf.CELERY_MONGODB_SCHEDULER_COLLECTION:
         return current_app.conf.CELERY_MONGODB_SCHEDULER_COLLECTION
@@ -13,7 +13,7 @@ def _get_periodic_task_collection():
 class PeriodicTask(Document):
     """mongo database model that represents a periodic task"""
 
-    meta = {'collection':_get_periodic_task_collection()} 
+    meta = {'collection':get_periodic_task_collection()} 
     
     class Interval(EmbeddedDocument):
     
