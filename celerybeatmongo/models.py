@@ -45,7 +45,7 @@ class PeriodicTask(Document):
         hour = StringField()
         day_of_week = StringField()
         day_of_month = StringField()
-        day_of_year = StringField()
+        month_of_year = StringField()
     
         @property
         def schedule(self):
