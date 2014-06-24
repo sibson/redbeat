@@ -37,37 +37,41 @@ Interval::
             "every" : 5,
             "period" : "minutes"
         },
-        "args": ["param1", "param2"]
+        "args" : [
+            "param1",
+            "param2"
+        ],
         "kwargs" : {
             "max_targets" : 100
         },
-        "total_run_count" : 5
-        "last_run_at" : ISODate("2014-04-03T02:19:22.666Z"),
+        "total_run_count" : 5,
+        "last_run_at" : ISODate("2014-04-03T19:19:22.666+17:00")
     }
-
 
 Crontab::
 
     {
-        "_id" : ObjectId("533c5b29b45a2092bffceb13"),
+        "_id" : ObjectId("53a91dfd455d1c1a4345fb59"),
         "name" : "crontab test schedule",
         "task" : "task-name-goes-here",
         "enabled" : true,
         "crontab" : {
-            "minute": "30",
-            "hour": "2",
-            "day_of_week": "*",
-            "day_of_month": "*",
-            "day_of_year": "*",
+            "minute" : "30",
+            "hour" : "2",
+            "day_of_week" : "*",
+            "day_of_month" : "*",
+            "day_of_year" : "*"
         },
-        "args": ["param1", "param2"]
+        "args" : [
+            "param1",
+            "param2"
+        ],
         "kwargs" : {
             "max_targets" : 100
         },
-        "total_run_count" : 5
-        "last_run_at" : ISODate("2014-04-03T02:19:22.666Z"),
+        "total_run_count" : 5,
+        "last_run_at" : ISODate("2014-04-03T19:19:22.666+17:00")
     }
-
 
 The following fields are required: name, task, crontab || interval,
 enabled when defining new tasks.
