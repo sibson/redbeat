@@ -49,35 +49,18 @@ Interval::
     }
 
 The example from Celery User Guide::Periodic Tasks. 
-(see: http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html#crontab-schedules)
 
-		CELERYBEAT_SCHEDULE = {
-		    'add-every-30-seconds': {
-		        'task': 'tasks.add',
-		        'schedule': timedelta(seconds=30),
-		        'args': (16, 16)
-		    },
-		}
+    {
+    	CELERYBEAT_SCHEDULE = {
+    	    'add-every-30-seconds': {
+    	        'task': 'tasks.add',
+    	        'schedule': timedelta(seconds=30),
+    	        'args': (16, 16)
+    	    },
+    	}
+    }
 
 Becomes:
-{
-    "_id" : ObjectId("533c5b29b45a2092bffceb13"),
-    "name" : "add-every-30-seconds",
-    "task" : "tasks.add",
-    "enabled" : true,
-    "interval" : {
-        "every" : 30,
-        "period" : "seconds"
-    },
-    "args" : [ 
-        "16", 
-        "16"
-    ],
-    "kwargs" : {},
-    "total_run_count" : 1,
-    "last_run_at" : ISODate("2014-06-24T03:17:57.189-07:00")
-}
-
 
 
 Crontab::
