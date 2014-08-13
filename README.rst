@@ -60,7 +60,7 @@ Crontab::
             "hour" : "2",
             "day_of_week" : "*",
             "day_of_month" : "*",
-            "day_of_year" : "*"
+            "month_of_year" : "*"
         },
         "args" : [
             "param1",
