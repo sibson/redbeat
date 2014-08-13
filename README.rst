@@ -48,6 +48,38 @@ Interval::
         "last_run_at" : ISODate("2014-04-03T19:19:22.666+17:00")
     }
 
+The example from Celery User Guide::Periodic Tasks. 
+(see: http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html#crontab-schedules)
+
+		CELERYBEAT_SCHEDULE = {
+		    'add-every-30-seconds': {
+		        'task': 'tasks.add',
+		        'schedule': timedelta(seconds=30),
+		        'args': (16, 16)
+		    },
+		}
+
+Becomes:
+{
+    "_id" : ObjectId("533c5b29b45a2092bffceb13"),
+    "name" : "add-every-30-seconds",
+    "task" : "tasks.add",
+    "enabled" : true,
+    "interval" : {
+        "every" : 30,
+        "period" : "seconds"
+    },
+    "args" : [ 
+        "16", 
+        "16"
+    ],
+    "kwargs" : {},
+    "total_run_count" : 1,
+    "last_run_at" : ISODate("2014-06-24T03:17:57.189-07:00")
+}
+
+
+
 Crontab::
 
     {
@@ -77,3 +109,37 @@ The following fields are required: name, task, crontab || interval,
 enabled when defining new tasks.
 total_run_count and last_run_at are maintained by the
 scheduler and should not be externally manipulated.
+
+The example from Celery User Guide::Periodic Tasks. 
+(see: http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html#crontab-schedules)
+
+		CELERYBEAT_SCHEDULE = {
+		    # Executes every Monday morning at 7:30 A.M
+		    'add-every-monday-morning': {
+		        'task': 'tasks.add',
+		        'schedule': crontab(hour=7, minute=30, day_of_week=1),
+		        'args': (16, 16),
+		    },
+		}
+
+Becomes:
+{
+    "_id" : ObjectId("53a91dfd455d1c1a4345fb59"),
+    "name" : "add-every-monday-morning",
+    "task" : "tasks.add",
+    "enabled" : true,
+    "crontab" : {
+        "minute" : "30",
+        "hour" : "7",
+        "day_of_week" : "1",
+        "day_of_month" : "*",
+        "month_of_year" : "*"
+    },
+    "args" : [ 
+        "16", 
+        "16"
+    ],
+    "kwargs" : {},
+    "total_run_count" : 1,
+    "last_run_at" : ISODate("2014-06-16T07:30:00.752-07:00")
+}
