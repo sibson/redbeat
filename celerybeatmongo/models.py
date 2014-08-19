@@ -18,7 +18,8 @@ def get_periodic_task_collection():
 class PeriodicTask(Document):
     """mongo database model that represents a periodic task"""
 
-    meta = {'collection':get_periodic_task_collection()} 
+    meta = {'collection':get_periodic_task_collection(),
+            'allow_inheritance': True}
     
     class Interval(EmbeddedDocument):
     
