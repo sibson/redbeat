@@ -298,9 +298,10 @@ class RedisScheduler(Scheduler):
         return self._schedule
 
     def sync(self):
-        saving_list = [t for t in self._schedule.values() if t.name in PeriodicTask.get_all]
+        # saving_list = [t for t in self._schedule.values() if t.name in PeriodicTask.get_all()]
 
-        for entry in saving_list:
+        # for entry in saving_list:
+        for entry in self.schedule.values():
             entry.save()
 
     def close(self):

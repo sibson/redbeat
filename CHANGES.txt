@@ -1,0 +1,3 @@
+v0.0.1 initial release
+v0.0.2 Remove task when manually remove task by delete task in redis.
+v0.0.6 fix: tick error
