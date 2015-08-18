@@ -62,11 +62,6 @@ class PeriodicTask(object):
     expires = None
     enabled = True
 
-    # datetime
-    last_run_at = None
-
-    total_run_count = 0
-
     date_changed = None
     description = None
 
@@ -139,15 +134,18 @@ class PeriodicTask(object):
         """
         tasks = rdb.keys(current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + '*')
         for task_name in tasks:
-            yield PeriodicTask.fetch(task_name)
+            periodic = PeriodicTask.fetch(task_name)
+            if periodic:
+                yield periodic
 
     @staticmethod
     def fetch(task_name):
-        return json.loads(rdb.get(task_name), cls=DateTimeDecoder)
+        return rdb.hget(task_name, 'periodic')
+
 
     def delete(self):
         rdb.sadd(self.CELERY_REDIS_SCHEDULER_DELETES, self.name)
-        rdb.delete(self.name)
+        rdb.hdel(self.name)
 
     def save(self):
         # must do a deepcopy
@@ -157,7 +155,7 @@ class PeriodicTask(object):
         if self_dict.get('crontab'):
             self_dict['crontab'] = self.crontab.__dict__
         rdb.srem(self.CELERY_REDIS_SCHEDULER_DELETES, self.name)
-        rdb.set(self.name, json.dumps(self_dict, cls=DateTimeEncoder))
+        rdb.hset(self.name, 'periodic', json.dumps(self_dict, cls=DateTimeEncoder))
         rdb.sadd(self.CELERY_REDIS_SCHEDULER_UPDATES, self.name)
 
     def clean(self):
@@ -235,20 +233,18 @@ class RedisScheduleEntry(ScheduleEntry):
             'routing_key': self._task.routing_key,
             'expires': self._task.expires
         }
-        if not self._task.total_run_count:
-            self._task.total_run_count = 0
-        self.total_run_count = self._task.total_run_count
 
-        if not self._task.last_run_at:
-            self._task.last_run_at = self._default_now()
-        self.last_run_at = self._task.last_run_at
+        meta = rdb.hget(self.name, 'meta') or '{}'
+        meta = json.loads(meta, cls=DateTimeDecoder)
+        self.total_run_count = meta.get('total_run_count', 0)
+        self.last_run_at = meta.get('last_run_at', self._default_now())
 
     def _default_now(self):
         return self.app.now()
 
     def next(self):
-        self._task.last_run_at = self.app.now()
-        self._task.total_run_count += 1
+        self.last_run_at = self.app.now()
+        self.total_run_count += 1
         return self.__class__(self._task)
 
     __next__ = next
@@ -260,8 +256,7 @@ class RedisScheduleEntry(ScheduleEntry):
 
     def __repr__(self):
         return '<RedisScheduleEntry ({0} {1}(*{2}, **{3}) {{4}})>'.format(
-            self.name, self.task, self.args,
-            self.kwargs, self.schedule,
+            self.name, self.task, self.args, self.kwargs, self.schedule,
         )
 
     def reserve(self, entry):
@@ -269,11 +264,11 @@ class RedisScheduleEntry(ScheduleEntry):
         return new_entry
 
     def save(self):
-        if self.total_run_count > self._task.total_run_count:
-            self._task.total_run_count = self.total_run_count
-        if self.last_run_at and self._task.last_run_at and self.last_run_at > self._task.last_run_at:
-            self._task.last_run_at = self.last_run_at
-        self._task.save()
+        meta = {
+            'last_run_at': self.last_run_at,
+            'total_run_count': self.total_run_count,
+        }
+        rdb.hset(self.name, 'meta', json.dumps(meta, cls=DateTimeEncoder))
 
     @classmethod
     def from_entry(cls, name, skip_fields=('relative', 'options'), **entry):
@@ -312,11 +307,11 @@ class RedisScheduler(Scheduler):
 
     def __init__(self, *args, **kwargs):
         if hasattr(current_app.conf, 'CELERY_REDIS_SCHEDULER_URL'):
-            get_logger(__name__).info('backend scheduler using %s',
-                                      current_app.conf.CELERY_REDIS_SCHEDULER_URL)
+            logger.info('backend scheduler using %s',
+                        current_app.conf.CELERY_REDIS_SCHEDULER_URL)
         else:
-            get_logger(__name__).info('backend scheduler using %s',
-                                      current_app.conf.CELERY_REDIS_SCHEDULER_URL)
+            logger.info('backend scheduler using %s',
+                        current_app.conf.CELERY_REDIS_SCHEDULER_URL)
 
         self._schedule = {}
         self._last_updated = None
@@ -329,6 +324,9 @@ class RedisScheduler(Scheduler):
         self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
 
     def get_from_database(self):
+        self.sync()
+
+        logger.info('reading schedule from redis')
         d = {}
         for task in PeriodicTask.get_all():
             t = PeriodicTask.from_dict(task)
@@ -375,6 +373,7 @@ class RedisScheduler(Scheduler):
         return self._schedule
 
     def sync(self):
+        logger.info('saving task meta to redis')
         for entry in self._schedule.values():
             entry.save()
 
