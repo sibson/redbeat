@@ -24,6 +24,9 @@ from decoder import DateTimeDecoder, DateTimeEncoder
 # share with result backend
 rdb = StrictRedis.from_url(current_app.conf.CELERY_REDIS_SCHEDULER_URL)
 
+CELERY_REDIS_SCHEDULER_UPDATES = current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + 'pending:updates'
+CELERY_REDIS_SCHEDULER_DELETES = current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + 'pending:delstes'
+
 ADD_ENTRY_ERROR = """\
 
 Couldn't add entry %r to redis schedule: %r. Contents: %r
@@ -136,9 +139,14 @@ class PeriodicTask(object):
         """
         tasks = rdb.keys(current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + '*')
         for task_name in tasks:
-            yield json.loads(rdb.get(task_name), cls=DateTimeDecoder)
+            yield PeriodicTask.fetch(task_name)
+
+    @staticmethod
+    def fetch(task_name):
+        return json.loads(rdb.get(task_name), cls=DateTimeDecoder)
 
     def delete(self):
+        rdb.sadd(self.CELERY_REDIS_SCHEDULER_DELETES, self.name)
         rdb.delete(self.name)
 
     def save(self):
@@ -148,7 +156,9 @@ class PeriodicTask(object):
             self_dict['interval'] = self.interval.__dict__
         if self_dict.get('crontab'):
             self_dict['crontab'] = self.crontab.__dict__
+        rdb.srem(self.CELERY_REDIS_SCHEDULER_DELETES, self.name)
         rdb.set(self.name, json.dumps(self_dict, cls=DateTimeEncoder))
+        rdb.sadd(self.CELERY_REDIS_SCHEDULER_UPDATES, self.name)
 
     def clean(self):
         """validation to ensure that you only have
@@ -182,6 +192,10 @@ class PeriodicTask(object):
             if key not in ('interval', 'crontab', 'schedule'):
                 setattr(task, key, d[key])
         return task
+
+    @staticmethod
+    def from_key(task_name):
+        return PeriodicTask.from_dict(PeriodicTask.fetch(task_name))
 
     @property
     def schedule(self):
@@ -314,20 +328,26 @@ class RedisScheduler(Scheduler):
         self.install_default_entries(self.schedule)
         self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
 
-    def requires_update(self):
-        """check whether we should pull an updated schedule
-        from the backend database"""
-        if not self._last_updated:
-            return True
-        return self._last_updated + self.UPDATE_INTERVAL < datetime.datetime.now()
-
     def get_from_database(self):
-        # self.sync()
         d = {}
         for task in PeriodicTask.get_all():
             t = PeriodicTask.from_dict(task)
-            d[t.name] = RedisScheduleEntry(t)
+            d[t.name] = self.Entry(t)
         return d
+
+    def update_from_database(self):
+        deletes = rdb.spop(CELERY_REDIS_SCHEDULER_DELETES, 1000)
+        for delete in deletes:
+            logger.debug('deleting %s', delete)
+            self._schedule.pop(delete, None)
+
+        updates = rdb.spop(CELERY_REDIS_SCHEDULER_UPDATES, 1000)
+        for update in updates:
+            logger.debug('updating %s', update)
+            d = PeriodicTask.fetch(update)
+            if d:
+                t = PeriodicTask.from_dict(update)
+                self._schedule[t.name] = self.Entry(t)
 
     def update_from_dict(self, dict_):
         s = {}
@@ -338,11 +358,20 @@ class RedisScheduler(Scheduler):
                 error(ADD_ENTRY_ERROR, name, exc, entry)
         self.schedule.update(s)
 
+    def requires_update(self):
+        """check whether we should pull an updated schedule
+        from the backend database"""
+        if not self._last_updated:
+            return True
+        return self._last_updated + self.UPDATE_INTERVAL < datetime.datetime.now()
+
     @property
     def schedule(self):
-        if self.requires_update():
+        if self._last_updated is None:
             self._schedule = self.get_from_database()
             self._last_updated = datetime.datetime.now()
+        elif self.requires_update():
+            self.update_from_database()
         return self._schedule
 
     def sync(self):
