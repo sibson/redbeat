@@ -1,9 +1,5 @@
-#! /usr/bin/env python
 # coding: utf-8
-# Date: 14/8/31
-# Author: konglx
-# File:
-# Description:
+
 from datetime import datetime
 
 try:

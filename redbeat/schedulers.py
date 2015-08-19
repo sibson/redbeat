@@ -23,10 +23,10 @@ from redis.exceptions import ResponseError
 from decoder import DateTimeDecoder, DateTimeEncoder
 
 # share with result backend
-rdb = StrictRedis.from_url(current_app.conf.CELERY_REDIS_SCHEDULER_URL)
+rdb = StrictRedis.from_url(current_app.conf.REDBEAT_REDIS_URL)
 
-CELERY_REDIS_SCHEDULER_UPDATES = current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + 'pending:updates'
-CELERY_REDIS_SCHEDULER_DELETES = current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + 'pending:delstes'
+REDBEAT_DELETES_KEY = current_app.conf.REDBEAT_KEY_PREFIX + 'pending:updates'
+REDBEAT_UPDATES_KEY = current_app.conf.REDBEAT_KEY_PREFIX + 'pending:delstes'
 
 ADD_ENTRY_ERROR = """\
 
@@ -34,7 +34,6 @@ Couldn't add entry %r to redis schedule: %r. Contents: %r
 """
 
 logger = get_logger(__name__)
-debug, info, error = logger.debug, logger.info, logger.error
 
 
 class ValidationError(Exception):
@@ -79,9 +78,9 @@ class PeriodicTask(object):
         self.kwargs = task_kwargs
 
         if not key:
-            self.name = current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + name
+            self.name = current_app.conf.REDBEAT_KEY_PREFIX + name
         else:
-            self.name = current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + name + ':' + key
+            self.name = current_app.conf.REDBEAT_KEY_PREFIX + name + ':' + key
 
     class Interval(object):
 
@@ -134,8 +133,8 @@ class PeriodicTask(object):
     def get_all():
         """get all of the tasks, for best performance with large amount of tasks, return a generator
         """
-        tasks = rdb.keys(current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + '*')
-        tasks = (t for t in tasks if t not in (CELERY_REDIS_SCHEDULER_DELETES, CELERY_REDIS_SCHEDULER_UPDATES))
+        tasks = rdb.keys(current_app.conf.REDBEAT_KEY_PREFIX + '*')
+        tasks = (t for t in tasks if t not in (REDBEAT_DELETES_KEY, REDBEAT_UPDATES_KEY))
         for task_name in tasks:
             periodic = PeriodicTask.load(task_name)
             if periodic:
@@ -157,7 +156,7 @@ class PeriodicTask(object):
         return json.loads(raw, cls=DateTimeDecoder)
 
     def delete(self):
-        rdb.sadd(self.CELERY_REDIS_SCHEDULER_DELETES, self.name)
+        rdb.sadd(REDBEAT_DELETES_KEY, self.name)
         rdb.hdel(self.name)
 
     def save(self):
@@ -169,9 +168,9 @@ class PeriodicTask(object):
             self_dict['interval'] = self.interval.__dict__
         if self_dict.get('crontab'):
             self_dict['crontab'] = self.crontab.__dict__
-        rdb.srem(CELERY_REDIS_SCHEDULER_DELETES, self.name)
+        rdb.srem(REDBEAT_DELETES_KEY, self.name)
         rdb.hset(self.name, 'periodic', json.dumps(self_dict, cls=DateTimeEncoder))
-        rdb.sadd(CELERY_REDIS_SCHEDULER_UPDATES, self.name)
+        rdb.sadd(REDBEAT_UPDATES_KEY, self.name)
 
     def clean(self):
         """validation to ensure that you only have
@@ -232,7 +231,7 @@ class PeriodicTask(object):
     __str__ = __unicode__
 
 
-class RedisScheduleEntry(ScheduleEntry):
+class RedBeatSchedulerEntry(ScheduleEntry):
     def __init__(self, task, total_run_count=0, last_run_at=None):
         self._task = task
 
@@ -271,7 +270,7 @@ class RedisScheduleEntry(ScheduleEntry):
         return self.schedule.is_due(self.last_run_at)
 
     def __repr__(self):
-        return '<RedisScheduleEntry ({0} {1}(*{2}, **{3}) {{4}})>'.format(
+        return '<RedBeatSchedulerEntry ({0} {1}(*{2}, **{3}) {{4}})>'.format(
             self.name, self.task, self.args, self.kwargs, self.schedule,
         )
 
@@ -288,7 +287,7 @@ class RedisScheduleEntry(ScheduleEntry):
         fields = dict(entry)
         for skip_field in skip_fields:
             fields.pop(skip_field, None)
-        fields['name'] = current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + name
+        fields['name'] = current_app.conf.REDBEAT_KEY_PREFIX + name
         schedule = fields.pop('schedule')
         schedule = celery.schedules.maybe_schedule(schedule)
         if isinstance(schedule, celery.schedules.crontab):
@@ -310,14 +309,13 @@ class RedisScheduleEntry(ScheduleEntry):
         return cls(PeriodicTask.from_dict(fields))
 
 
-class RedisScheduler(Scheduler):
+class RedBeatScheduler(Scheduler):
     # how often should we sync in schedule information
     # from the backend redis database
-    Entry = RedisScheduleEntry
+    Entry = RedBeatSchedulerEntry
 
     def __init__(self, *args, **kwargs):
-        logger.info('backend scheduler using %s',
-                        current_app.conf.CELERY_REDIS_SCHEDULER_URL)
+        logger.info('backend scheduler using %s', current_app.conf.REDBEAT_REDIS_URL)
 
         self._schedule = {}
         self._last_updated = None
@@ -339,20 +337,20 @@ class RedisScheduler(Scheduler):
         return d
 
     def update_from_database(self):
-        delete = rdb.spop(CELERY_REDIS_SCHEDULER_DELETES)
+        delete = rdb.spop(REDBEAT_DELETES_KEY)
         while delete:
             logger.debug('deleting %s', delete)
             self._schedule.pop(delete, None)
-            delete = rdb.spop(CELERY_REDIS_SCHEDULER_DELETES)
+            delete = rdb.spop(REDBEAT_DELETES_KEY)
 
-        update = rdb.spop(CELERY_REDIS_SCHEDULER_UPDATES)
+        update = rdb.spop(REDBEAT_UPDATES_KEY)
         while update:
             logger.debug('updating %s', update)
             d = PeriodicTask.from_key(update)
             if d:
                 t = PeriodicTask.from_key(update)
                 self._schedule[t.name] = self.Entry(t)
-            update = rdb.spop(CELERY_REDIS_SCHEDULER_UPDATES)
+            update = rdb.spop(REDBEAT_UPDATES_KEY)
 
     def update_from_dict(self, dict_):
         s = {}
@@ -360,13 +358,13 @@ class RedisScheduler(Scheduler):
             try:
                 s[name] = self.Entry.from_entry(name, **entry)
             except Exception as exc:
-                error(ADD_ENTRY_ERROR, name, exc, entry)
+                logger.error(ADD_ENTRY_ERROR, name, exc, entry)
         self.schedule.update(s)
 
     def requires_update(self):
         """check whether we should pull an updated schedule
         from the backend database"""
-        return rdb.scard(CELERY_REDIS_SCHEDULER_DELETES) or rdb.scard(CELERY_REDIS_SCHEDULER_UPDATES)
+        return rdb.scard(REDBEAT_DELETES_KEY) or rdb.scard(REDBEAT_UPDATES_KEY)
 
     @property
     def schedule(self):

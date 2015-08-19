@@ -1,38 +1,34 @@
-celerybeat-redis
+Red Beat
 ################
 
-Github page: https://github.com/jayklx/celerybeatredis
+Github page: https://github.com/sibson/redbeat
 
 It's modified from celerybeat-mongo (https://github.com/zakird/celerybeat-mongo)
 
-This is a Celery Beat Scheduler (http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html)
-that stores both the schedules themselves and their status
-information in a backend Redis database. It can be installed by
-installing the celerybeat-redis Python egg::
+This is a [Celery Beat Scheduler](http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html)
+that stores both the schedules themselves and their status information in a Redis database. 
 
-    # pip install celerybeat-redis
+It can be installed via pip::
 
-And specifying the scheduler when running Celery Beat, e.g.::
+    # pip install celery-redbeat
 
-    $ celery beat -S celerybeatredis.schedulers.RedisScheduler
+Then specify the scheduler when running Celery Beat::
 
-Settings for the scheduler are defined in your celery configuration file
-similar to how other aspects of Celery are configured::
+    $ celery beat -S redbeat.RedisBeatScheduler
 
-    CELERY_REDIS_SCHEDULER_URL = "redis://localhost:6379/1"
-    CELERY_REDIS_SCHEDULER_KEY_PREFIX = 'tasks:meta:'
+To configure you will need to set two settings in your celery configuration file::
 
-You mush make these two value configured.
-CELERY_REDIS_SCHEDULER_KEY_PREFIX is used to generate keys in redis.
-The key was like::
+    REDBEAT_REDIS_URL = "redis://localhost:6379/1"
+    REDBEAT_KEY_PREFIX = 'tasks:meta:'
 
-    tasks:meta:task-name-here:sha1-hash-value
-    tasks:meta:test-fib-every-3s:efff8ee06703c4cffad73834154a609dab0e1161
+redbeat will create a redis hash with a key of `REDBEAT_KEY_PREFIX:task-name`.
+The hash contains two keys `periodic` which is a JSON blob with the task details and `meta`
+which contains metadata for the scheduler.
 
-Schedules can be manipulated in the Redis database through
-direct database manipulation. There exist two types of schedules,
-interval and crontab.
-crontab are not much tested yet.
+You can either create new tasks using Python to create and save a new PeriodicTask()_ or
+you can create them directly in Redis.
+
+The format of task definitions is as follow
 
 Interval::
 
@@ -51,112 +47,6 @@ Interval::
         "kwargs" : {
             "max_targets" : 100
         },
-        "total_run_count" : 5,
-	    "last_run_at" : {
-	        "__type__", "datetime",
-	        "year": 2014,
-	        "month": 8,
-	        "day": 30,
-	        "hour": 8,
-	        "minute": 10,
-	        "second": 6,
-	        "microsecond": 667
-	    }
     }
 
-The example from Celery User Guide::Periodic Tasks. ::
-
-    {
-    	CELERYBEAT_SCHEDULE = {
-    	    'interval-test-schedule': {
-    	        'task': 'tasks.add',
-    	        'schedule': timedelta(seconds=30),
-    	        'args': (param1, param2)
-    	    }
-    	}
-    }
-
-Becomes the following::
-
-    {
-        "name" : "interval test schedule",
-        "task" : "task.add",
-        "enabled" : true,
-        "interval" : {
-            "every" : 30,
-            "period" : "seconds",
-        },
-        "args" : [
-            "param1",
-            "param2"
-        ],
-        "kwargs" : {
-            "max_targets" : 100
-        }
-        "total_run_count": 5,
-	    "last_run_at" : {
-	        "__type__", "datetime",
-	        "year": 2014,
-	        "month": 8,
-	        "day": 30,
-	        "hour": 8,
-	        "minute": 10,
-	        "second": 6,
-	        "microsecond": 667
-	    }
-    }
-
-The following fields are required: name, task, crontab || interval,
-enabled when defining new tasks.
-total_run_count and last_run_at are maintained by the
-scheduler and should not be externally manipulated.
-
-
-WARNING: crontab feature was not well tested. Bugs will be fixed later.
-
-The example from Celery User Guide::Periodic Tasks.
-(see: http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html#crontab-schedules)::
-
-	{
-
-		CELERYBEAT_SCHEDULE = {
-		    # Executes every Monday morning at 7:30 A.M
-		    'add-every-monday-morning': {
-		        'task': 'tasks.add',
-		        'schedule': crontab(hour=7, minute=30, day_of_week=1),
-		        'args': (16, 16),
-		    },
-		}
-	}
-
-Becomes::
-
-	{
-	    "_id" : ObjectId("53a91dfd455d1c1a4345fb59"),
-	    "name" : "add-every-monday-morning",
-	    "task" : "tasks.add",
-	    "enabled" : true,
-	    "crontab" : {
-	        "minute" : "30",
-	        "hour" : "7",
-	        "day_of_week" : "1",
-	        "day_of_month" : "*",
-	        "month_of_year" : "*"
-	    },
-	    "args" : [
-	        "16",
-	        "16"
-	    ],
-	    "kwargs" : {},
-	    "total_run_count" : 1,
-	    "last_run_at" : {
-	        "__type__", "datetime",
-	        "year": 2014,
-	        "month": 8,
-	        "day": 30,
-	        "hour": 8,
-	        "minute": 10,
-	        "second": 6,
-	        "microsecond": 667
-	    }
-	}
+The following fields are required: name, task, enabled, crontab|interval when defining new tasks.
