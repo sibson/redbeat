@@ -68,7 +68,6 @@ class PeriodicTask(object):
 
     no_changes = False
 
-
     def __init__(self, name, task, schedule, key=None, enabled=True, task_args=[], task_kwargs={}, **kwargs):
         self.task = task
         self.enabled = enabled
@@ -83,7 +82,6 @@ class PeriodicTask(object):
             self.name = current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + name
         else:
             self.name = current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + name + ':' + key
-
 
     class Interval(object):
 
@@ -163,6 +161,8 @@ class PeriodicTask(object):
         rdb.hdel(self.name)
 
     def save(self):
+        self.clean()
+
         # must do a deepcopy
         self_dict = deepcopy(self.__dict__)
         if self_dict.get('interval'):
@@ -316,11 +316,7 @@ class RedisScheduler(Scheduler):
     Entry = RedisScheduleEntry
 
     def __init__(self, *args, **kwargs):
-        if hasattr(current_app.conf, 'CELERY_REDIS_SCHEDULER_URL'):
-            logger.info('backend scheduler using %s',
-                        current_app.conf.CELERY_REDIS_SCHEDULER_URL)
-        else:
-            logger.info('backend scheduler using %s',
+        logger.info('backend scheduler using %s',
                         current_app.conf.CELERY_REDIS_SCHEDULER_URL)
 
         self._schedule = {}
