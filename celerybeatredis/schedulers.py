@@ -159,8 +159,8 @@ class PeriodicTask(object):
         return json.loads(raw, cls=DateTimeDecoder)
 
     def delete(self):
-        rdb.sadd(self.CELERY_REDIS_SCHEDULER_DELETES, self.name)
-        rdb.hdel(self.name)
+        rdb.sadd(CELERY_REDIS_SCHEDULER_DELETES, self.name)
+        rdb.delete(self.name)
 
     def save(self):
         # must do a deepcopy
