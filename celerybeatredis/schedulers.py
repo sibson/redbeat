@@ -157,8 +157,8 @@ class PeriodicTask(object):
         return json.loads(raw, cls=DateTimeDecoder)
 
     def delete(self):
-        rdb.sadd(self.CELERY_REDIS_SCHEDULER_DELETES, self.name)
-        rdb.hdel(self.name)
+        rdb.sadd(CELERY_REDIS_SCHEDULER_DELETES, self.name)
+        rdb.delete(self.name)
 
     def save(self):
         self.clean()
@@ -348,10 +348,12 @@ class RedisScheduler(Scheduler):
         update = rdb.spop(CELERY_REDIS_SCHEDULER_UPDATES)
         while update:
             logger.debug('updating %s', update)
-            d = PeriodicTask.from_key(update)
-            if d:
-                t = PeriodicTask.from_key(update)
-                self._schedule[t.name] = self.Entry(t)
+            task = PeriodicTask.from_key(update)
+            if task:
+                entry = self._schedule.get(task.name)
+                if entry:
+                    entry.save()
+                self._schedule[task.name] = self.Entry(task)
             update = rdb.spop(CELERY_REDIS_SCHEDULER_UPDATES)
 
     def update_from_dict(self, dict_):
