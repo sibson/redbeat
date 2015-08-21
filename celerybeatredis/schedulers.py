@@ -134,7 +134,7 @@ class PeriodicTask(object):
     def get_all():
         """get all of the tasks, for best performance with large amount of tasks, return a generator
         """
-        tasks = rdb.keys(current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX + '*')
+        tasks = rdb.scan_iter(match='{}*'.format(current_app.conf.CELERY_REDIS_SCHEDULER_KEY_PREFIX))
         tasks = (t for t in tasks if t not in (CELERY_REDIS_SCHEDULER_DELETES, CELERY_REDIS_SCHEDULER_UPDATES))
         for task_name in tasks:
             periodic = PeriodicTask.load(task_name)
