@@ -252,10 +252,22 @@ class RedisScheduleEntry(ScheduleEntry):
         }
 
         if not total_run_count and not last_run_at:
-            meta = rdb.hget(self.name, 'meta') or '{}'
-            meta = json.loads(meta, cls=DateTimeDecoder)
+            meta = RedisScheduleEntry.load(self.name)
             self.total_run_count = meta.get('total_run_count', 0)
             self.last_run_at = meta.get('last_run_at', self._default_now())
+
+    @staticmethod
+    def load(task_name):
+        try:
+            meta = rdb.hget(task_name, 'meta')
+        except ResponseError as exc:
+            if 'WRONGTYPE' in str(exc):
+                return {}
+
+        if not meta:
+            return {}
+
+        return json.loads(meta, cls=DateTimeDecoder)
 
     def next(self):
         self.last_run_at = self._default_now()
