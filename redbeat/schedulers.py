@@ -133,7 +133,7 @@ class PeriodicTask(object):
     def get_all():
         """get all of the tasks, for best performance with large amount of tasks, return a generator
         """
-        tasks = rdb.keys(current_app.conf.REDBEAT_KEY_PREFIX + '*')
+        tasks = rdb.scan_iter(match='{}*'.format(current_app.conf.REDBEAT_KEY_PREFIX))
         tasks = (t for t in tasks if t not in (REDBEAT_DELETES_KEY, REDBEAT_UPDATES_KEY))
         for task_name in tasks:
             periodic = PeriodicTask.load(task_name)
@@ -157,7 +157,7 @@ class PeriodicTask(object):
 
     def delete(self):
         rdb.sadd(REDBEAT_DELETES_KEY, self.name)
-        rdb.hdel(self.name)
+        rdb.delete(self.name)
 
     def save(self):
         self.clean()
@@ -251,10 +251,22 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         }
 
         if not total_run_count and not last_run_at:
-            meta = rdb.hget(self.name, 'meta') or '{}'
-            meta = json.loads(meta, cls=DateTimeDecoder)
+            meta = RedisScheduleEntry.load(self.name)
             self.total_run_count = meta.get('total_run_count', 0)
             self.last_run_at = meta.get('last_run_at', self._default_now())
+
+    @staticmethod
+    def load(task_name):
+        try:
+            meta = rdb.hget(task_name, 'meta')
+        except ResponseError as exc:
+            if 'WRONGTYPE' in str(exc):
+                return {}
+
+        if not meta:
+            return {}
+
+        return json.loads(meta, cls=DateTimeDecoder)
 
     def next(self):
         self.last_run_at = self._default_now()
@@ -315,7 +327,7 @@ class RedBeatScheduler(Scheduler):
     Entry = RedBeatSchedulerEntry
 
     def __init__(self, *args, **kwargs):
-        logger.info('backend scheduler using %s', current_app.conf.REDBEAT_REDIS_URL)
+        logger.info('Backend scheduler using %s', current_app.conf.REDBEAT_REDIS_URL)
 
         self._schedule = {}
         self._last_updated = None
@@ -328,7 +340,7 @@ class RedBeatScheduler(Scheduler):
     def get_from_database(self):
         self.sync()
 
-        logger.info('reading schedule from redis')
+        logger.info('Reading schedule from redis')
         d = {}
         for task in PeriodicTask.get_all():
             t = PeriodicTask.from_dict(task)
@@ -346,10 +358,12 @@ class RedBeatScheduler(Scheduler):
         update = rdb.spop(REDBEAT_UPDATES_KEY)
         while update:
             logger.debug('updating %s', update)
-            d = PeriodicTask.from_key(update)
-            if d:
-                t = PeriodicTask.from_key(update)
-                self._schedule[t.name] = self.Entry(t)
+            task = PeriodicTask.from_key(update)
+            if task:
+                entry = self._schedule.get(task.name)
+                if entry:
+                    entry.save()
+                self._schedule[task.name] = self.Entry(task)
             update = rdb.spop(REDBEAT_UPDATES_KEY)
 
     def update_from_dict(self, dict_):
