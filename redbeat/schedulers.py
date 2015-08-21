@@ -251,7 +251,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         }
 
         if not total_run_count and not last_run_at:
-            meta = RedisScheduleEntry.load(self.name)
+            meta = RedBeatSchedulerEntry.load(self.name)
             self.total_run_count = meta.get('total_run_count', 0)
             self.last_run_at = meta.get('last_run_at', self._default_now())
 
