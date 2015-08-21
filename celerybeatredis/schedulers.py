@@ -328,7 +328,7 @@ class RedisScheduler(Scheduler):
     Entry = RedisScheduleEntry
 
     def __init__(self, *args, **kwargs):
-        logger.info('backend scheduler using %s',
+        logger.info('Backend scheduler using %s',
                         current_app.conf.CELERY_REDIS_SCHEDULER_URL)
 
         self._schedule = {}
@@ -342,7 +342,7 @@ class RedisScheduler(Scheduler):
     def get_from_database(self):
         self.sync()
 
-        logger.info('reading schedule from redis')
+        logger.info('Reading schedule from redis')
         d = {}
         for task in PeriodicTask.get_all():
             t = PeriodicTask.from_dict(task)
