@@ -135,10 +135,7 @@ class PeriodicTask(object):
         """
         tasks = rdb.scan_iter(match='{}*'.format(current_app.conf.REDBEAT_KEY_PREFIX))
         tasks = (t for t in tasks if t not in (REDBEAT_DELETES_KEY, REDBEAT_UPDATES_KEY))
-        for task_name in tasks:
-            periodic = PeriodicTask.load(task_name)
-            if periodic:
-                yield periodic
+        return tasks
 
     @staticmethod
     def load(task_name):
@@ -151,7 +148,7 @@ class PeriodicTask(object):
                 raise
 
         if not raw:
-            return raise KeyError(task_name)
+            raise KeyError(task_name)
 
         return json.loads(raw, cls=DateTimeDecoder)
 
@@ -326,26 +323,27 @@ class RedBeatScheduler(Scheduler):
     # from the backend redis database
     Entry = RedBeatSchedulerEntry
 
-    def __init__(self, *args, **kwargs):
-        logger.info('Backend scheduler using %s', current_app.conf.REDBEAT_REDIS_URL)
-
-        self._schedule = {}
-        self._last_updated = None
-        Scheduler.__init__(self, *args, **kwargs)
+    _schedule = None
 
     def setup_schedule(self):
-        self.install_default_entries(self.schedule)
+        self._schedule = {}
         self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
+        self.install_default_entries(self.schedule)
+
+        # TODO use update_from_dict here
+        self.schedule.update(self.get_from_database())
 
     def get_from_database(self):
-        self.sync()
-
         logger.info('Reading schedule from redis')
         d = {}
         for task in PeriodicTask.get_all():
-            t = PeriodicTask.from_dict(task)
-            logger.debug(unicode(t))
-            d[t.name] = self.Entry(t)
+            try:
+                t = PeriodicTask.from_key(task)
+            except KeyError:
+                pass
+            else:
+                logger.debug(unicode(t))
+                d[t.name] = self.Entry(t)
         return d
 
     def update_from_database(self):
@@ -380,6 +378,7 @@ class RedBeatScheduler(Scheduler):
                 s[name] = self.Entry.from_entry(name, **entry)
             except Exception as exc:
                 logger.error(ADD_ENTRY_ERROR, name, exc, entry)
+            logger.debug(unicode(s[name]._task))
         self.schedule.update(s)
 
     def requires_update(self):
@@ -389,10 +388,7 @@ class RedBeatScheduler(Scheduler):
 
     @property
     def schedule(self):
-        if self._last_updated is None:
-            self._schedule = self.get_from_database()
-            self._last_updated = datetime.datetime.now()
-        elif self.requires_update():
+        if self.requires_update():
             self.update_from_database()
         return self._schedule
 
