@@ -25,8 +25,8 @@ from decoder import DateTimeDecoder, DateTimeEncoder
 # share with result backend
 rdb = StrictRedis.from_url(current_app.conf.REDBEAT_REDIS_URL)
 
-REDBEAT_DELETES_KEY = current_app.conf.REDBEAT_KEY_PREFIX + 'pending:updates'
-REDBEAT_UPDATES_KEY = current_app.conf.REDBEAT_KEY_PREFIX + 'pending:delstes'
+REDBEAT_DELETES_KEY = current_app.conf.REDBEAT_KEY_PREFIX + 'pending:deletes'
+REDBEAT_UPDATES_KEY = current_app.conf.REDBEAT_KEY_PREFIX + 'pending:updates'
 
 ADD_ENTRY_ERROR = """\
 
@@ -151,7 +151,7 @@ class PeriodicTask(object):
                 raise
 
         if not raw:
-            return None
+            return raise KeyError(task_name)
 
         return json.loads(raw, cls=DateTimeDecoder)
 
@@ -358,13 +358,20 @@ class RedBeatScheduler(Scheduler):
         update = rdb.spop(REDBEAT_UPDATES_KEY)
         while update:
             logger.debug('updating %s', update)
-            task = PeriodicTask.from_key(update)
-            if task:
-                entry = self._schedule.get(task.name)
-                if entry:
-                    entry.save()
-                self._schedule[task.name] = self.Entry(task)
+            try:
+                task = PeriodicTask.from_key(update)
+            except KeyError:  # got deleted before we tried to update
+                task = None
+
             update = rdb.spop(REDBEAT_UPDATES_KEY)
+
+            if not task:
+                continue
+
+            entry = self._schedule.get(task.name)
+            if entry:
+                entry.save()
+            self._schedule[task.name] = self.Entry(task)
 
     def update_from_dict(self, dict_):
         s = {}
