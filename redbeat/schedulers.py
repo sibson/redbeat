@@ -6,6 +6,7 @@
 
 import datetime
 from copy import deepcopy
+import time
 
 try:
     import simplejson as json
@@ -25,8 +26,9 @@ from decoder import DateTimeDecoder, DateTimeEncoder
 # share with result backend
 rdb = StrictRedis.from_url(current_app.conf.REDBEAT_REDIS_URL)
 
-REDBEAT_DELETES_KEY = current_app.conf.REDBEAT_KEY_PREFIX + 'pending:deletes'
-REDBEAT_UPDATES_KEY = current_app.conf.REDBEAT_KEY_PREFIX + 'pending:updates'
+REDBEAT_DELETES_KEY = current_app.conf.REDBEAT_KEY_PREFIX + ':deletes'
+REDBEAT_UPDATES_KEY = current_app.conf.REDBEAT_KEY_PREFIX + ':updates'
+REDBEAT_SCHEDULE_KEY = current_app.conf.REDBEAT_KEY_PREFIX + ':schedule'
 
 ADD_ENTRY_ERROR = """\
 
@@ -34,6 +36,10 @@ Couldn't add entry %r to redis schedule: %r. Contents: %r
 """
 
 logger = get_logger(__name__)
+
+
+def to_timestamp(dt):
+    return time.mktime(dt.timetuple())
 
 
 class ValidationError(Exception):
@@ -134,7 +140,8 @@ class PeriodicTask(object):
         """get all of the tasks, for best performance with large amount of tasks, return a generator
         """
         tasks = rdb.scan_iter(match='{}*'.format(current_app.conf.REDBEAT_KEY_PREFIX))
-        tasks = (t for t in tasks if t not in (REDBEAT_DELETES_KEY, REDBEAT_UPDATES_KEY))
+        # filter out internal keys
+        tasks = (t for t in tasks if ':' not in t.replace(current_app.conf.REDBEAT_KEY_PREFIX, ''))
         return tasks
 
     @staticmethod
@@ -152,32 +159,9 @@ class PeriodicTask(object):
 
         return json.loads(raw, cls=DateTimeDecoder)
 
-    def delete(self):
-        rdb.sadd(REDBEAT_DELETES_KEY, self.name)
-        rdb.delete(self.name)
-
-    def save(self):
-        self.clean()
-
-        # must do a deepcopy
-        self_dict = deepcopy(self.__dict__)
-        if self_dict.get('interval'):
-            self_dict['interval'] = self.interval.__dict__
-        if self_dict.get('crontab'):
-            self_dict['crontab'] = self.crontab.__dict__
-        rdb.srem(REDBEAT_DELETES_KEY, self.name)
-        rdb.hset(self.name, 'periodic', json.dumps(self_dict, cls=DateTimeEncoder))
-        rdb.sadd(REDBEAT_UPDATES_KEY, self.name)
-
-    def clean(self):
-        """validation to ensure that you only have
-        an interval or crontab schedule, but not both simultaneously"""
-        if self.interval and self.crontab:
-            msg = 'Cannot define both interval and crontab schedule.'
-            raise ValidationError(msg)
-        if not (self.interval or self.crontab):
-            msg = 'Must defined either interval or crontab schedule.'
-            raise ValidationError(msg)
+    @staticmethod
+    def from_key(task_name):
+        return PeriodicTask.from_dict(PeriodicTask.load(task_name))
 
     @staticmethod
     def from_dict(d):
@@ -202,9 +186,33 @@ class PeriodicTask(object):
                 setattr(task, key, d[key])
         return task
 
-    @staticmethod
-    def from_key(task_name):
-        return PeriodicTask.from_dict(PeriodicTask.load(task_name))
+    def delete(self):
+        rdb.sadd(REDBEAT_DELETES_KEY, self.name)
+        rdb.delete(self.name)
+
+    def save(self):
+        self.clean()
+
+        # must do a deepcopy
+        self_dict = deepcopy(self.__dict__)
+        if self_dict.get('interval'):
+            self_dict['interval'] = self.interval.__dict__
+        if self_dict.get('crontab'):
+            self_dict['crontab'] = self.crontab.__dict__
+
+        rdb.srem(REDBEAT_DELETES_KEY, self.name)
+        rdb.hset(self.name, 'periodic', json.dumps(self_dict, cls=DateTimeEncoder))
+        rdb.sadd(REDBEAT_UPDATES_KEY, self.name)
+
+    def clean(self):
+        """validation to ensure that you only have
+        an interval or crontab schedule, but not both simultaneously"""
+        if self.interval and self.crontab:
+            msg = 'Cannot define both interval and crontab schedule.'
+            raise ValidationError(msg)
+        if not (self.interval or self.crontab):
+            msg = 'Must defined either interval or crontab schedule.'
+            raise ValidationError(msg)
 
     @property
     def schedule(self):
@@ -265,9 +273,22 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
         return json.loads(meta, cls=DateTimeDecoder)
 
+    @staticmethod
+    def from_key(task_name):
+        task = PeriodicTask.from_key(task_name)
+        return RedBeatSchedulerEntry(task)
+
+    @property
+    def due_at(self):
+        delta = self.schedule.remaining_estimate(self.last_run_at)
+        due_at = self.last_run_at + delta
+        return to_timestamp(due_at)
+
     def next(self):
         self.last_run_at = self._default_now()
         self.total_run_count += 1
+        self.save()
+
         return self
 
     __next__ = next
@@ -276,7 +297,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         if not self._task.enabled:
             return False, 5.0  # 5 second delay for re-enable.
 
-        return self.schedule.is_due(self.last_run_at)
+        return super(RedBeatSchedulerEntry, self).is_due()
 
     def __repr__(self):
         return '<RedBeatSchedulerEntry ({0} {1}(*{2}, **{3}) {{4}})>'.format(
@@ -323,11 +344,8 @@ class RedBeatScheduler(Scheduler):
     # from the backend redis database
     Entry = RedBeatSchedulerEntry
 
-    _schedule = None
-
     def setup_schedule(self):
-        self._schedule = {}
-        self.install_default_entries(self.schedule)
+        self.install_default_entries(self.app.conf.CELERYBEAT_SCHEDULE)
         self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
         self.load_from_database()
 
@@ -340,55 +358,55 @@ class RedBeatScheduler(Scheduler):
                 pass
             else:
                 logger.debug(unicode(t))
-                self._schedule[t.name] = self.Entry(t)
+                entry = self.Entry(t)
+                rdb.zadd(REDBEAT_SCHEDULE_KEY, entry.due_at, entry.name)
 
-    def update_from_database(self):
+    def update_from_dict(self, dict_):
+        for name, entry in dict_.items():
+            try:
+                entry = self.Entry.from_entry(name, **entry)
+            except Exception as exc:
+                logger.error(ADD_ENTRY_ERROR, name, exc, entry)
+
+            entry._task.save()
+            rdb.srem(REDBEAT_UPDATES_KEY, entry.name)  # hack, avoid triggering task updat
+            logger.debug(unicode(entry._task))
+            rdb.zadd(REDBEAT_SCHEDULE_KEY, entry.due_at, entry.name)
+
+    def reserve(self, entry):
+        new_entry = next(entry)
+        rdb.zadd(REDBEAT_SCHEDULE_KEY, new_entry.due_at, new_entry.name)
+
+        return new_entry
+
+    def schedule_changed(self):
+        """check whether we should pull an updated schedule
+        from the backend database"""
+        return rdb.scard(REDBEAT_DELETES_KEY) or rdb.scard(REDBEAT_UPDATES_KEY)
+
+    def update_schedule(self):
         delete = rdb.spop(REDBEAT_DELETES_KEY)
         while delete:
             logger.debug('deleting %s', delete)
-            self._schedule.pop(delete, None)
+            rdb.zrem(REDBEAT_SCHEDULE_KEY, delete)
             delete = rdb.spop(REDBEAT_DELETES_KEY)
 
         update = rdb.spop(REDBEAT_UPDATES_KEY)
         while update:
             logger.debug('updating %s', update)
             try:
-                task = PeriodicTask.from_key(update)
+                entry = self.Entry.from_key(update)
+                rdb.zadd(REDBEAT_SCHEDULE_KEY, entry.due_at, entry.name)
             except KeyError:  # got deleted before we tried to update
-                task = None
+                pass
 
             update = rdb.spop(REDBEAT_UPDATES_KEY)
 
-            if not task:
-                continue
-
-            entry = self._schedule.get(task.name)
-            if entry:
-                entry.save()
-            self._schedule[task.name] = self.Entry(task)
-
-    def update_from_dict(self, dict_):
-        s = {}
-        for name, entry in dict_.items():
-            try:
-                s[name] = self.Entry.from_entry(name, **entry)
-            except Exception as exc:
-                logger.error(ADD_ENTRY_ERROR, name, exc, entry)
-            logger.debug(unicode(s[name]._task))
-        self.schedule.update(s)
-
-    def requires_update(self):
-        """check whether we should pull an updated schedule
-        from the backend database"""
-        return rdb.scard(REDBEAT_DELETES_KEY) or rdb.scard(REDBEAT_UPDATES_KEY)
-
     @property
     def schedule(self):
-        if self.requires_update():
-            self.update_from_database()
-        return self._schedule
+        if self.schedule_changed():
+            self.update_schedule()
 
-    def sync(self):
-        logger.info('Saving task meta to redis')
-        for entry in self._schedule.values():
-            entry.save()
+        maxscore = to_timestamp(self.app.now())
+        due_tasks = rdb.zrangebyscore(REDBEAT_SCHEDULE_KEY, 0, maxscore)
+        return {key: self.Entry.from_key(key) for key in due_tasks}
