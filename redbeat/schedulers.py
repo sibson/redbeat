@@ -26,7 +26,6 @@ from decoder import DateTimeDecoder, DateTimeEncoder
 # share with result backend
 rdb = StrictRedis.from_url(current_app.conf.REDBEAT_REDIS_URL)
 
-REDBEAT_DELETES_KEY = current_app.conf.REDBEAT_KEY_PREFIX + ':deletes'
 REDBEAT_UPDATES_KEY = current_app.conf.REDBEAT_KEY_PREFIX + ':updates'
 REDBEAT_SCHEDULE_KEY = current_app.conf.REDBEAT_KEY_PREFIX + ':schedule'
 
@@ -187,7 +186,7 @@ class PeriodicTask(object):
         return task
 
     def delete(self):
-        rdb.sadd(REDBEAT_DELETES_KEY, self.name)
+        rdb.zrem(REDBEAT_SCHEDULE_KEY, delete)
         rdb.delete(self.name)
 
     def save(self):
@@ -200,8 +199,8 @@ class PeriodicTask(object):
         if self_dict.get('crontab'):
             self_dict['crontab'] = self.crontab.__dict__
 
-        rdb.srem(REDBEAT_DELETES_KEY, self.name)
         rdb.hset(self.name, 'periodic', json.dumps(self_dict, cls=DateTimeEncoder))
+
         rdb.sadd(REDBEAT_UPDATES_KEY, self.name)
 
     def clean(self):
@@ -382,15 +381,9 @@ class RedBeatScheduler(Scheduler):
     def schedule_changed(self):
         """check whether we should pull an updated schedule
         from the backend database"""
-        return rdb.scard(REDBEAT_DELETES_KEY) or rdb.scard(REDBEAT_UPDATES_KEY)
+        return rdb.scard(REDBEAT_UPDATES_KEY)
 
     def update_schedule(self):
-        delete = rdb.spop(REDBEAT_DELETES_KEY)
-        while delete:
-            logger.debug('deleting %s', delete)
-            rdb.zrem(REDBEAT_SCHEDULE_KEY, delete)
-            delete = rdb.spop(REDBEAT_DELETES_KEY)
-
         update = rdb.spop(REDBEAT_UPDATES_KEY)
         while update:
             logger.debug('updating %s', update)
