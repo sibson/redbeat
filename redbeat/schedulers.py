@@ -143,7 +143,10 @@ class PeriodicTask(object):
             raw = rdb.hget(task_name, 'periodic')
         except ResponseError as exc:
             if 'WRONGTYPE' in exc.message:
-                raw = rdb.get(task_name)
+                try:
+                    raw = rdb.get(task_name)
+                except ResponseError:
+                    raw = None
             else:
                 raise
 
@@ -337,7 +340,7 @@ class RedBeatScheduler(Scheduler):
             try:
                 t = PeriodicTask.from_key(task)
             except KeyError:
-                pass
+                logger.debug('%s failed to load', task)
             else:
                 logger.debug(unicode(t))
                 self._schedule[t.name] = self.Entry(t)
@@ -355,6 +358,7 @@ class RedBeatScheduler(Scheduler):
             try:
                 task = PeriodicTask.from_key(update)
             except KeyError:  # got deleted before we tried to update
+                logger.debug('%s failed to load', update)
                 task = None
 
             update = rdb.spop(REDBEAT_UPDATES_KEY)
