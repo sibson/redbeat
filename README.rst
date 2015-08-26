@@ -1,14 +1,11 @@
-Red Beat
+RedBeat
 ################
 
-Github page: https://github.com/sibson/redbeat
+RedBeat is a [Celery Beat Scheduler](http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html) that stores the scheduled tasks and runtime metadata in Redis.
 
-It's modified from celerybeat-mongo (https://github.com/zakird/celerybeat-mongo)
+It's modified from [celerybeat-mongo](https://github.com/zakird/celerybeat-mongo)
 
-This is a [Celery Beat Scheduler](http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html)
-that stores both the schedules themselves and their status information in a Redis database. 
-
-It can be installed via pip::
+Install with pip::
 
     # pip install celery-redbeat
 
@@ -21,7 +18,9 @@ To configure you will need to set two settings in your celery configuration file
     REDBEAT_REDIS_URL = "redis://localhost:6379/1"
     REDBEAT_KEY_PREFIX = 'tasks:meta:'
 
-redbeat will create a redis hash with a key of `REDBEAT_KEY_PREFIX:task-name`.
+Task Definitions
+------------------
+RedBeat will create a redis hash with a key of `REDBEAT_KEY_PREFIX:task-name`.
 The hash contains two keys `periodic` which is a JSON blob with the task details and `meta`
 which contains metadata for the scheduler.
 

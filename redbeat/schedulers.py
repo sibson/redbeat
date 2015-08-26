@@ -1,8 +1,8 @@
-# Copyright 2014 Kong Luoxing
-
 # Licensed under the Apache License, Version 2.0 (the 'License'); you may not
 # use this file except in compliance with the License. You may obtain a copy
 # of the License at http://www.apache.org/licenses/LICENSE-2.0
+# Copyright 2014 Kong Luoxing, Copyright 2015 Marc Sibson
+
 
 import datetime
 from copy import deepcopy
@@ -143,7 +143,10 @@ class PeriodicTask(object):
             raw = rdb.hget(task_name, 'periodic')
         except ResponseError as exc:
             if 'WRONGTYPE' in exc.message:
-                raw = rdb.get(task_name)
+                try:
+                    raw = rdb.get(task_name)
+                except ResponseError:
+                    raw = None
             else:
                 raise
 
@@ -327,24 +330,20 @@ class RedBeatScheduler(Scheduler):
 
     def setup_schedule(self):
         self._schedule = {}
-        self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
         self.install_default_entries(self.schedule)
+        self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
+        self.load_from_database()
 
-        # TODO use update_from_dict here
-        self.schedule.update(self.get_from_database())
-
-    def get_from_database(self):
-        logger.info('Reading schedule from redis')
-        d = {}
+    def load_from_database(self):
+        logger.info('Reading PeriodicTasks from Redis')
         for task in PeriodicTask.get_all():
             try:
                 t = PeriodicTask.from_key(task)
             except KeyError:
-                pass
+                logger.debug('%s failed to load', task)
             else:
                 logger.debug(unicode(t))
-                d[t.name] = self.Entry(t)
-        return d
+                self._schedule[t.name] = self.Entry(t)
 
     def update_from_database(self):
         delete = rdb.spop(REDBEAT_DELETES_KEY)
@@ -359,6 +358,7 @@ class RedBeatScheduler(Scheduler):
             try:
                 task = PeriodicTask.from_key(update)
             except KeyError:  # got deleted before we tried to update
+                logger.debug('%s failed to load', update)
                 task = None
 
             update = rdb.spop(REDBEAT_UPDATES_KEY)
