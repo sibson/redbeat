@@ -21,31 +21,57 @@ To configure you will need to set two settings in your celery configuration file
 Task Definitions
 ------------------
 RedBeat will create a redis hash with a key of `REDBEAT_KEY_PREFIX:task-name`.
-The hash contains two keys `periodic` which is a JSON blob with the task details and `meta`
-which contains metadata for the scheduler.
+The hash contains two keys `definition` which is a JSON blob with the task details and `meta`
+which contains metadata for the scheduler.  It also uses a `Sorted Set` to 
 
-You can either create new tasks using Python to create and save a new PeriodicTask()_ or
-you can create them directly in Redis.
+You can use RedBeatSchedulerEntry()_ to create/delete tasks from Python or you can manipulate the schedule directly in Redis. 
 
-The format of task definitions is as follow
+If you create a task manually in Redis you will either need to restart beat to pickup the new task or you can add it to the schedule manually with::
 
+    zadd REDBEAT_KEY_PREFIX::schedule 0 new-task-name
+
+Using RedBeatSchedulerEntry.save() will add the new task to the schedule for you.
+
+The format of task definitions is as follows
 Interval::
 
     {
         "name" : "interval test schedule",
         "task" : "task-name-goes-here",
-        "enabled" : true,
-        "interval" : {
-            "every" : 5,
-            "period" : "minutes"
-        },
-        "args" : [
+        "__type__": "interval",
+        "every" : 5, # seconds
+        "relative": false, # optional
+
+        "args" : [  # optional
             "param1",
             "param2"
-        ],
-        "kwargs" : {
+        ], 
+        "kwargs" : {  # optional
             "max_targets" : 100
         },
+        "enabled" : true,  # optional
+    }
+
+Crontab::
+
+    {
+        "name" : "interval test schedule",
+        "task" : "task-name-goes-here",
+        "__type__": "interval",
+        "minute" : "5", # optional, defaults to *
+        "hour" : "*", # optional, defaults to *
+        "day_of_week" : "monday", # optional, defaults to *
+        "day_of_month" : "*/7", # optional, defaults to *
+        "month_of_year" : "[1-12]", # optional, defaults to *
+
+        "args" : [  # optional
+            "param1",
+            "param2"
+        ], 
+        "kwargs" : {  # optional
+            "max_targets" : 100
+        },
+        "enabled" : true,  # optional
     }
 
 The following fields are required: name, task, enabled, crontab|interval when defining new tasks.
