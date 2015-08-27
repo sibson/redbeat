@@ -19,6 +19,7 @@ class RedBeatJSONDecoder(json.JSONDecoder):
             return d
 
         objtype = d.pop('__type__')
+
         if objtype == 'datetime':
             return datetime(**d)
 

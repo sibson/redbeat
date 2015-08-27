@@ -40,7 +40,7 @@ def to_timestamp(dt):
 class RedBeatSchedulerEntry(ScheduleEntry):
     _meta = None
 
-    def __init__(self, name, task, schedule=None, args=None, kwargs=None, enabled=True, **clsargs):
+    def __init__(self, name=None, task=None, schedule=None, args=None, kwargs=None, enabled=True, **clsargs):
         super(RedBeatSchedulerEntry, self).__init__(name, task, schedule=schedule,
                                                     args=args, kwargs=kwargs, **clsargs)
         self.key = current_app.conf.REDBEAT_KEY_PREFIX + name
@@ -62,13 +62,17 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
         return json.loads(meta, cls=RedBeatJSONDecoder)
 
-    @classmethod
-    def from_key(cls, key):
-        definition = cls.load_definition(key)
-        meta = cls.load_meta(key)
+    @staticmethod
+    def from_key(key):
+        definition = RedBeatSchedulerEntry.load_definition(key)
+        meta = RedBeatSchedulerEntry.load_meta(key)
         definition.update(meta)
 
-        return cls(**definition)
+        entry = RedBeatSchedulerEntry(**definition)
+        if not meta:
+            entry.save_meta()
+
+        return entry
 
     @property
     def due_at(self):
@@ -76,7 +80,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         due_at = self.last_run_at + delta
         return to_timestamp(due_at)
 
-    def save(self):
+    def save_definition(self):
         definition = {
             'name': self.name,
             'task': self.task,
@@ -87,7 +91,25 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             'enabled': self.enabled,
         }
         rdb.hset(self.key, 'definition', json.dumps(definition, cls=RedBeatJSONEncoder))
-        rdb.zadd(REDBEAT_SCHEDULE_KEY, self.due_at, self.key)
+
+    def save_meta(self):
+        meta = {
+            'last_run_at': self.last_run_at,
+            'total_run_count': self.total_run_count,
+        }
+        rdb.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
+
+    def save(self):
+        self.save_definition()
+        RedBeatScheduler.update_schedule(self)
+
+    def update_last_run_at(self, last_run_at=None):
+        if last_run_at is None:
+            last_run_at = self._default_now()
+
+        self.last_run_at = last_run_at
+        self.save_meta()
+        RedBeatScheduler.update_schedule(self)
 
     def delete(self):
         rdb.zrem(REDBEAT_SCHEDULE_KEY, self.key)
@@ -103,7 +125,6 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             'total_run_count': self.total_run_count,
         }
         rdb.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
-        rdb.zadd(REDBEAT_SCHEDULE_KEY, self.due_at, self.key)
 
         return self
     __next__ = next
@@ -123,13 +144,12 @@ class RedBeatScheduler(Scheduler):
     def setup_schedule(self):
         self.install_default_entries(self.app.conf.CELERYBEAT_SCHEDULE)
         self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
-        self.load_from_database()
 
-    def load_from_database(self):
-        logger.info('Reading task from Redis')
-        tasks = rdb.scan_iter(match='{}*'.format(current_app.conf.REDBEAT_KEY_PREFIX))
+    def load_from_redis(self):
+        logger.info('Reading tasks from Redis')
+        tasks = rdb.scan_iter(match='{}*'.format(self.app.conf.REDBEAT_KEY_PREFIX))
         # filter out internal keys
-        tasks = (t for t in tasks if ':' not in t.replace(current_app.conf.REDBEAT_KEY_PREFIX, ''))
+        tasks = (t for t in tasks if ':' not in t.replace(self.app.conf.REDBEAT_KEY_PREFIX, ''))
         for task in tasks:
             try:
                 entry = self.Entry.from_key(task)
@@ -138,7 +158,7 @@ class RedBeatScheduler(Scheduler):
                 continue
 
             logger.debug(unicode(entry))
-            rdb.zadd(REDBEAT_SCHEDULE_KEY, entry.due_at, entry.name)
+            self.update_schedule(entry)
 
     def update_from_dict(self, dict_):
         for name, entry in dict_.items():
@@ -148,12 +168,17 @@ class RedBeatScheduler(Scheduler):
                 logger.error(ADD_ENTRY_ERROR, name, exc, entry)
                 continue
 
+            entry.save()  # store into redis
             logger.debug(unicode(entry))
-            # we need to create a definition in redis and add to the schedule
-            entry.save()
 
     def reserve(self, entry):
-        return next(entry)
+        new_entry = next(entry)
+        self.update_schedule(new_entry)
+        return new_entry
+
+    @staticmethod
+    def update_schedule(entry):
+        rdb.zadd(REDBEAT_SCHEDULE_KEY, entry.due_at, entry.key)
 
     @property
     def schedule(self):
@@ -163,7 +188,12 @@ class RedBeatScheduler(Scheduler):
         d = {}
         for key in due_tasks:
             try:
-                d[key] = self.Entry.from_key(key)
+                entry = self.Entry.from_key(key)
             except KeyError:
+                logger.warning('failed to load %s, removing', key)
+                rdb.zrem(REDBEAT_SCHEDULE_KEY, key)
                 continue
+
+            d[entry.name] = entry
+
         return d
