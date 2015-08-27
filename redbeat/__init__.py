@@ -1,1 +1,1 @@
-from redbeat.schedulers import RedBeatScheduler, PeriodicTask  # noqa
+from redbeat.schedulers import RedBeatScheduler, RedBeatSchedulerEntry  # noqa
