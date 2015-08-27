@@ -145,6 +145,7 @@ class RedBeatScheduler(Scheduler):
         self.install_default_entries(self.app.conf.CELERYBEAT_SCHEDULE)
         self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
 
+<<<<<<< HEAD
     def load_from_redis(self):
         logger.info('Reading tasks from Redis')
         tasks = rdb.scan_iter(match='{}*'.format(self.app.conf.REDBEAT_KEY_PREFIX))
@@ -155,6 +156,38 @@ class RedBeatScheduler(Scheduler):
                 entry = self.Entry.from_key(task)
             except KeyError as exc:
                 logger.error(ADD_ENTRY_ERROR, task, exc, {})
+=======
+    def load_from_database(self):
+        logger.info('Reading PeriodicTasks from Redis')
+        for task in PeriodicTask.get_all():
+            try:
+                t = PeriodicTask.from_key(task)
+            except KeyError:
+                logger.debug('%s failed to load', task)
+            else:
+                logger.debug(unicode(t))
+                self._schedule[t.name] = self.Entry(t)
+
+    def update_from_database(self):
+        delete = rdb.spop(REDBEAT_DELETES_KEY)
+        while delete:
+            logger.debug('deleting %s', delete)
+            self._schedule.pop(delete, None)
+            delete = rdb.spop(REDBEAT_DELETES_KEY)
+
+        update = rdb.spop(REDBEAT_UPDATES_KEY)
+        while update:
+            logger.debug('updating %s', update)
+            try:
+                task = PeriodicTask.from_key(update)
+            except KeyError:  # got deleted before we tried to update
+                logger.debug('%s failed to load', update)
+                task = None
+
+            update = rdb.spop(REDBEAT_UPDATES_KEY)
+
+            if not task:
+>>>>>>> master
                 continue
 
             logger.debug(unicode(entry))
