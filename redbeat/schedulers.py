@@ -145,21 +145,6 @@ class RedBeatScheduler(Scheduler):
         self.install_default_entries(self.app.conf.CELERYBEAT_SCHEDULE)
         self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
 
-    def load_from_redis(self):
-        logger.info('Reading tasks from Redis')
-        tasks = rdb.scan_iter(match='{}*'.format(self.app.conf.REDBEAT_KEY_PREFIX))
-        # filter out internal keys
-        tasks = (t for t in tasks if ':' not in t.replace(self.app.conf.REDBEAT_KEY_PREFIX, ''))
-        for task in tasks:
-            try:
-                entry = self.Entry.from_key(task)
-            except KeyError as exc:
-                logger.error(ADD_ENTRY_ERROR, task, exc, {})
-                continue
-
-            logger.debug(unicode(entry))
-            self.update_schedule(entry)
-
     def update_from_dict(self, dict_):
         for name, entry in dict_.items():
             try:
@@ -182,9 +167,9 @@ class RedBeatScheduler(Scheduler):
 
     @property
     def schedule(self):
-        # need to peek into the next interval so we don't sleep a full interval
-        maxscore = to_timestamp(self.app.now() + datetime.timedelta(seconds=self.max_interval))
-        due_tasks = rdb.zrangebyscore(REDBEAT_SCHEDULE_KEY, 0, maxscore)
+        # need to peek into the next tick to accurate calculate our sleep time
+        max_due_at = to_timestamp(self.app.now() + datetime.timedelta(seconds=self.max_interval))
+        due_tasks = rdb.zrangebyscore(REDBEAT_SCHEDULE_KEY, 0, max_due_at)
         d = {}
         for key in due_tasks:
             try:
