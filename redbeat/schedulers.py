@@ -58,7 +58,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     def load_meta(key):
         meta = rdb.hget(key, 'meta')
         if not meta:
-            return {}
+            return {'last_run_at': datetime.datetime.min}
 
         return json.loads(meta, cls=RedBeatJSONDecoder)
 
@@ -68,11 +68,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         meta = RedBeatSchedulerEntry.load_meta(key)
         definition.update(meta)
 
-        entry = RedBeatSchedulerEntry(**definition)
-        if not meta:
-            entry.save_meta()
-
-        return entry
+        return RedBeatSchedulerEntry(**definition)
 
     @property
     def due_at(self):
