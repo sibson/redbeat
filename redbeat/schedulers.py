@@ -73,8 +73,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     @property
     def due_at(self):
         delta = self.schedule.remaining_estimate(self.last_run_at)
-        due_at = self.last_run_at + delta
-        return to_timestamp(due_at)
+        return self.last_run_at + delta
 
     def save_definition(self):
         definition = {
@@ -100,10 +99,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         RedBeatScheduler.update_schedule(self)
 
     def update_last_run_at(self, last_run_at=None):
-        if last_run_at is None:
-            last_run_at = self._default_now()
-
-        self.last_run_at = last_run_at
+        self.last_run_at = last_run_at or self._default_now()
         self.save_meta()
         RedBeatScheduler.update_schedule(self)
 
@@ -111,9 +107,9 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         rdb.zrem(REDBEAT_SCHEDULE_KEY, self.key)
         rdb.delete(self.key)
 
-    def next(self):
+    def next(self, last_run_at=None):
         # TODO handle meta not loaded
-        self.last_run_at = self._default_now()
+        self.last_run_at = last_run_at or self._default_now()
         self.total_run_count += 1
 
         meta = {
@@ -159,7 +155,7 @@ class RedBeatScheduler(Scheduler):
 
     @staticmethod
     def update_schedule(entry):
-        rdb.zadd(REDBEAT_SCHEDULE_KEY, entry.due_at, entry.key)
+        rdb.zadd(REDBEAT_SCHEDULE_KEY, to_timestamp(entry.due_at), entry.key)
 
     @property
     def schedule(self):
