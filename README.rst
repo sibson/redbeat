@@ -3,45 +3,72 @@ RedBeat
 
 RedBeat is a [Celery Beat Scheduler](http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html) that stores the scheduled tasks and runtime metadata in Redis.
 
-It's modified from [celerybeat-mongo](https://github.com/zakird/celerybeat-mongo)
+
+Why RedBeat
+--------------
+
+  1. Dynamic task creation and modification, no restart required
+  1. Externally manage tasks from any language
+  1. Shared data store; Beat isn't tied to a single drive
+  1. Fast startup
+  1. Avoid running multiple Beat servers (TODO)
+
+
+Getting Started
+------------------
 
 Install with pip::
 
     # pip install celery-redbeat
 
+Configure RedBeat settings in your celery configuration file::
+
+    REDBEAT_REDIS_URL = "redis://localhost:6379/1"
+    REDBEAT_KEY_PREFIX = 'redbeat:'
+
 Then specify the scheduler when running Celery Beat::
 
     $ celery beat -S redbeat.RedisBeatScheduler
 
-To configure you will need to set two settings in your celery configuration file::
 
-    REDBEAT_REDIS_URL = "redis://localhost:6379/1"
-    REDBEAT_KEY_PREFIX = 'tasks:meta:'
+Design
+---------
+At its core RedBeat uses a Sorted Set to store the schedule and a hash key with the task definition and metadata.
 
-Task Definitions
+The schedule set contains the task keys sorted by the next scheduled run time.
+
+For each tick of Beat
+
+  1. get list of due keys and due next tick
+  1. retrieve definitions and metadata for all keys from previous step
+  1. update task metadata and reschedule with next run time of task
+  1. call due tasks using async_apply
+  1. calculate time to sleep until start of next tick using remaining tasks
+
+Creating Tasks
 ------------------
-RedBeat will create a redis hash with a key of `REDBEAT_KEY_PREFIX:task-name`.
-The hash contains two keys `definition` which is a JSON blob with the task details and `meta`
-which contains metadata for the scheduler.  It also uses a `Sorted Set` to 
+You can use the standard CELERYBEAT_SCHEDULE to define static tasks or you can insert tasks
+directly into Redis.
 
-You can use RedBeatSchedulerEntry()_ to create/delete tasks from Python or you can manipulate the schedule directly in Redis. 
+The easiest way to insert tasks from Python is it use RedBeatSchedulerEntry()_.
 
-If you create a task manually in Redis you will either need to restart beat to pickup the new task or you can add it to the schedule manually with::
+    interval = celey.schedulers.schdule(run_every=60)  # seconds
+    entry = RedBeatSchedulerEntry('task-name', 'tasks.some_task', interval, args=['arg1', 2])
+    entry.save()
 
-    zadd REDBEAT_KEY_PREFIX::schedule 0 new-task-name
+Alternatively, you can insert directly into Redis by creating a new hash with a key of `REDBEAT_KEY_PREFIX:task-name`.
+It should contain a single key `definition` which is a JSON blob with the task details.
 
-Using RedBeatSchedulerEntry.save() will add the new task to the schedule for you.
-
-The format of task definitions is as follows
 Interval::
 
     {
-        "name" : "interval test schedule",
-        "task" : "task-name-goes-here",
-        "__type__": "interval",
-        "every" : 5, # seconds
-        "relative": false, # optional
-
+        "name" : "interval example",
+        "task" : "tasks.every_5_seconds",
+        "schedule": {
+            "__type__": "interval",
+            "every" : 5, # seconds
+            "relative": false, # optional
+        },
         "args" : [  # optional
             "param1",
             "param2"
@@ -55,15 +82,16 @@ Interval::
 Crontab::
 
     {
-        "name" : "interval test schedule",
-        "task" : "task-name-goes-here",
-        "__type__": "interval",
-        "minute" : "5", # optional, defaults to *
-        "hour" : "*", # optional, defaults to *
-        "day_of_week" : "monday", # optional, defaults to *
-        "day_of_month" : "*/7", # optional, defaults to *
-        "month_of_year" : "[1-12]", # optional, defaults to *
-
+        "name" : "crontab example",
+        "task" : "tasks.daily",
+        "schedule": {
+            "__type__": "crontab",
+            "minute" : "5", # optional, defaults to *
+            "hour" : "*", # optional, defaults to *
+            "day_of_week" : "monday", # optional, defaults to *
+            "day_of_month" : "*/7", # optional, defaults to *
+            "month_of_year" : "[1-12]", # optional, defaults to *
+        },
         "args" : [  # optional
             "param1",
             "param2"
@@ -74,4 +102,24 @@ Crontab::
         "enabled" : true,  # optional
     }
 
-The following fields are required: name, task, enabled, crontab|interval when defining new tasks.
+You will also need to insert the new task into the schedule with::
+
+    zadd REDBEAT_KEY_PREFIX::schedule 0 new-task-name
+
+The score is the next time the task should run formatted as a UNIX timestamp.
+
+Applications may also want to manipulate the task metadata to have more control over when a task runs.
+The meta key contains a JSON blob as follows
+
+    {
+        'last_run_at': {
+            '__type__': 'datetime',
+            'year': 2015,
+            'month': 12,
+            'day': 29,
+            'hour': 16,
+            'minute': 45,
+            'microsecond': 231
+        },
+        'total_run_count'; 23
+    }
