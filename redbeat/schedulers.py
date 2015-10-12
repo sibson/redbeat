@@ -12,8 +12,10 @@ try:
 except ImportError:
     import json
 
-from celery.beat import Scheduler, ScheduleEntry
+from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL
 from celery.utils.log import get_logger
+from celery.signals import beat_init
+from celery.utils.timeutils import humanize_seconds
 from celery import current_app
 
 from redis.client import StrictRedis
@@ -133,6 +135,18 @@ class RedBeatScheduler(Scheduler):
     # from the backend redis database
     Entry = RedBeatSchedulerEntry
 
+    lock = None
+    lock_key = current_app.conf.REDBEAT_KEY_PREFIX + ':lock'
+    lock_timeout = 2 * DEFAULT_MAX_INTERVAL
+
+    def __init__(self, app, **kwargs):
+        lock_key = kwargs.pop('lock_key', None)
+        lock_timeout = kwargs.pop('lock_timeout', None)
+        super(RedBeatScheduler, self).__init__(app, **kwargs)
+
+        self.lock_key = (lock_key or app.conf.REDBEAT_LOCK_KEY or self.lock_key)
+        self.lock_timeout = (lock_timeout or app.conf.REDBEAT_LOCK_TIMEOUT or self.lock_timeout)
+
     def setup_schedule(self):
         self.install_default_entries(self.app.conf.CELERYBEAT_SCHEDULE)
         self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
@@ -174,3 +188,36 @@ class RedBeatScheduler(Scheduler):
             d[entry.name] = entry
 
         return d
+
+    def tick(self, **kwargs):
+        if self.lock:
+            logger.debug('beat: Extending lock...')
+            rdb.pexpire(self.lock_key, int(self.lock_timeout * 1000))
+        return super(RedBeatScheduler, self).tick(**kwargs)
+
+    def close(self):
+        if self.lock:
+            logger.debug('beat: Releasing Lock')
+            self.lock.release()
+            self.lock = None
+        super(RedBeatScheduler, self).close()
+
+    @property
+    def info(self):
+        info = ['       . redis -> {}'.format(current_app.conf.REDBEAT_REDIS_URL)]
+        if self.lock_key:
+            info.append('       . lock -> `{}` {} ({}s)'.format(self.lock_key, humanize_seconds(self.lock_timeout), self.lock_timeout))
+        return '\n'.join(info)
+
+
+@beat_init.connect
+def acquire_distributed_beat_lock(sender=None, **kwargs):
+    scheduler = sender.scheduler
+
+    if not scheduler.lock_key:
+        return
+
+    lock = rdb.lock(scheduler.lock_key, timeout=scheduler.lock_timeout, sleep=scheduler.max_interval)
+    logger.debug('bett: Acquiring lock...')
+    lock.acquire()
+    scheduler.lock = lock
