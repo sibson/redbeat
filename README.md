@@ -27,7 +27,7 @@ Configure RedBeat settings in your celery configuration file::
 
 Then specify the scheduler when running Celery Beat::
 
-    $ celery beat -S redbeat.RedisBeatScheduler
+    $ celery beat -S redbeat.RedBeatScheduler
 
 
 Design
