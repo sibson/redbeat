@@ -32,7 +32,8 @@ Then specify the scheduler when running Celery Beat::
 
 Design
 ---------
-At its core RedBeat uses a Sorted Set to store the schedule and a hash key with the task definition and metadata.
+At its core RedBeat uses a Sorted Set to store the schedule as a priority queue.
+It stores task details using a hash key with the task `definition and metadata.
 
 The schedule set contains the task keys sorted by the next scheduled run time.
 
