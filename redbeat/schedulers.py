@@ -160,8 +160,11 @@ class RedBeatScheduler(Scheduler):
     @property
     def schedule(self):
         # need to peek into the next tick to accurate calculate our sleep time
+        logger.debug('Selecting tasks')
         max_due_at = to_timestamp(self.app.now() + datetime.timedelta(seconds=self.max_interval))
         due_tasks = rdb.zrangebyscore(REDBEAT_SCHEDULE_KEY, 0, max_due_at)
+
+        logger.info('Loading %d tasks', len(due_tasks))
         d = {}
         for key in due_tasks:
             try:
@@ -172,5 +175,7 @@ class RedBeatScheduler(Scheduler):
                 continue
 
             d[entry.name] = entry
+
+        logger.debug('Processing tasks')
 
         return d
