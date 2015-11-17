@@ -25,6 +25,10 @@ from decoder import RedBeatJSONEncoder, RedBeatJSONDecoder
 # share with result backend
 rdb = StrictRedis.from_url(current_app.conf.REDBEAT_REDIS_URL)
 
+current_app.conf.add_defaults({
+    'REDBEAT_KEY_PREFIX': 'redbeat'
+})
+
 REDBEAT_SCHEDULE_KEY = current_app.conf.REDBEAT_KEY_PREFIX + ':schedule'
 
 ADD_ENTRY_ERROR = """\
@@ -137,15 +141,15 @@ class RedBeatScheduler(Scheduler):
 
     lock = None
     lock_key = current_app.conf.REDBEAT_KEY_PREFIX + ':lock'
-    lock_timeout = 2 * DEFAULT_MAX_INTERVAL
+    lock_timeout = 10 * DEFAULT_MAX_INTERVAL
 
     def __init__(self, app, **kwargs):
         lock_key = kwargs.pop('lock_key', None)
         lock_timeout = kwargs.pop('lock_timeout', None)
         super(RedBeatScheduler, self).__init__(app, **kwargs)
 
-        self.lock_key = (lock_key or app.conf.REDBEAT_LOCK_KEY or self.lock_key)
-        self.lock_timeout = (lock_timeout or app.conf.REDBEAT_LOCK_TIMEOUT or self.lock_timeout)
+        self.lock_key = (lock_key or app.conf.get('REDBEAT_LOCK_KEY', self.lock_key))
+        self.lock_timeout = (lock_timeout or app.conf.get('REDBEAT_LOCK_TIMEOUT', self.lock_timeout))
 
     def setup_schedule(self):
         self.install_default_entries(self.app.conf.CELERYBEAT_SCHEDULE)
