@@ -46,12 +46,6 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'second': obj.second,
                 'microsecond': obj.microsecond,
             }
-        if isinstance(obj, schedule):
-            return {
-                '__type__': 'interval',
-                'every': obj.run_every.total_seconds(),
-                'relative': bool(obj.relative),
-            }
         if isinstance(obj, crontab):
             return {
                 '__type__': 'crontab',
@@ -60,6 +54,12 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'day_of_week': obj._orig_day_of_week,
                 'day_of_month': obj._orig_day_of_month,
                 'month_of_year': obj._orig_month_of_year,
+            }
+        if isinstance(obj, schedule):
+            return {
+                '__type__': 'interval',
+                'every': obj.run_every.total_seconds(),
+                'relative': bool(obj.relative),
             }
 
         return super(RedBeatJSONEncoder, self).default(obj)
