@@ -30,6 +30,8 @@ current_app.conf.add_defaults({
 })
 
 REDBEAT_SCHEDULE_KEY = current_app.conf.REDBEAT_KEY_PREFIX + ':schedule'
+REDBEAT_STATICS_KEY = current_app.conf.REDBEAT_KEY_PREFIX + ':statics'
+
 
 ADD_ENTRY_ERROR = """\
 
@@ -152,8 +154,19 @@ class RedBeatScheduler(Scheduler):
         self.lock_timeout = (lock_timeout or app.conf.get('REDBEAT_LOCK_TIMEOUT', self.lock_timeout))
 
     def setup_schedule(self):
+        # cleanup old static entries
+        previous = rdb.smembers(REDBEAT_STATICS_KEY)
+        current = set(self.app.conf.CELERYBEAT_SCHEDULE.keys())
+        removed = previous - current
+        for name in removed:
+            RedBeatSchedulerEntry(name).delete()
+
+        # setup statics
         self.install_default_entries(self.app.conf.CELERYBEAT_SCHEDULE)
         self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
+
+        # track static entries
+        rdb.sadd(REDBEAT_STATICS_KEY, *self.app.conf.CELERYBEAT_SCHEDULE.keys())
 
     def update_from_dict(self, dict_):
         for name, entry in dict_.items():
