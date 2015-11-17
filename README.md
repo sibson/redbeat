@@ -10,7 +10,7 @@ Why RedBeat
   1. Externally manage tasks from any language
   1. Shared data store; Beat isn't tied to a single drive
   1. Fast startup
-  1. Avoid running multiple Beat servers (TODO)
+  1. Avoid running multiple Beat servers
 
 
 Getting Started
@@ -23,11 +23,24 @@ Install with pip::
 Configure RedBeat settings in your celery configuration file::
 
     REDBEAT_REDIS_URL = "redis://localhost:6379/1"
-    REDBEAT_KEY_PREFIX = 'redbeat:'
 
 Then specify the scheduler when running Celery Beat::
 
     $ celery beat -S redbeat.RedBeatScheduler
+
+RedBeat uses a distributed lock to prevent multiple instances running.
+To disable this feature, set
+
+    REDBEAT_LOCK_KEY = None
+
+
+Configuration
+----------------
+
+    REDBEAT_REDIS_URL: URL to redis server used to store the schedule
+    REDBEAT_KEY_PREFIX: A prefix for all keys created by RedBeat, default 'redbeat'
+    REDBEAT_LOCK_KEY: Key used to ensure only a single beat instance runs at a time
+    REDBEAT_LOCK_TIMEOUT: Unless refreshed the lock will expire after this time
 
 
 Design
