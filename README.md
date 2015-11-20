@@ -26,7 +26,7 @@ Configure RedBeat settings in your celery configuration file::
 
 Then specify the scheduler when running Celery Beat::
 
-    $ celery beat -S redbeat.RedisBeatScheduler
+    $ celery beat -S redbeat.RedBeatScheduler
 
 RedBeat uses a distributed lock to prevent multiple instances running.
 To disable this feature, set
@@ -45,7 +45,8 @@ Configuration
 
 Design
 ---------
-At its core RedBeat uses a Sorted Set to store the schedule and a hash key with the task definition and metadata.
+At its core RedBeat uses a Sorted Set to store the schedule as a priority queue.
+It stores task details using a hash key with the task `definition and metadata.
 
 The schedule set contains the task keys sorted by the next scheduled run time.
 
