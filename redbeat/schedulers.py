@@ -12,25 +12,31 @@ try:
 except ImportError:
     import json
 
-from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL
+from celery.beat import Scheduler, ScheduleEntry
 from celery.utils.log import get_logger
 from celery.signals import beat_init
 from celery.utils.timeutils import humanize_seconds
 from celery import current_app
+from celery.app import app_or_default
 
 from redis.client import StrictRedis
 
 from decoder import RedBeatJSONEncoder, RedBeatJSONDecoder
 
-# share with result backend
-rdb = StrictRedis.from_url(current_app.conf.REDBEAT_REDIS_URL)
+# XXX
+rdb = StrictRedis.from_url(current_app.conf.get('REDBEAT_REDIS_URL', 'redis://'))
 
-current_app.conf.add_defaults({
-    'REDBEAT_KEY_PREFIX': 'redbeat'
-})
 
-REDBEAT_SCHEDULE_KEY = current_app.conf.REDBEAT_KEY_PREFIX + ':schedule'
-REDBEAT_STATICS_KEY = current_app.conf.REDBEAT_KEY_PREFIX + ':statics'
+def add_defaults(app=None):
+    app = app_or_default(app)
+
+    app.add_defaults({
+        'REDBEAT_KEY_PREFIX': 'redbeat:',
+        'REDBEAT_SCHEDULE_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':schedule',
+        'REDBEAT_STATICS_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':statics',
+        'REDBEAT_LOCK_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':lock',
+        'REDBEAT_LOCK_TIMEOUT': app.conf.CELERYBEAT_MAX_LOOP_INTERVAL * 5,
+    })
 
 
 ADD_ENTRY_ERROR = """\
@@ -51,8 +57,11 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     def __init__(self, name=None, task=None, schedule=None, args=None, kwargs=None, enabled=True, **clsargs):
         super(RedBeatSchedulerEntry, self).__init__(name, task, schedule=schedule,
                                                     args=args, kwargs=kwargs, **clsargs)
-        self.key = current_app.conf.REDBEAT_KEY_PREFIX + name
         self.enabled = enabled
+
+    @property
+    def key(self):
+        return app_or_default(self.app) + self.name
 
     @staticmethod
     def load_definition(key):
@@ -106,11 +115,6 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         self.save_definition()
         RedBeatScheduler.update_schedule(self)
 
-    def update_last_run_at(self, last_run_at=None):
-        self.last_run_at = last_run_at or self._default_now()
-        self.save_meta()
-        RedBeatScheduler.update_schedule(self)
-
     def delete(self):
         rdb.zrem(REDBEAT_SCHEDULE_KEY, self.key)
         rdb.delete(self.key)
@@ -120,14 +124,11 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         self.last_run_at = last_run_at or self._default_now()
         self.total_run_count += 1
 
-        meta = {
-            'last_run_at': self.last_run_at,
-            'total_run_count': self.total_run_count,
-        }
-        rdb.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
+        self.save_meta()
+        rdb.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, to_timestamp(entry.due_at), entry.key)
 
         return self
-    __next__ = next
+    update_last_run_at = __next__ = next
 
     def is_due(self):
         if not self.enabled:
@@ -142,20 +143,15 @@ class RedBeatScheduler(Scheduler):
     Entry = RedBeatSchedulerEntry
 
     lock = None
-    lock_key = current_app.conf.REDBEAT_KEY_PREFIX + ':lock'
-    lock_timeout = 10 * DEFAULT_MAX_INTERVAL
 
     def __init__(self, app, **kwargs):
-        lock_key = kwargs.pop('lock_key', None)
-        lock_timeout = kwargs.pop('lock_timeout', None)
+        self.lock_key = kwargs.pop('lock_key', app.conf.REDBEAT_LOCK_KEY)
+        self.lock_timeout = kwargs.pop('lock_timeout', app.conf.REDBEAT_LOCK_TIMEOUT)
         super(RedBeatScheduler, self).__init__(app, **kwargs)
-
-        self.lock_key = (lock_key or app.conf.get('REDBEAT_LOCK_KEY', self.lock_key))
-        self.lock_timeout = (lock_timeout or app.conf.get('REDBEAT_LOCK_TIMEOUT', self.lock_timeout))
 
     def setup_schedule(self):
         # cleanup old static entries
-        previous = rdb.smembers(REDBEAT_STATICS_KEY)
+        previous = rdb.smembers(self.app.conf.REDBEAT_STATICS_KEY)
         current = set(self.app.conf.CELERYBEAT_SCHEDULE.keys())
         removed = previous - current
         for name in removed:
@@ -163,10 +159,13 @@ class RedBeatScheduler(Scheduler):
 
         # setup statics
         self.install_default_entries(self.app.conf.CELERYBEAT_SCHEDULE)
+        if not self.app.conf.CELERYBEAT_SCHEDULE:
+            return
+
         self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
 
         # track static entries
-        rdb.sadd(REDBEAT_STATICS_KEY, *self.app.conf.CELERYBEAT_SCHEDULE.keys())
+        rdb.sadd(self.app.conf.REDBEAT_STATICS_KEY, *self.app.conf.CELERYBEAT_SCHEDULE.keys())
 
     def update_from_dict(self, dict_):
         for name, entry in dict_.items():
@@ -181,19 +180,15 @@ class RedBeatScheduler(Scheduler):
 
     def reserve(self, entry):
         new_entry = next(entry)
-        self.update_schedule(new_entry)
         return new_entry
 
-    @staticmethod
-    def update_schedule(entry):
-        rdb.zadd(REDBEAT_SCHEDULE_KEY, to_timestamp(entry.due_at), entry.key)
 
     @property
     def schedule(self):
         # need to peek into the next tick to accurate calculate our sleep time
         logger.debug('Selecting tasks')
         max_due_at = to_timestamp(self.app.now() + datetime.timedelta(seconds=self.max_interval))
-        due_tasks = rdb.zrangebyscore(REDBEAT_SCHEDULE_KEY, 0, max_due_at)
+        due_tasks = rdb.zrangebyscore(self.app.conf.REDBEAT_SCHEDULE_KEY, 0, max_due_at)
 
         logger.info('Loading %d tasks', len(due_tasks))
         d = {}
@@ -202,7 +197,7 @@ class RedBeatScheduler(Scheduler):
                 entry = self.Entry.from_key(key)
             except KeyError:
                 logger.warning('failed to load %s, removing', key)
-                rdb.zrem(REDBEAT_SCHEDULE_KEY, key)
+                rdb.zrem(self.app.conf.REDBEAT_SCHEDULE_KEY, key)
                 continue
 
             d[entry.name] = entry
@@ -226,7 +221,7 @@ class RedBeatScheduler(Scheduler):
 
     @property
     def info(self):
-        info = ['       . redis -> {}'.format(current_app.conf.REDBEAT_REDIS_URL)]
+        info = ['       . redis -> {}'.format(self.app.conf.REDBEAT_REDIS_URL)]
         if self.lock_key:
             info.append('       . lock -> `{}` {} ({}s)'.format(self.lock_key, humanize_seconds(self.lock_timeout), self.lock_timeout))
         return '\n'.join(info)
@@ -235,6 +230,7 @@ class RedBeatScheduler(Scheduler):
 @beat_init.connect
 def acquire_distributed_beat_lock(sender=None, **kwargs):
     scheduler = sender.scheduler
+    add_defaults(sender.app)
 
     if not scheduler.lock_key:
         return
