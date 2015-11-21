@@ -31,6 +31,7 @@ def add_defaults(app=None):
     app = app_or_default(app)
 
     app.add_defaults({
+        'REDBEAT_REDIS_URL': app.conf['BROKER_URL'],
         'REDBEAT_KEY_PREFIX': 'redbeat:',
         'REDBEAT_SCHEDULE_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':schedule',
         'REDBEAT_STATICS_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':statics',
@@ -58,10 +59,6 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         super(RedBeatSchedulerEntry, self).__init__(name, task, schedule=schedule,
                                                     args=args, kwargs=kwargs, **clsargs)
         self.enabled = enabled
-
-    @property
-    def key(self):
-        return app_or_default(self.app) + self.name
 
     @staticmethod
     def load_definition(key):
@@ -92,7 +89,15 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         delta = self.schedule.remaining_estimate(self.last_run_at)
         return self.last_run_at + delta
 
-    def save_definition(self):
+    @property
+    def key(self):
+        return app_or_default(self.app).conf['REDBEAT_KEY_PREFIX'] + self.name
+
+    @property
+    def score(self):
+        return to_timestamp(self.due_at)
+
+    def save(self):
         definition = {
             'name': self.name,
             'task': self.task,
@@ -103,20 +108,10 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             'enabled': self.enabled,
         }
         rdb.hset(self.key, 'definition', json.dumps(definition, cls=RedBeatJSONEncoder))
-
-    def save_meta(self):
-        meta = {
-            'last_run_at': self.last_run_at,
-            'total_run_count': self.total_run_count,
-        }
-        rdb.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
-
-    def save(self):
-        self.save_definition()
-        RedBeatScheduler.update_schedule(self)
+        rdb.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, self.score, self.key)
 
     def delete(self):
-        rdb.zrem(REDBEAT_SCHEDULE_KEY, self.key)
+        rdb.zrem(self.app.conf.REDBEAT_SCHEDULE_KEY, self.key)
         rdb.delete(self.key)
 
     def next(self, last_run_at=None):
@@ -124,11 +119,23 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         self.last_run_at = last_run_at or self._default_now()
         self.total_run_count += 1
 
-        self.save_meta()
-        rdb.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, to_timestamp(entry.due_at), entry.key)
+        meta = {
+            'last_run_at': self.last_run_at,
+            'total_run_count': self.total_run_count,
+        }
+        rdb.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
+        rdb.zadd(REDBEAT_SCHEDULE_KEY, self.score, self.key)
 
         return self
-    update_last_run_at = __next__ = next
+    __next__ = next
+
+    def reschedule(self, last_run_at=None):
+        self.last_run_at = last_run_at or self._default_now()
+        meta = {
+            'last_run_at': self.last_run_at,
+        }
+        rdb.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
+        rdb.zadd(REDBEAT_SCHEDULE_KEY, self.score, self.key)
 
     def is_due(self):
         if not self.enabled:
@@ -145,6 +152,7 @@ class RedBeatScheduler(Scheduler):
     lock = None
 
     def __init__(self, app, **kwargs):
+        add_defaults(app)
         self.lock_key = kwargs.pop('lock_key', app.conf.REDBEAT_LOCK_KEY)
         self.lock_timeout = kwargs.pop('lock_timeout', app.conf.REDBEAT_LOCK_TIMEOUT)
         super(RedBeatScheduler, self).__init__(app, **kwargs)
@@ -181,7 +189,6 @@ class RedBeatScheduler(Scheduler):
     def reserve(self, entry):
         new_entry = next(entry)
         return new_entry
-
 
     @property
     def schedule(self):
@@ -230,8 +237,6 @@ class RedBeatScheduler(Scheduler):
 @beat_init.connect
 def acquire_distributed_beat_lock(sender=None, **kwargs):
     scheduler = sender.scheduler
-    add_defaults(sender.app)
-
     if not scheduler.lock_key:
         return
 

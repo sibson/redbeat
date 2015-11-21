@@ -1,7 +1,13 @@
+import json
+
+from redis import StrictRedis
+
+from celery.schedules import schedule, crontab
 from celery.tests.case import AppCase
 
-from redbeat import RedBeatScheduler
+from redbeat import RedBeatScheduler, RedBeatSchedulerEntry
 from redbeat.schedulers import add_defaults
+from redbeat.decoder import RedBeatJSONDecoder, RedBeatJSONEncoder
 
 
 class RedBeatCase(AppCase):
@@ -15,7 +21,27 @@ class RedBeatCase(AppCase):
 
 
 class test_RedBeatEntry(RedBeatCase):
-    pass
+
+    def test_basic_save(self):
+        s = schedule(run_every=60)
+        e = RedBeatSchedulerEntry('test', 'tasks.test', s, app=self.app)
+        e.save()
+
+        redis = StrictRedis.from_url(self.app.conf.REDBEAT_REDIS_URL)
+        expected = {
+            'name': 'test',
+            'task': 'tasks.test',
+            'schedule': s,
+            'args': None,
+            'kwargs': None,
+            'options': {},
+            'enabled': True,
+        }
+
+        value = redis.hget(self.app.conf.REDBEAT_KEY_PREFIX + 'test', 'definition')
+        self.assertEqual(expected, json.loads(value, cls=RedBeatJSONDecoder))
+        self.assertEqual(redis.zrank(self.app.conf.REDBEAT_SCHEDULE_KEY, e.key), 0)
+        self.assertEqual(redis.zscore(self.app.conf.REDBEAT_SCHEDULE_KEY, e.key), e.score)
 
 
 class test_RedBeatScheduler(RedBeatCase):
