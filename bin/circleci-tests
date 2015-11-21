@@ -1,1 +1,1 @@
-py.test --cov=redbeat --junitxml=$CIRCLE_TEST_REPORTS/unittests.xml
+py.test --cov=redbeat --junitxml=$CIRCLE_TEST_REPORTS/unittests.xml tests
