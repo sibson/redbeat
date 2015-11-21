@@ -1,3 +1,5 @@
+[![Circle CI](https://circleci.com/gh/sibson/redbeat.svg?style=svg)](https://circleci.com/gh/sibson/redbeat)
+
 RedBeat
 =========
 RedBeat is a [Celery Beat Scheduler](http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html) that stores the scheduled tasks and runtime metadata in Redis.

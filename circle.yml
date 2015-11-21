@@ -1,0 +1,11 @@
+machine:
+    services:
+        - redis
+
+dependencies:
+    override:
+        - pip install -r requirements.dev.txt
+
+test:
+    override:
+        - bin/circleci-tests

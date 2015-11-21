@@ -1,0 +1,1 @@
+py.test --cov=redbeat --junitxml=$CIRCLE_ARTIFACTS/unittests.xml
