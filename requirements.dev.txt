@@ -1,0 +1,4 @@
+celery
+redis
+pytest
+coverage
