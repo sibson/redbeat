@@ -6,7 +6,7 @@ from celery.schedules import schedule, crontab
 from celery.tests.case import AppCase
 
 from redbeat import RedBeatScheduler, RedBeatSchedulerEntry
-from redbeat.schedulers import add_defaults
+from redbeat.schedulers import add_defaults, redis
 from redbeat.decoder import RedBeatJSONDecoder, RedBeatJSONEncoder
 
 
@@ -17,6 +17,9 @@ class RedBeatCase(AppCase):
             'REDBEAT_REDIS_URL': 'redis://',
             'REDBEAT_KEY_PREFIX': 'rb-tests:',
         })
+
+        redis(self.app).flushdb()
+
         add_defaults(self.app)
 
 
