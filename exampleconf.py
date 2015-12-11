@@ -1,0 +1,5 @@
+CELERYBEAT_MAX_LOOP_INTERVAL = 5
+BROKER_URL = 'redis://'
+
+REDBEAT_KEY_PREFIX = 'redbeat:'
+CELERYBEAT_SCHEDULER = 'redbeat.RedBeatScheduler'
