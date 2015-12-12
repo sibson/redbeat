@@ -136,3 +136,15 @@ The meta key contains a JSON blob as follows
         },
         'total_run_count'; 23
     }
+
+
+Development
+--------------
+You can run the tests by 
+
+    pip install -r requirements.dev.txt
+    py.test tests
+
+You can also quickly run a Beat instance with
+
+    celery beat --config exmapleconf
