@@ -2,17 +2,17 @@
 
 RedBeat
 =========
-RedBeat is a [Celery Beat Scheduler](http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html) that stores the scheduled tasks and runtime metadata in Redis.
+RedBeat is a `Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_ that stores the scheduled tasks and runtime metadata in Redis.
 
 
 Why RedBeat
 --------------
 
   1. Dynamic task creation and modification, no restart required
-  1. Externally manage tasks from any language
-  1. Shared data store; Beat isn't tied to a single drive
-  1. Fast startup
-  1. Avoid running multiple Beat servers
+  2. Externally manage tasks from any language
+  3. Shared data store; Beat isn't tied to a single drive
+  4. Fast startup
+  5. Avoid running multiple Beat servers
 
 
 Getting Started
@@ -31,13 +31,14 @@ Then specify the scheduler when running Celery Beat::
     $ celery beat -S redbeat.RedBeatScheduler
 
 RedBeat uses a distributed lock to prevent multiple instances running.
-To disable this feature, set
+To disable this feature, set::
 
     REDBEAT_LOCK_KEY = None
 
 
 Configuration
 ----------------
+You can add any of the following parameters to your celery configuration::
 
     REDBEAT_REDIS_URL: URL to redis server used to store the schedule
     REDBEAT_KEY_PREFIX: A prefix for all keys created by RedBeat, default 'redbeat'
@@ -48,24 +49,24 @@ Configuration
 Design
 ---------
 At its core RedBeat uses a Sorted Set to store the schedule as a priority queue.
-It stores task details using a hash key with the task `definition and metadata.
+It stores task details using a hash key with the task definition and metadata.
 
 The schedule set contains the task keys sorted by the next scheduled run time.
 
 For each tick of Beat
 
   1. get list of due keys and due next tick
-  1. retrieve definitions and metadata for all keys from previous step
-  1. update task metadata and reschedule with next run time of task
-  1. call due tasks using async_apply
-  1. calculate time to sleep until start of next tick using remaining tasks
+  2. retrieve definitions and metadata for all keys from previous step
+  3. update task metadata and reschedule with next run time of task
+  4. call due tasks using async_apply
+  5. calculate time to sleep until start of next tick using remaining tasks
 
 Creating Tasks
 ------------------
 You can use the standard CELERYBEAT_SCHEDULE to define static tasks or you can insert tasks
 directly into Redis.
 
-The easiest way to insert tasks from Python is it use RedBeatSchedulerEntry()_.
+The easiest way to insert tasks from Python is it use ```RedBeatSchedulerEntry()```::
 
     interval = celey.schedulers.schdule(run_every=60)  # seconds
     entry = RedBeatSchedulerEntry('task-name', 'tasks.some_task', interval, args=['arg1', 2])
@@ -124,7 +125,7 @@ You will also need to insert the new task into the schedule with::
 The score is the next time the task should run formatted as a UNIX timestamp.
 
 Applications may also want to manipulate the task metadata to have more control over when a task runs.
-The meta key contains a JSON blob as follows
+The meta key contains a JSON blob as follows::
 
     {
         'last_run_at': {
@@ -138,3 +139,15 @@ The meta key contains a JSON blob as follows
         },
         'total_run_count'; 23
     }
+
+
+Development
+--------------
+You can run the tests by 
+
+    pip install -r requirements.dev.txt
+    py.test tests
+
+You can also quickly run a Beat instance with
+
+    celery beat --config exmapleconf
