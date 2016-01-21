@@ -73,7 +73,9 @@ The easiest way to insert tasks from Python is it use ```RedBeatSchedulerEntry()
 Alternatively, you can insert directly into Redis by creating a new hash with a key of `REDBEAT_KEY_PREFIX:task-name`.
 It should contain a single key `definition` which is a JSON blob with the task details.
 
-Interval::
+Interval
+~~~~~~~~
+An interval task is defined with the JSON like::
 
     {
         "name" : "interval example",
@@ -93,7 +95,9 @@ Interval::
         "enabled" : true,  # optional
     }
 
-Crontab::
+Crontab
+~~~~~~~
+An crontab task is defined with the JSON like::
 
     {
         "name" : "crontab example",
@@ -141,11 +145,11 @@ The meta key contains a JSON blob as follows::
 
 Development
 --------------
-You can run the tests by 
+Once you have the source you can run the tests with the following commands::
 
     pip install -r requirements.dev.txt
     py.test tests
 
-You can also quickly run a Beat instance with
+You can also quickly fire up a sample Beat instance with::
 
     celery beat --config exmapleconf
