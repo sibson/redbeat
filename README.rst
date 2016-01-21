@@ -159,4 +159,4 @@ Once you have the source you can run the tests with the following commands::
 
 You can also quickly fire up a sample Beat instance with::
 
-    celery beat --config exmapleconf
+    celery beat --config exampleconf

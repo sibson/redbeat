@@ -1,3 +1,4 @@
-include README.md
+include README.rst
 include LICENSE
 include CHANGES.txt
+include exampleconf.py
