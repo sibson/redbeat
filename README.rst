@@ -120,12 +120,17 @@ An crontab task is defined with the JSON like::
         "enabled" : true,  # optional
     }
 
+
+Scheduling
+~~~~~~~~~~~~
 You will also need to insert the new task into the schedule with::
 
     zadd REDBEAT_KEY_PREFIX::schedule 0 new-task-name
 
 The score is the next time the task should run formatted as a UNIX timestamp.
 
+Metadata
+~~~~~~~~~~~
 Applications may also want to manipulate the task metadata to have more control over when a task runs.
 The meta key contains a JSON blob as follows::
 
@@ -142,6 +147,8 @@ The meta key contains a JSON blob as follows::
         'total_run_count'; 23
     }
 
+For instance by default ```last_run_at``` corresponds to when Beat dispatched the task, but depending on queue latency it might not run immediately, but the application could update the metadata with
+the actual run time, allowing intervals to be relative to last execution rather than last dispatch.
 
 Development
 --------------
