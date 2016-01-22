@@ -23,11 +23,6 @@ from redis.client import StrictRedis
 from decoder import RedBeatJSONEncoder, RedBeatJSONDecoder
 
 
-def redis_client(app=None):
-    url = app_or_default(app).conf.REDBEAT_REDIS_URL
-    return StrictRedis.from_url(url)
-
-
 def add_defaults(app=None):
     app = app_or_default(app)
 
@@ -39,6 +34,8 @@ def add_defaults(app=None):
         'REDBEAT_LOCK_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':lock',
         'REDBEAT_LOCK_TIMEOUT': app.conf.CELERYBEAT_MAX_LOOP_INTERVAL * 5,
     })
+
+    app.redbeat_redis = StrictRedis.from_url(app.conf.REDBEAT_REDIS_URL)
 
 
 ADD_ENTRY_ERROR = """\
@@ -63,7 +60,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @staticmethod
     def load_definition(key, app=None):
-        definition = redis_client(app).hget(key, 'definition')
+        definition = app.redbeat_redis.hget(key, 'definition')
         if not definition:
             raise KeyError(key)
 
@@ -100,7 +97,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def redis(self):
-        return redis_client(self.app)
+        return self.app.redbeat_redis
 
     def save(self):
         definition = {
@@ -164,7 +161,7 @@ class RedBeatScheduler(Scheduler):
 
     @property
     def redis(self):
-        return redis_client(self.app)
+        return self.app.redbeat_redis
 
     def setup_schedule(self):
         # cleanup old static entries
@@ -249,7 +246,7 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     if not scheduler.lock_key:
         return
 
-    redis = redis_client(scheduler.app)
+    redis = scheduler.app.redbeat_redis
     lock = redis.lock(scheduler.lock_key, timeout=scheduler.lock_timeout, sleep=scheduler.max_interval)
     logger.debug('bett: Acquiring lock...')
     lock.acquire()
