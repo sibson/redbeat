@@ -1,5 +1,4 @@
 .. image:: https://img.shields.io/pypi/v/celery-redbeat.svg
-.. image:: https://img.shields.io/badge/license-Apache%202-blue.svg   :target: https://raw.githubusercontent.com/sibson/redbeat/master/LICENSE
 .. image:: https://img.shields.io/circleci/project/sibson/redbeat.svg
 
 RedBeat
