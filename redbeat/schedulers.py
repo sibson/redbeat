@@ -120,6 +120,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     def next(self, last_run_at=None):
         # TODO handle meta not loaded
+        # TODO next should create a new instance
         self.last_run_at = last_run_at or self._default_now()
         self.total_run_count += 1
 
@@ -128,7 +129,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             'total_run_count': self.total_run_count,
         }
         self.redis.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
-        self.redis.zadd(REDBEAT_SCHEDULE_KEY, self.score, self.key)
+        self.redis.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, self.score, self.key)
 
         return self
     __next__ = next

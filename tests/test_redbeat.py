@@ -59,6 +59,14 @@ class test_RedBeatEntry(RedBeatCase):
         with self.assertRaises(KeyError):
             RedBeatSchedulerEntry.from_key('doesntexist', self.app)
 
+    def test_next(self):
+        s = schedule(run_every=10)
+        initial = RedBeatSchedulerEntry('test', 'tasks.test', s, app=self.app)
+
+        n = next(initial)
+
+        # TODO flesh out test
+
 
 class test_RedBeatScheduler(RedBeatCase):
 
