@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 
 from celery.schedules import schedule, crontab
@@ -45,6 +46,18 @@ class test_RedBeatEntry(RedBeatCase):
         self.assertEqual(expected, json.loads(value, cls=RedBeatJSONDecoder))
         self.assertEqual(redis.zrank(self.app.conf.REDBEAT_SCHEDULE_KEY, e.key), 0)
         self.assertEqual(redis.zscore(self.app.conf.REDBEAT_SCHEDULE_KEY, e.key), e.score)
+
+    def test_load_meta_nonexistent_key(self):
+        meta = RedBeatSchedulerEntry.load_meta('doesntexist', self.app)
+        self.assertEqual(meta, {'last_run_at': datetime.min})
+
+    def test_load_definition_nonexistent_key(self):
+        with self.assertRaises(KeyError):
+            RedBeatSchedulerEntry.load_definition('doesntexist', self.app)
+
+    def test_from_key_nonexistent_key(self):
+        with self.assertRaises(KeyError):
+            RedBeatSchedulerEntry.from_key('doesntexist', self.app)
 
 
 class test_RedBeatScheduler(RedBeatCase):

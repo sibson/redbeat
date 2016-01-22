@@ -60,6 +60,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @staticmethod
     def load_definition(key, app=None):
+        app = app_or_default(app)
         definition = app.redbeat_redis.hget(key, 'definition')
         if not definition:
             raise KeyError(key)
@@ -68,7 +69,8 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @staticmethod
     def load_meta(key, app=None):
-        meta = redis_client(app).hget(key, 'meta')
+        app = app_or_default(app)
+        meta = app.redbeat_redis.hget(key, 'meta')
         if not meta:
             return {'last_run_at': datetime.datetime.min}
 
@@ -80,7 +82,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         meta = RedBeatSchedulerEntry.load_meta(key, app)
         definition.update(meta)
 
-        return RedBeatSchedulerEntry(**definition)
+        return RedBeatSchedulerEntry(app=app, **definition)
 
     @property
     def due_at(self):
