@@ -1,9 +1,10 @@
-[![Circle CI](https://circleci.com/gh/sibson/redbeat.svg?style=svg)](https://circleci.com/gh/sibson/redbeat)
+.. image:: https://img.shields.io/pypi/v/celery-redbeat.svg
+.. image:: https://img.shields.io/badge/license-Apache%202-blue.svg   :target: https://raw.githubusercontent.com/sibson/redbeat/master/LICENSE
+.. image:: https://img.shields.io/circleci/project/sibson/redbeat.svg
 
 RedBeat
 =========
-RedBeat is a `Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_ that stores the scheduled tasks and runtime metadata in Redis.
-
+`RedBeat <https://github.com/sibson/redbeat>`_ is a `Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_ that stores the scheduled tasks and runtime metadata in `Redis <http://redis.io/>`_.
 
 Why RedBeat
 --------------
@@ -75,7 +76,9 @@ The easiest way to insert tasks from Python is it use ```RedBeatSchedulerEntry()
 Alternatively, you can insert directly into Redis by creating a new hash with a key of `REDBEAT_KEY_PREFIX:task-name`.
 It should contain a single key `definition` which is a JSON blob with the task details.
 
-Interval::
+Interval
+~~~~~~~~
+An interval task is defined with the JSON like::
 
     {
         "name" : "interval example",
@@ -95,7 +98,9 @@ Interval::
         "enabled" : true,  # optional
     }
 
-Crontab::
+Crontab
+~~~~~~~
+An crontab task is defined with the JSON like::
 
     {
         "name" : "crontab example",
@@ -118,12 +123,17 @@ Crontab::
         "enabled" : true,  # optional
     }
 
+
+Scheduling
+~~~~~~~~~~~~
 You will also need to insert the new task into the schedule with::
 
     zadd REDBEAT_KEY_PREFIX::schedule 0 new-task-name
 
 The score is the next time the task should run formatted as a UNIX timestamp.
 
+Metadata
+~~~~~~~~~~~
 Applications may also want to manipulate the task metadata to have more control over when a task runs.
 The meta key contains a JSON blob as follows::
 
@@ -140,14 +150,18 @@ The meta key contains a JSON blob as follows::
         'total_run_count'; 23
     }
 
+For instance by default ```last_run_at``` corresponds to when Beat dispatched the task, but depending on queue latency it might not run immediately, but the application could update the metadata with
+the actual run time, allowing intervals to be relative to last execution rather than last dispatch.
 
 Development
 --------------
-You can run the tests by 
+RedBeat is available on `GitHub <https://github.com/sibson/redbeat>`_
+
+Once you have the source you can run the tests with the following commands::
 
     pip install -r requirements.dev.txt
     py.test tests
 
-You can also quickly run a Beat instance with
+You can also quickly fire up a sample Beat instance with::
 
-    celery beat --config exmapleconf
+    celery beat --config exampleconf
