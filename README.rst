@@ -1,7 +1,10 @@
+.. image:: https://img.shields.io/pypi/v/celery-redbeat.svg
+.. image:: https://img.shields.io/github/license/sibson/redbeat.svg
+.. image:: https://img.shields.io/circleci/project/sibson/redbeat.svg
+
 RedBeat
 =========
-RedBeat is a `Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_ that stores the scheduled tasks and runtime metadata in Redis.
-
+`RedBeat <https://github.com/sibson/redbeat>`_ is a `Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_ that stores the scheduled tasks and runtime metadata in `Redis <http://redis.io/>`_.
 
 Why RedBeat
 --------------
@@ -152,6 +155,8 @@ the actual run time, allowing intervals to be relative to last execution rather 
 
 Development
 --------------
+RedBeat is available on `GitHub <https://github.com/sibson/redbeat>`_
+
 Once you have the source you can run the tests with the following commands::
 
     pip install -r requirements.dev.txt
