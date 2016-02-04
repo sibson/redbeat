@@ -35,7 +35,8 @@ def add_defaults(app=None):
         'REDBEAT_LOCK_TIMEOUT': app.conf.CELERYBEAT_MAX_LOOP_INTERVAL * 5,
     })
 
-    app.redbeat_redis = StrictRedis.from_url(app.conf.REDBEAT_REDIS_URL)
+    if not hasattr(app, 'redbeat_redis') or app.redbeat_redis is None:
+        app.redbeat_redis = StrictRedis.from_url(app.conf.REDBEAT_REDIS_URL)
 
 
 ADD_ENTRY_ERROR = """\

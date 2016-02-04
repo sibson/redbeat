@@ -17,11 +17,10 @@ class RedBeatCase(AppCase):
         self.app.conf.add_defaults({
             'REDBEAT_KEY_PREFIX': 'rb-tests:',
         })
+        add_defaults(self.app)
 
         self.app.redbeat_redis = FakeStrictRedis()
         self.app.redbeat_redis.flushdb()
-
-        add_defaults(self.app)
 
 
 class test_RedBeatEntry(RedBeatCase):
