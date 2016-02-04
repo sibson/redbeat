@@ -119,21 +119,18 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         self.redis.zrem(self.app.conf.REDBEAT_SCHEDULE_KEY, self.key)
         self.redis.delete(self.key)
 
-    def next(self, last_run_at=None):
-        # TODO handle meta not loaded
-        # TODO next should create a new instance
-        self.last_run_at = last_run_at or self._default_now()
-        self.total_run_count += 1
+    def _next_instance(self, last_run_at=None):
+        entry = super(RedBeatSchedulerEntry, self)._next_instance(last_run_at=last_run_at)
 
         meta = {
-            'last_run_at': self.last_run_at,
-            'total_run_count': self.total_run_count,
+            'last_run_at': entry.last_run_at,
+            'total_run_count': entry.total_run_count,
         }
         self.redis.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
-        self.redis.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, self.score, self.key)
+        self.redis.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, entry.score, entry.key)
 
-        return self
-    __next__ = next
+        return entry
+    __next__ = next = _next_instance
 
     def reschedule(self, last_run_at=None):
         self.last_run_at = last_run_at or self._default_now()
