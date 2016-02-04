@@ -119,8 +119,11 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         self.redis.zrem(self.app.conf.REDBEAT_SCHEDULE_KEY, self.key)
         self.redis.delete(self.key)
 
-    def _next_instance(self, last_run_at=None):
+    def _next_instance(self, last_run_at=None, only_update_last_run_at=False):
         entry = super(RedBeatSchedulerEntry, self)._next_instance(last_run_at=last_run_at)
+
+        if only_update_last_run_at:
+            entry.total_run_count = self.total_run_count
 
         meta = {
             'last_run_at': entry.last_run_at,

@@ -92,6 +92,13 @@ class test_RedBeatEntry(RedBeatCase):
         redis = self.app.redbeat_redis
         self.assertEqual(redis.zscore(self.app.conf.REDBEAT_SCHEDULE_KEY, n.key), n.score)
 
+    def test_next_only_update_last_run_at(self):
+        initial = self.create_entry()
+
+        n = initial.next(only_update_last_run_at=True)
+        self.assertGreater(n.last_run_at, initial.last_run_at)
+        self.assertEqual(n.total_run_count, initial.total_run_count)
+
     def test_delete(self):
         initial = self.create_entry()
         initial.save()
