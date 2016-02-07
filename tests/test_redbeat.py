@@ -145,6 +145,7 @@ class test_RedBeatScheduler(RedBeatCase):
 
         due = self.create_entry(name='due', s=due_now).save()
         up_next = self.create_entry(name='up_next', s=mocked_schedule(1)).save()
+        up_next2 = self.create_entry(name='up_next2', s=mocked_schedule(1)).save()
         way_out = self.create_entry(name='way_out', s=mocked_schedule(s.max_interval * 10)).save()
 
         schedule = s.schedule
@@ -156,4 +157,5 @@ class test_RedBeatScheduler(RedBeatCase):
         self.assertIn(up_next.name, schedule)
         self.assertEqual(up_next.key, schedule[up_next.name].key)
 
+        self.assertNotIn(up_next2.name, schedule)
         self.assertNotIn(way_out.name, schedule)
