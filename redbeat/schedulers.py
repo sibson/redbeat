@@ -115,6 +115,8 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         self.redis.hset(self.key, 'definition', json.dumps(definition, cls=RedBeatJSONEncoder))
         self.redis.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, self.score, self.key)
 
+        return self
+
     def delete(self):
         self.redis.zrem(self.app.conf.REDBEAT_SCHEDULE_KEY, self.key)
         self.redis.delete(self.key)
@@ -202,14 +204,15 @@ class RedBeatScheduler(Scheduler):
 
     @property
     def schedule(self):
-        # need to peek into the next tick to accurate calculate our sleep time
         logger.debug('Selecting tasks')
-        max_due_at = to_timestamp(self.app.now() + datetime.timedelta(seconds=self.max_interval))
-        due_tasks = self.redis.zrangebyscore(self.app.conf.REDBEAT_SCHEDULE_KEY, 0, max_due_at)
 
-        logger.info('Loading %d tasks', len(due_tasks))
+        # need to peek into the next tick to accurate calculate our sleep time between ticks
+        max_due_at = to_timestamp(self.app.now() + datetime.timedelta(seconds=self.max_interval))
+        maybe_due_tasks = self.redis.zrangebyscore(self.app.conf.REDBEAT_SCHEDULE_KEY, 0, max_due_at)
+
+        logger.info('Loading %d tasks', len(maybe_due_tasks))
         d = {}
-        for key in due_tasks:
+        for key in maybe_due_tasks:
             try:
                 entry = self.Entry.from_key(key, app=self.app)
             except KeyError:
