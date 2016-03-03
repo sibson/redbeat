@@ -30,6 +30,7 @@ class RedBeatJSONDecoder(json.JSONDecoder):
             return crontab(**d)
 
         d['__type__'] = objtype
+
         return d
 
 

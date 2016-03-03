@@ -1,19 +1,19 @@
 .. image:: https://img.shields.io/pypi/v/celery-redbeat.svg
-.. image:: https://img.shields.io/badge/license-Apache%202-blue.svg   :target: https://raw.githubusercontent.com/sibson/redbeat/master/LICENSE
 .. image:: https://img.shields.io/circleci/project/sibson/redbeat.svg
 
 RedBeat
 =========
 `RedBeat <https://github.com/sibson/redbeat>`_ is a `Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_ that stores the scheduled tasks and runtime metadata in `Redis <http://redis.io/>`_.
 
+
 Why RedBeat
 --------------
 
-  1. Dynamic task creation and modification, no restart required
-  2. Externally manage tasks from any language
-  3. Shared data store; Beat isn't tied to a single drive
-  4. Fast startup
-  5. Avoid running multiple Beat servers
+  1. Dynamic live task creation and modification, without lengthy downtime
+  2. Externally manage tasks from any language with Redis bindings
+  3. Shared data store; Beat isn't tied to a single drive or machine
+  4. Fast startup even with a large task count
+  5. Prevent accidentally running multiple Beat servers
 
 
 Getting Started
@@ -61,6 +61,7 @@ For each tick of Beat
   3. update task metadata and reschedule with next run time of task
   4. call due tasks using async_apply
   5. calculate time to sleep until start of next tick using remaining tasks
+
 
 Creating Tasks
 ------------------
@@ -152,6 +153,7 @@ The meta key contains a JSON blob as follows::
 
 For instance by default ```last_run_at``` corresponds to when Beat dispatched the task, but depending on queue latency it might not run immediately, but the application could update the metadata with
 the actual run time, allowing intervals to be relative to last execution rather than last dispatch.
+
 
 Development
 --------------

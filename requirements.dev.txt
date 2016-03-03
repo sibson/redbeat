@@ -1,0 +1,6 @@
+celery
+fakeredis
+mock
+pytest
+pytest-cov
+redis
