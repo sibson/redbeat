@@ -13,7 +13,7 @@ Why RedBeat
   2. Externally manage tasks from any language with Redis bindings
   3. Shared data store; Beat isn't tied to a single drive or machine
   4. Fast startup even with a large task count
-  5. Prevent accidental running multiple Beat servers
+  5. Prevent accidentally running multiple Beat servers
 
 
 Getting Started
