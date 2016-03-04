@@ -4,7 +4,7 @@
 # Copyright 2015 Marc Sibson
 
 
-import datetime
+from datetime import datetime
 import time
 
 try:
@@ -73,7 +73,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         app = app_or_default(app)
         meta = app.redbeat_redis.hget(key, 'meta')
         if not meta:
-            return {'last_run_at': datetime.datetime.min}
+            return {'last_run_at': datetime.min}
 
         return json.loads(meta, cls=RedBeatJSONDecoder)
 
@@ -114,6 +114,8 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         }
         self.redis.hset(self.key, 'definition', json.dumps(definition, cls=RedBeatJSONEncoder))
         self.redis.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, self.score, self.key)
+
+        return self
 
     def delete(self):
         self.redis.zrem(self.app.conf.REDBEAT_SCHEDULE_KEY, self.key)
@@ -202,14 +204,23 @@ class RedBeatScheduler(Scheduler):
 
     @property
     def schedule(self):
-        # need to peek into the next tick to accurate calculate our sleep time
         logger.debug('Selecting tasks')
-        max_due_at = to_timestamp(self.app.now() + datetime.timedelta(seconds=self.max_interval))
-        due_tasks = self.redis.zrangebyscore(self.app.conf.REDBEAT_SCHEDULE_KEY, 0, max_due_at)
 
-        logger.info('Loading %d tasks', len(due_tasks))
+        max_due_at = to_timestamp(self.app.now())
+
+        with self.redis.pipeline() as pipe:
+            pipe.zrangebyscore(self.app.conf.REDBEAT_SCHEDULE_KEY, 0, max_due_at)
+
+            # peek into the next tick to accuratly calculate sleep between ticks
+            pipe.zrangebyscore(self.app.conf.REDBEAT_SCHEDULE_KEY,
+                               '({}'.format(max_due_at),
+                               max_due_at + self.max_interval,
+                               start=0, num=1)
+            due_tasks, maybe_due = pipe.execute()
+
+        logger.info('Loading %d tasks', len(due_tasks) + len(maybe_due))
         d = {}
-        for key in due_tasks:
+        for key in due_tasks + maybe_due:
             try:
                 entry = self.Entry.from_key(key, app=self.app)
             except KeyError:
@@ -218,6 +229,9 @@ class RedBeatScheduler(Scheduler):
                 continue
 
             d[entry.name] = entry
+
+        logger.debug('Loading next task')
+
 
         logger.debug('Processing tasks')
 
