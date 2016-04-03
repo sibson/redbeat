@@ -60,18 +60,26 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         self.enabled = enabled
 
     @staticmethod
-    def load_definition(key, app=None):
-        app = app_or_default(app)
-        definition = app.redbeat_redis.hget(key, 'definition')
+    def load_definition(key, app=None, definition=None):
+        if definition is None:
+            app = app_or_default(app)
+            definition = app.redbeat_redis.hget(key, 'definition')
+
+        if definition is None:
+            raise KeyError(key)
+
+        definition = json.loads(definition, cls=RedBeatJSONDecoder)
         if not definition:
             raise KeyError(key)
 
-        return json.loads(definition, cls=RedBeatJSONDecoder)
+        return definition
 
     @staticmethod
-    def load_meta(key, app=None):
-        app = app_or_default(app)
-        meta = app.redbeat_redis.hget(key, 'meta')
+    def load_meta(key, app=None, meta=None):
+        if meta is None:
+            app = app_or_default(app)
+            meta = app.redbeat_redis.hget(key, 'meta')
+
         if not meta:
             return {'last_run_at': datetime.min}
 
@@ -79,8 +87,13 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @staticmethod
     def from_key(key, app=None):
-        definition = RedBeatSchedulerEntry.load_definition(key, app)
-        meta = RedBeatSchedulerEntry.load_meta(key, app)
+        with app_or_default(app).redbeat_redis.pipeline() as pipe:
+            pipe.hget(key, 'definition')
+            pipe.hget(key, 'meta')
+            definition, meta = pipe.execute()
+
+        definition = RedBeatSchedulerEntry.load_definition(key, definition=definition or '{}')
+        meta = RedBeatSchedulerEntry.load_meta(key, meta=meta or '{}')
         definition.update(meta)
 
         return RedBeatSchedulerEntry(app=app, **definition)
@@ -112,14 +125,18 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             'schedule': self.schedule,
             'enabled': self.enabled,
         }
-        self.redis.hset(self.key, 'definition', json.dumps(definition, cls=RedBeatJSONEncoder))
-        self.redis.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, self.score, self.key)
+        with self.redis.pipeline() as pipe:
+            pipe.hset(self.key, 'definition', json.dumps(definition, cls=RedBeatJSONEncoder))
+            pipe.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, self.score, self.key)
+            pipe.execute()
 
         return self
 
     def delete(self):
-        self.redis.zrem(self.app.conf.REDBEAT_SCHEDULE_KEY, self.key)
-        self.redis.delete(self.key)
+        with self.redis.pipeline() as pipe:
+            pipe.zrem(self.app.conf.REDBEAT_SCHEDULE_KEY, self.key)
+            pipe.delete(self.key)
+            pipe.execute()
 
     def _next_instance(self, last_run_at=None, only_update_last_run_at=False):
         entry = super(RedBeatSchedulerEntry, self)._next_instance(last_run_at=last_run_at)
@@ -131,8 +148,10 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             'last_run_at': entry.last_run_at,
             'total_run_count': entry.total_run_count,
         }
-        self.redis.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
-        self.redis.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, entry.score, entry.key)
+        with self.redis.pipeline() as pipe:
+            pipe.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
+            pipe.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, entry.score, entry.key)
+            pipe.execute()
 
         return entry
     __next__ = next = _next_instance
@@ -142,8 +161,10 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         meta = {
             'last_run_at': self.last_run_at,
         }
-        self.redis.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
-        self.redis.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, self.score, self.key)
+        with self.redis.pipeline() as pipe:
+            pipe.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
+            pipe.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, self.score, self.key)
+            pipe.execute()
 
     def is_due(self):
         if not self.enabled:
@@ -230,9 +251,6 @@ class RedBeatScheduler(Scheduler):
 
             d[entry.name] = entry
 
-        logger.debug('Loading next task')
-
-
         logger.debug('Processing tasks')
 
         return d
@@ -266,6 +284,6 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
 
     redis = scheduler.app.redbeat_redis
     lock = redis.lock(scheduler.lock_key, timeout=scheduler.lock_timeout, sleep=scheduler.max_interval)
-    logger.debug('bett: Acquiring lock...')
+    logger.debug('beat: Acquiring lock...')
     lock.acquire()
     scheduler.lock = lock
