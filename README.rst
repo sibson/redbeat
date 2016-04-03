@@ -1,5 +1,5 @@
-.. image:: https://img.shields.io/pypi/v/celery-redbeat.svg   :target: https://pypi.python.org/pypi/celery-redbeat
-.. image:: https://img.shields.io/circleci/project/sibson/redbeat.svg   :target: https://circleci.com/gh/sibson/redbeat
+.. image:: https://img.shields.io/pypi/v/celery-redbeat.svg
+.. image:: https://img.shields.io/circleci/project/sibson/redbeat.svg
 
 RedBeat
 =========
