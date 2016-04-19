@@ -28,7 +28,7 @@ def add_defaults(app=None):
 
     app.add_defaults({
         'REDBEAT_REDIS_URL': app.conf['BROKER_URL'],
-        'REDBEAT_KEY_PREFIX': 'redbeat:',
+        'REDBEAT_KEY_PREFIX': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:'),
         'REDBEAT_SCHEDULE_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':schedule',
         'REDBEAT_STATICS_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':statics',
         'REDBEAT_LOCK_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':lock',
@@ -270,7 +270,8 @@ class RedBeatScheduler(Scheduler):
     def info(self):
         info = ['       . redis -> {}'.format(self.app.conf.REDBEAT_REDIS_URL)]
         if self.lock_key:
-            info.append('       . lock -> `{}` {} ({}s)'.format(self.lock_key, humanize_seconds(self.lock_timeout), self.lock_timeout))
+            info.append('       . lock -> `{}` {} ({}s)'.format(
+                self.lock_key, humanize_seconds(self.lock_timeout), self.lock_timeout))
         return '\n'.join(info)
 
 
@@ -280,7 +281,9 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     if not scheduler.lock_key:
         return
 
-    lock = redis(scheduler.app).lock(scheduler.lock_key, timeout=scheduler.lock_timeout, sleep=scheduler.max_interval)
     logger.debug('beat: Acquiring lock...')
+
+    lock = redis(scheduler.app).lock(
+            scheduler.lock_key, timeout=scheduler.lock_timeout, sleep=scheduler.max_interval)
     lock.acquire()
     scheduler.lock = lock
