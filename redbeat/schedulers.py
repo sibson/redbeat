@@ -60,46 +60,25 @@ def to_timestamp(dt):
 class RedBeatSchedulerEntry(ScheduleEntry):
     _meta = None
 
-    def __init__(self, name=None, task=None, schedule=None, args=None, kwargs=None, enabled=True, **clsargs):
+    def __init__(self, name=None, task=None, schedule=None, args=None, kwargs=None,
+                 enabled=True, **clsargs):
         super(RedBeatSchedulerEntry, self).__init__(name, task, schedule=schedule,
                                                     args=args, kwargs=kwargs, **clsargs)
         self.enabled = enabled
 
     @staticmethod
-    def load_definition(key, app=None, definition=None):
-        if definition is None:
-            definition = redis(app).hget(key, 'definition')
+    def from_key(key, app=None):
+        data = redis(app).hgetall(key)
 
-        if definition is None:
-            raise KeyError(key)
-
-        definition = json.loads(definition, cls=RedBeatJSONDecoder)
+        definition = json.loads(data.get('definition', '{}'), cls=RedBeatJSONDecoder)
         if not definition:
             raise KeyError(key)
 
-        return definition
-
-    @staticmethod
-    def load_meta(key, app=None, meta=None):
-        if meta is None:
-            meta = redis(app).hget(key, 'meta')
-
+        meta = json.loads(data.get('meta', '{}'), cls=RedBeatJSONDecoder)
         if not meta:
-            return {'last_run_at': datetime.min}
+            meta = {'last_run_at': datetime.min}
 
-        return json.loads(meta, cls=RedBeatJSONDecoder)
-
-    @staticmethod
-    def from_key(key, app=None):
-        with redis(app).pipeline() as pipe:
-            pipe.hget(key, 'definition')
-            pipe.hget(key, 'meta')
-            definition, meta = pipe.execute()
-
-        definition = RedBeatSchedulerEntry.load_definition(key, definition=definition or '{}')
-        meta = RedBeatSchedulerEntry.load_meta(key, meta=meta or '{}')
         definition.update(meta)
-
         return RedBeatSchedulerEntry(app=app, **definition)
 
     @property
