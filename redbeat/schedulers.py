@@ -74,15 +74,20 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         if not definition:
             raise KeyError(key)
 
+        entry = RedBeatSchedulerEntry(app=app, **definition)
         meta = json.loads(data.get('meta', '{}'), cls=RedBeatJSONDecoder)
-        if not meta:
-            meta = {'last_run_at': datetime.min}
+        entry.last_run_at = meta.get('last_run_at', datetime.min)
+        entry.total_run_count = meta.get('total_run_count', 0)
 
         definition.update(meta)
-        return RedBeatSchedulerEntry(app=app, **definition)
+
+        return entry
 
     @property
     def due_at(self):
+        if self.last_run_at == datetime.min:
+            return self._default_now()
+
         delta = self.schedule.remaining_estimate(self.last_run_at)
         return self.last_run_at + delta
 
@@ -121,12 +126,14 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         entry = super(RedBeatSchedulerEntry, self)._next_instance(last_run_at=last_run_at)
 
         if only_update_last_run_at:
+            # rollback the update to total_run_count
             entry.total_run_count = self.total_run_count
 
         meta = {
             'last_run_at': entry.last_run_at,
             'total_run_count': entry.total_run_count,
         }
+
         with redis(self.app).pipeline() as pipe:
             pipe.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
             pipe.zadd(self.app.conf.REDBEAT_SCHEDULE_KEY, entry.score, entry.key)
