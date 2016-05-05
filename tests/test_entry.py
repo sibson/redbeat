@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 
 from basecase import RedBeatCase
@@ -29,20 +29,19 @@ class test_RedBeatEntry(RedBeatCase):
         self.assertEqual(redis.zrank(self.app.conf.REDBEAT_SCHEDULE_KEY, e.key), 0)
         self.assertEqual(redis.zscore(self.app.conf.REDBEAT_SCHEDULE_KEY, e.key), e.score)
 
-    def test_load_meta_nonexistent_key(self):
-        meta = RedBeatSchedulerEntry.load_meta('doesntexist', self.app)
-        self.assertEqual(meta, {'last_run_at': datetime.min})
-
-    def test_load_definition_nonexistent_key(self):
-        with self.assertRaises(KeyError):
-            RedBeatSchedulerEntry.load_definition('doesntexist', self.app)
-
     def test_from_key_nonexistent_key(self):
         with self.assertRaises(KeyError):
             RedBeatSchedulerEntry.from_key('doesntexist', self.app)
 
+    def test_from_key_missing_meta(self):
+        initial = self.create_entry().save()
+
+        loaded = RedBeatSchedulerEntry.from_key(initial.key, self.app)
+        self.assertEqual(initial.task, loaded.task)
+        self.assertEqual(loaded.last_run_at, datetime.min)
+
     def test_next(self):
-        initial = self.create_entry()
+        initial = self.create_entry().save()
         now = self.app.now()
 
         n = initial.next(last_run_at=now)
@@ -53,9 +52,9 @@ class test_RedBeatEntry(RedBeatCase):
         self.assertEqual(initial.total_run_count + 1, n.total_run_count)
 
         # updated meta was stored into redis
-        meta = RedBeatSchedulerEntry.load_meta(initial.key, app=self.app)
-        self.assertEqual(meta['last_run_at'], now)
-        self.assertEqual(meta['total_run_count'], initial.total_run_count + 1)
+        loaded = RedBeatSchedulerEntry.from_key(initial.key, app=self.app)
+        self.assertEqual(loaded.last_run_at, now)
+        self.assertEqual(loaded.total_run_count, initial.total_run_count + 1)
 
         # new entry updated the schedule
         redis = self.app.redbeat_redis
@@ -80,3 +79,24 @@ class test_RedBeatEntry(RedBeatCase):
 
         score = self.app.redbeat_redis.zrank(self.app.conf.REDBEAT_SCHEDULE_KEY, initial.key)
         self.assertIsNone(score)
+
+    def test_due_at_never_run(self):
+        entry = self.create_entry(last_run_at=datetime.min)
+
+        before = entry._default_now()
+        due_at = entry.due_at
+        after = entry._default_now()
+
+        self.assertLess(before, due_at)
+        self.assertLess(due_at, after)
+
+    def test_due_at(self):
+        entry = self.create_entry()
+
+        now = entry._default_now()
+
+        entry.last_run_at = now
+        due_at = entry.due_at
+
+        self.assertLess(now, due_at)
+        self.assertLess(due_at, now + entry.schedule.run_every)
