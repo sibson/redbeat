@@ -27,7 +27,7 @@ def add_defaults(app=None):
     app = app_or_default(app)
 
     app.add_defaults({
-        'REDBEAT_REDIS_URL': app.conf['BROKER_URL'],
+        'REDBEAT_REDIS_URL': app.conf.get('REDBEAT_REDIS_URL', app.conf['BROKER_URL']),
         'REDBEAT_KEY_PREFIX': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:'),
         'REDBEAT_SCHEDULE_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':schedule',
         'REDBEAT_STATICS_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':statics',
