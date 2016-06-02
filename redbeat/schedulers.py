@@ -85,10 +85,16 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def due_at(self):
+        # never run => due now
         if self.last_run_at == datetime.min:
             return self._default_now()
 
         delta = self.schedule.remaining_estimate(self.last_run_at)
+
+        # overdue => due now
+        if delta.total_seconds() < 0:
+            return self._default_now()
+
         return self.last_run_at + delta
 
     @property
@@ -98,6 +104,10 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     @property
     def score(self):
         return to_timestamp(self.due_at)
+
+    @property
+    def rank(self):
+        return redis(self.app).zrank(self.app.conf.REDBEAT_SCHEDULE_KEY, self.key)
 
     def save(self):
         definition = {

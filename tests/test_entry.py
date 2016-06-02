@@ -100,3 +100,13 @@ class test_RedBeatEntry(RedBeatCase):
 
         self.assertLess(now, due_at)
         self.assertLess(due_at, now + entry.schedule.run_every)
+
+    def test_due_at_overdue(self):
+        last_run_at = self.app.now() - timedelta(hours=10)
+        entry = self.create_entry(last_run_at=last_run_at)
+
+        before = entry._default_now()
+        due_at = entry.due_at
+
+        self.assertLess(last_run_at, due_at)
+        self.assertGreater(due_at, before)
