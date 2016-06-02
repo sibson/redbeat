@@ -1,0 +1,11 @@
+
+
+
+Release
+---------
+
+ - bump version in setup.py
+ - tag in github
+ - download and extract
+ - python setup.py sdist
+ - twine upload --
