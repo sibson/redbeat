@@ -5,7 +5,7 @@
 
 
 from datetime import datetime
-import time
+import calendar
 
 try:
     import simplejson as json
@@ -15,7 +15,7 @@ except ImportError:
 from celery.beat import Scheduler, ScheduleEntry
 from celery.utils.log import get_logger
 from celery.signals import beat_init
-from celery.utils.timeutils import humanize_seconds
+from celery.utils.timeutils import humanize_seconds, maybe_make_aware
 from celery.app import app_or_default
 
 from redis.client import StrictRedis
@@ -54,7 +54,11 @@ logger = get_logger(__name__)
 
 
 def to_timestamp(dt):
-    return time.mktime(dt.timetuple())
+    return calendar.timegm(maybe_make_aware(dt).timetuple())
+
+
+def from_timestamp(ts):
+    return datetime.utcfromtimestamp(ts)
 
 
 class RedBeatSchedulerEntry(ScheduleEntry):
