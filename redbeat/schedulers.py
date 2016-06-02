@@ -27,7 +27,7 @@ def add_defaults(app=None):
     app = app_or_default(app)
 
     app.add_defaults({
-        'REDBEAT_REDIS_URL': app.conf['BROKER_URL'],
+        'REDBEAT_REDIS_URL': app.conf.get('REDBEAT_REDIS_URL', app.conf['BROKER_URL']),
         'REDBEAT_KEY_PREFIX': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:'),
         'REDBEAT_SCHEDULE_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':schedule',
         'REDBEAT_STATICS_KEY': app.conf.get('REDBEAT_KEY_PREFIX', 'redbeat:') + ':statics',
@@ -89,10 +89,16 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def due_at(self):
+        # never run => due now
         if self.last_run_at == datetime.min:
             return self._default_now()
 
         delta = self.schedule.remaining_estimate(self.last_run_at)
+
+        # overdue => due now
+        if delta.total_seconds() < 0:
+            return self._default_now()
+
         return self.last_run_at + delta
 
     @property
@@ -102,6 +108,10 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     @property
     def score(self):
         return to_timestamp(self.due_at)
+
+    @property
+    def rank(self):
+        return redis(self.app).zrank(self.app.conf.REDBEAT_SCHEDULE_KEY, self.key)
 
     def save(self):
         definition = {
