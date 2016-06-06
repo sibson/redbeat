@@ -5,7 +5,6 @@ from basecase import RedBeatCase
 
 from redbeat import RedBeatSchedulerEntry
 from redbeat.decoder import RedBeatJSONDecoder, RedBeatJSONEncoder
-from redbeat.schedulers import to_timestamp, from_timestamp
 
 
 class test_RedBeatEntry(RedBeatCase):
@@ -111,15 +110,3 @@ class test_RedBeatEntry(RedBeatCase):
 
         self.assertLess(last_run_at, due_at)
         self.assertGreater(due_at, before)
-
-    def test_score(self):
-        run_every = 61*60
-        entry = self.create_entry(run_every=run_every)
-        entry = entry._next_instance()
-
-        score = entry.score
-        expected = entry.last_run_at + timedelta(seconds=run_every)
-        expected = expected.replace(microsecond=0)  # discard microseconds, lost in timestamp
-
-        self.assertEqual(score, to_timestamp(expected))
-        self.assertEqual(expected, from_timestamp(score))
