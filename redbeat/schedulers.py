@@ -5,7 +5,7 @@
 
 
 from datetime import datetime
-import calendar
+import time
 
 try:
     import simplejson as json
@@ -54,11 +54,11 @@ logger = get_logger(__name__)
 
 
 def to_timestamp(dt):
-    return calendar.timegm(maybe_make_aware(dt).timetuple())
+    return time.mktime(dt.timetuple())
 
 
 def from_timestamp(ts):
-    return datetime.utcfromtimestamp(ts)
+    return datetime.fromtimestamp(ts)
 
 
 class RedBeatSchedulerEntry(ScheduleEntry):
