@@ -5,4 +5,3 @@ nose
 pytest
 pytest-cov
 redis
-pytest-capturelog
