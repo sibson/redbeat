@@ -1,6 +1,7 @@
 celery
 fakeredis
 mock
+nose
 pytest
 pytest-cov
 redis
