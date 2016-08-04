@@ -23,9 +23,10 @@ class test_RedBeatEntry(RedBeatCase):
             'options': {},
             'enabled': True,
         }
+        expected_key = (self.app.conf.REDBEAT_KEY_PREFIX + 'test').encode('utf-8')
 
         redis = self.app.redbeat_redis
-        value = redis.hget(self.app.conf.REDBEAT_KEY_PREFIX + 'test', 'definition')
+        value = redis.hget(expected_key, 'definition').decode('utf8')
         self.assertEqual(expected, json.loads(value, cls=RedBeatJSONDecoder))
         self.assertEqual(redis.zrank(self.app.conf.REDBEAT_SCHEDULE_KEY, e.key), 0)
         self.assertEqual(redis.zscore(self.app.conf.REDBEAT_SCHEDULE_KEY, e.key), e.score)
