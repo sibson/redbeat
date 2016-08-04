@@ -3,6 +3,7 @@
 # of the License at http://www.apache.org/licenses/LICENSE-2.0
 # Copyright 2015 Marc Sibson
 
+from __future__ import absolute_import
 
 from datetime import datetime
 import time
@@ -20,7 +21,7 @@ from celery.app import app_or_default
 
 from redis.client import StrictRedis
 
-from decoder import RedBeatJSONEncoder, RedBeatJSONDecoder
+from .decoder import RedBeatJSONEncoder, RedBeatJSONDecoder
 
 
 def add_defaults(app=None):
@@ -74,12 +75,14 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     def from_key(key, app=None):
         data = redis(app).hgetall(key)
 
-        definition = json.loads(data.get('definition', '{}'), cls=RedBeatJSONDecoder)
+        definition = json.loads(data.get(b'definition', b'{}').decode('utf-8'),
+                                cls=RedBeatJSONDecoder)
         if not definition:
             raise KeyError(key)
 
+
         entry = RedBeatSchedulerEntry(app=app, **definition)
-        meta = json.loads(data.get('meta', '{}'), cls=RedBeatJSONDecoder)
+        meta = json.loads(data.get(b'meta', b'{}').decode('utf-8'), cls=RedBeatJSONDecoder)
         entry.last_run_at = meta.get('last_run_at', datetime.min)
         entry.total_run_count = meta.get('total_run_count', 0)
 
@@ -103,7 +106,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def key(self):
-        return app_or_default(self.app).conf['REDBEAT_KEY_PREFIX'] + self.name
+        return (app_or_default(self.app).conf['REDBEAT_KEY_PREFIX'] + self.name).encode('utf-8')
 
     @property
     def score(self):
@@ -214,7 +217,7 @@ class RedBeatScheduler(Scheduler):
                 continue
 
             entry.save()  # store into redis
-            logger.debug(unicode(entry))
+            logger.debug("Stored entry: %s", entry)
 
     def reserve(self, entry):
         new_entry = next(entry)
