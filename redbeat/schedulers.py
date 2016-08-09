@@ -195,7 +195,9 @@ class RedBeatScheduler(Scheduler):
                        for key in client.smembers(self.app.conf.REDBEAT_STATICS_KEY))
         removed = previous.difference(self.app.conf.CELERYBEAT_SCHEDULE.keys())
         for name in removed:
+            logger.debug("Removing old schedule entry '%s'.", name)
             RedBeatSchedulerEntry(name, app=self.app).delete()
+            client.srem(self.app.conf.REDBEAT_STATICS_KEY, name)
 
         # setup statics
         self.install_default_entries(self.app.conf.CELERYBEAT_SCHEDULE)
