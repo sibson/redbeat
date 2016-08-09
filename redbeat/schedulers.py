@@ -16,7 +16,7 @@ except ImportError:
 from celery.beat import Scheduler, ScheduleEntry
 from celery.utils.log import get_logger
 from celery.signals import beat_init
-from celery.utils.timeutils import humanize_seconds, maybe_make_aware
+from celery.utils.timeutils import humanize_seconds
 from celery.app import app_or_default
 
 from redis.client import StrictRedis
@@ -79,7 +79,6 @@ class RedBeatSchedulerEntry(ScheduleEntry):
                                 cls=RedBeatJSONDecoder)
         if not definition:
             raise KeyError(key)
-
 
         entry = RedBeatSchedulerEntry(app=app, **definition)
         meta = json.loads(data.get(b'meta', b'{}').decode('utf-8'), cls=RedBeatJSONDecoder)
