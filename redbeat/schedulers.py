@@ -191,11 +191,11 @@ class RedBeatScheduler(Scheduler):
     def setup_schedule(self):
         # cleanup old static entries
         client = redis(self.app)
-        previous = client.smembers(self.app.conf.REDBEAT_STATICS_KEY)
-        current = set(self.app.conf.CELERYBEAT_SCHEDULE.keys())
-        removed = previous - current
+        previous = set(key.decode('utf-8')
+                       for key in client.smembers(self.app.conf.REDBEAT_STATICS_KEY))
+        removed = previous.difference(self.app.conf.CELERYBEAT_SCHEDULE.keys())
         for name in removed:
-            RedBeatSchedulerEntry(name).delete()
+            RedBeatSchedulerEntry(name, app=self.app).delete()
 
         # setup statics
         self.install_default_entries(self.app.conf.CELERYBEAT_SCHEDULE)
