@@ -4,7 +4,7 @@ import json
 from basecase import RedBeatCase
 
 from redbeat import RedBeatSchedulerEntry
-from redbeat.decoder import RedBeatJSONDecoder, RedBeatJSONEncoder
+from redbeat.decoder import RedBeatJSONDecoder
 from redbeat.schedulers import to_timestamp, from_timestamp
 
 
