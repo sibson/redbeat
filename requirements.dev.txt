@@ -1,7 +1,8 @@
 celery
 fakeredis
 mock
+nose
 pytest
+pytest-catchlog
 pytest-cov
 redis
-pytest-capturelog
