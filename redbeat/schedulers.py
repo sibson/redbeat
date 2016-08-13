@@ -189,25 +189,27 @@ class RedBeatScheduler(Scheduler):
         super(RedBeatScheduler, self).__init__(app, **kwargs)
 
     def setup_schedule(self):
-        # cleanup old static entries
+        # cleanup old static schedule entries
         client = redis(self.app)
         previous = set(key.decode('utf-8')
                        for key in client.smembers(self.app.conf.REDBEAT_STATICS_KEY))
         removed = previous.difference(self.app.conf.CELERYBEAT_SCHEDULE.keys())
         for name in removed:
-            logger.debug("Removing old schedule entry '%s'.", name)
-            RedBeatSchedulerEntry(name, app=self.app).delete()
-            client.srem(self.app.conf.REDBEAT_STATICS_KEY, name)
+            logger.debug("Removing old static schedule entry '%s'.", name)
+            with client.pipeline() as pipe:
+                RedBeatSchedulerEntry(name, app=self.app).delete()
+                pipe.srem(self.app.conf.REDBEAT_STATICS_KEY, name)
+                pipe.execute()
 
-        # setup statics
+        # setup static schedule entries
         self.install_default_entries(self.app.conf.CELERYBEAT_SCHEDULE)
-        if not self.app.conf.CELERYBEAT_SCHEDULE:
-            return
+        if self.app.conf.CELERYBEAT_SCHEDULE:
+            self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
 
-        self.update_from_dict(self.app.conf.CELERYBEAT_SCHEDULE)
-
-        # track static entries
-        client.sadd(self.app.conf.REDBEAT_STATICS_KEY, *self.app.conf.CELERYBEAT_SCHEDULE.keys())
+            # keep track of static schedule entries,
+            # so we notice when any are removed at next startup
+            client.sadd(self.app.conf.REDBEAT_STATICS_KEY,
+                        *self.app.conf.CELERYBEAT_SCHEDULE.keys())
 
     def update_from_dict(self, dict_):
         for name, entry in dict_.items():
