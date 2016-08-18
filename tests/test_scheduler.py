@@ -65,10 +65,10 @@ class test_RedBeatScheduler(RedBeatCase):
         redis = self.app.redbeat_redis
 
         self.assertIn('test', s.schedule)
-        self.assertIn(b'test', redis.smembers(conf.REDBEAT_STATICS_KEY))
+        self.assertIn('test', redis.smembers(conf.REDBEAT_STATICS_KEY))
 
         conf.CELERYBEAT_SCHEDULE = {}
         s.setup_schedule()
 
         self.assertNotIn('test', s.schedule)
-        self.assertNotIn(b'test', redis.smembers(conf.REDBEAT_STATICS_KEY))
+        self.assertNotIn('test', redis.smembers(conf.REDBEAT_STATICS_KEY))
