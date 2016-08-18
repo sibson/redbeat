@@ -40,7 +40,7 @@ class test_RedBeatEntry(RedBeatCase):
 
         loaded = RedBeatSchedulerEntry.from_key(initial.key, self.app)
         self.assertEqual(initial.task, loaded.task)
-        self.assertEqual(loaded.last_run_at, datetime.min)
+        self.assertIsNone(loaded.last_run_at)
 
     def test_next(self):
         initial = self.create_entry().save()
