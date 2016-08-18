@@ -41,7 +41,8 @@ def redis(app=None):
     app = app_or_default(app)
 
     if not hasattr(app, 'redbeat_redis') or app.redbeat_redis is None:
-        app.redbeat_redis = StrictRedis.from_url(app.conf.REDBEAT_REDIS_URL)
+        app.redbeat_redis = StrictRedis.from_url(app.conf.REDBEAT_REDIS_URL,
+                                                 decode_responses=True)
 
     return app.redbeat_redis
 
@@ -75,13 +76,12 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     def from_key(key, app=None):
         data = redis(app).hgetall(key)
 
-        definition = json.loads(data.get(b'definition', b'{}').decode('utf-8'),
-                                cls=RedBeatJSONDecoder)
+        definition = json.loads(data.get('definition', '{}'), cls=RedBeatJSONDecoder)
         if not definition:
             raise KeyError(key)
 
         entry = RedBeatSchedulerEntry(app=app, **definition)
-        meta = json.loads(data.get(b'meta', b'{}').decode('utf-8'), cls=RedBeatJSONDecoder)
+        meta = json.loads(data.get('meta', '{}'), cls=RedBeatJSONDecoder)
         entry.last_run_at = meta.get('last_run_at', datetime.min)
         entry.total_run_count = meta.get('total_run_count', 0)
 
@@ -105,7 +105,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def key(self):
-        return (app_or_default(self.app).conf['REDBEAT_KEY_PREFIX'] + self.name).encode('utf-8')
+        return app_or_default(self.app).conf['REDBEAT_KEY_PREFIX'] + self.name
 
     @property
     def score(self):
