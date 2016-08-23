@@ -52,3 +52,23 @@ class test_RedBeatScheduler(RedBeatCase):
 
         self.assertNotIn(up_next2.name, schedule)
         self.assertNotIn(way_out.name, schedule)
+
+    def test_old_static_entries_are_removed(self):
+        conf = self.app.conf
+        conf.CELERYBEAT_SCHEDULE = {
+            'test': {
+                'task': 'test',
+                'schedule': mocked_schedule(42)
+            }
+        }
+        s = self.create_scheduler()
+        redis = self.app.redbeat_redis
+
+        self.assertIn('test', s.schedule)
+        self.assertIn('test', redis.smembers(conf.REDBEAT_STATICS_KEY))
+
+        conf.CELERYBEAT_SCHEDULE = {}
+        s.setup_schedule()
+
+        self.assertNotIn('test', s.schedule)
+        self.assertNotIn('test', redis.smembers(conf.REDBEAT_STATICS_KEY))
