@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-from datetime import datetime
+from datetime import datetime, MINYEAR
 import time
 
 try:
@@ -82,7 +82,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
         entry = RedBeatSchedulerEntry(app=app, **definition)
         meta = json.loads(data.get('meta', '{}'), cls=RedBeatJSONDecoder)
-        entry.last_run_at = meta.get('last_run_at', datetime.min)
+        entry.last_run_at = meta.get('last_run_at')
         entry.total_run_count = meta.get('total_run_count', 0)
 
         definition.update(meta)
@@ -92,7 +92,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     @property
     def due_at(self):
         # never run => due now
-        if self.last_run_at == datetime.min:
+        if self.last_run_at is None:
             return self._default_now()
 
         delta = self.schedule.remaining_estimate(self.last_run_at)
@@ -172,7 +172,8 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         if not self.enabled:
             return False, 5.0  # 5 second delay for re-enable.
 
-        return super(RedBeatSchedulerEntry, self).is_due()
+        return self.schedule.is_due(self.last_run_at or
+                                    datetime(MINYEAR, 1, 1, tzinfo=self.schedule.tz))
 
 
 class RedBeatScheduler(Scheduler):
