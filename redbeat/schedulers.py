@@ -17,6 +17,7 @@ from celery.utils.log import get_logger
 from celery.signals import beat_init
 from celery.utils.timeutils import humanize_seconds
 from celery.app import app_or_default
+from celery.five import values
 
 from redis.client import StrictRedis
 
@@ -253,11 +254,21 @@ class RedBeatScheduler(Scheduler):
 
         return d
 
-    def tick(self, **kwargs):
+    def tick(self, min=min, **kwargs):
         if self.lock:
             logger.debug('beat: Extending lock...')
             redis(self.app).pexpire(self.lock_key, int(self.lock_timeout * 1000))
-        return super(RedBeatScheduler, self).tick(**kwargs)
+
+        remaining_times = []
+        try:
+            for entry in values(self.schedule):
+                next_time_to_run = self.maybe_due(entry, self.publisher)
+                if next_time_to_run:
+                    remaining_times.append(next_time_to_run)
+        except RuntimeError:
+            pass
+
+        return min(remaining_times + [self.max_interval])
 
     def close(self):
         if self.lock:
