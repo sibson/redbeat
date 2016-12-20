@@ -61,7 +61,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     _meta = None
 
     def __init__(self, name=None, task=None, schedule=None, args=None, kwargs=None, enabled=True, **clsargs):
-        super(RedBeatSchedulerEntry, self).__init__(name, task, schedule=schedule,
+        super(RedBeatSchedulerEntry, self).__init__(name=name, task=task, schedule=schedule,
                                                     args=args, kwargs=kwargs, **clsargs)
         self.enabled = enabled
 
@@ -70,20 +70,23 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         if definition is None:
             definition = redis(app).hget(key, 'definition')
 
-        if definition is None:
-            raise KeyError(key)
-
-        definition = json.loads(definition, cls=RedBeatJSONDecoder)
         if not definition:
             raise KeyError(key)
+
+        definition = RedBeatSchedulerEntry.decode_definition(definition)
 
         return definition
 
     @staticmethod
-    def load_meta(key, app=None, meta=None):
-        if meta is None:
-            meta = redis(app).hget(key, 'meta')
+    def decode_definition(definition):
+        return json.loads(definition, cls=RedBeatJSONDecoder)
 
+    @staticmethod
+    def load_meta(key, app=None):
+        return RedBeatSchedulerEntry.decode_meta(redis(app).hget(key, 'meta'))
+
+    @staticmethod
+    def decode_meta(meta, app=None):
         if not meta:
             return {'last_run_at': datetime.min}
 
@@ -96,8 +99,11 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             pipe.hget(key, 'meta')
             definition, meta = pipe.execute()
 
-        definition = RedBeatSchedulerEntry.load_definition(key, definition=definition or '{}')
-        meta = RedBeatSchedulerEntry.load_meta(key, meta=meta or '{}')
+        if not definition:
+            raise KeyError(key)
+
+        definition = RedBeatSchedulerEntry.decode_definition(definition)
+        meta = RedBeatSchedulerEntry.decode_meta(meta)
         definition.update(meta)
 
         return RedBeatSchedulerEntry(app=app, **definition)
@@ -248,8 +254,6 @@ class RedBeatScheduler(Scheduler):
                 continue
 
             d[entry.name] = entry
-
-        logger.debug('Processing tasks')
 
         return d
 
