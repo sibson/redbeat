@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta
 
 from celery.schedules import schedule
-from celery.utils.timeutils import maybe_timedelta
+try:  # celery 3.x
+    from celery.utils.timeutils import maybe_timedelta
+except ImportError:  # celery 4.0
+    from celery.utils.time import maybe_timedelta
 
 from mock import patch, ANY
 
@@ -25,6 +28,7 @@ due_next = mocked_schedule(1)
 
 
 class RedBeatSchedulerTestBase(RedBeatCase):
+
     def setUp(self):
         super(RedBeatSchedulerTestBase, self).setUp()
         self.s = RedBeatScheduler(app=self.app)
@@ -75,9 +79,9 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
 
         with patch.object(self.s, 'send_task') as send_task:
             sleep = self.s.tick()
-            # debateable if we should be calling the task that isn't due quite yet
-            #self.assertFalse(send_task.called)
-            send_task.assert_called_with(e.task, e.args, e.kwargs, publisher=ANY, **e.options)
+            send_task.assert_called_with(e.task, e.args, e.kwargs, **self.s._maybe_due_kwargs)
+            # would be more correct to
+            # self.assertFalse(send_task.called)
 
         self.assertEqual(sleep, 1.0)
 
@@ -105,6 +109,6 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
 
         with patch.object(self.s, 'send_task') as send_task:
             sleep = self.s.tick()
-            send_task.assert_called_with(e.task, e.args, e.kwargs, publisher=ANY, **e.options)
+            send_task.assert_called_with(e.task, e.args, e.kwargs, **self.s._maybe_due_kwargs)
 
         self.assertEqual(sleep, 1.0)

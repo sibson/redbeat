@@ -15,9 +15,13 @@ except ImportError:
 from celery.beat import Scheduler, ScheduleEntry
 from celery.utils.log import get_logger
 from celery.signals import beat_init
-from celery.utils.timeutils import humanize_seconds
+try:  # celery 3.x
+    from celery.utils.timeutils import humanize_seconds
+except ImportError:  # celery 4.x
+    from celery.utils.time import humanize_seconds
 from celery.app import app_or_default
 from celery.five import values
+from kombu.utils.objects import cached_property
 
 from redis.client import StrictRedis
 
@@ -258,6 +262,19 @@ class RedBeatScheduler(Scheduler):
 
         return d
 
+    def maybe_due(self, entry, **kwargs):
+        is_due, next_time_to_run = entry.is_due()
+
+        if is_due:
+            logger.info('Scheduler: Sending due task %s (%s)', entry.name, entry.task)
+            try:
+                result = self.apply_async(entry, **kwargs)
+            except Exception, exc:
+                logger.exception('Message Error: %s', exc)
+            else:
+                logger.debug('%s sent. id->%s', entry.task, result.id)
+        return next_time_to_run
+
     def tick(self, min=min, **kwargs):
         if self.lock:
             logger.debug('beat: Extending lock...')
@@ -266,7 +283,7 @@ class RedBeatScheduler(Scheduler):
         remaining_times = []
         try:
             for entry in values(self.schedule):
-                next_time_to_run = self.maybe_due(entry, self.publisher)
+                next_time_to_run = self.maybe_due(entry, **self._maybe_due_kwargs)
                 if next_time_to_run:
                     remaining_times.append(next_time_to_run)
         except RuntimeError:
@@ -289,6 +306,13 @@ class RedBeatScheduler(Scheduler):
                 self.lock_key, humanize_seconds(self.lock_timeout), self.lock_timeout))
         return '\n'.join(info)
 
+    @cached_property
+    def _maybe_due_kwargs(self):
+        """ handle rename of publisher to producer """
+        try:
+            return {'producer': self.producer}  # celery 4.x
+        except AttributeError:
+            return {'publisher': self.publisher}  # celery 3.x
 
 @beat_init.connect
 def acquire_distributed_beat_lock(sender=None, **kwargs):
