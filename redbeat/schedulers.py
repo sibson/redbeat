@@ -99,7 +99,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     @staticmethod
     def decode_meta(meta, app=None):
         if not meta:
-            return {'last_run_at': datetime.min}
+            return {'last_run_at': None}
 
         return json.loads(meta, cls=RedBeatJSONDecoder)
 
@@ -116,6 +116,10 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         definition = RedBeatSchedulerEntry.decode_definition(definition)
         meta = RedBeatSchedulerEntry.decode_meta(meta)
         definition.update(meta)
+
+        entry = RedBeatSchedulerEntry(app=app, **definition)
+        # celery.ScheduleEntry sets last_run_at = utcnow(), which is confusing and wrong
+        entry.last_run_at = meta['last_run_at']
 
         return entry
 
