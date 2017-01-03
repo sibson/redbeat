@@ -1,7 +1,8 @@
 celery
-fakeredis
+fakeredis>=0.8.1
 mock
+nose
 pytest
+pytest-catchlog
 pytest-cov
 redis
-pytest-capturelog

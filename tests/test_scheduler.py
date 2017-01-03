@@ -112,3 +112,23 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
             send_task.assert_called_with(e.task, e.args, e.kwargs, **self.s._maybe_due_kwargs)
 
         self.assertEqual(sleep, 1.0)
+
+    def test_old_static_entries_are_removed(self):
+        conf = self.app.conf
+        conf.CELERYBEAT_SCHEDULE = {
+            'test': {
+                'task': 'test',
+                'schedule': mocked_schedule(42)
+            }
+        }
+        s = self.create_scheduler()
+        redis = self.app.redbeat_redis
+
+        self.assertIn('test', s.schedule)
+        self.assertIn('test', redis.smembers(conf.REDBEAT_STATICS_KEY))
+
+        conf.CELERYBEAT_SCHEDULE = {}
+        s.setup_schedule()
+
+        self.assertNotIn('test', s.schedule)
+        self.assertNotIn('test', redis.smembers(conf.REDBEAT_STATICS_KEY))
