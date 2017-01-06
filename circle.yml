@@ -8,4 +8,4 @@ dependencies:
 
 test:
     override:
-        - bin/circleci-tests
+        - tox -- --cov=redbeat --junitxml=$CIRCLE_TEST_REPORTS/unittests.xml 
