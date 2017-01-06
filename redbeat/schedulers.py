@@ -104,8 +104,8 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
         return json.loads(meta, cls=RedBeatJSONDecoder)
 
-    @staticmethod
-    def from_key(key, app=None):
+    @classmethod
+    def from_key(cls, key, app=None):
         with redis(app).pipeline() as pipe:
             pipe.hget(key, 'definition')
             pipe.hget(key, 'meta')
@@ -114,11 +114,11 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         if not definition:
             raise KeyError(key)
 
-        definition = RedBeatSchedulerEntry.decode_definition(definition)
-        meta = RedBeatSchedulerEntry.decode_meta(meta)
+        definition = cls.decode_definition(definition)
+        meta = cls.decode_meta(meta)
         definition.update(meta)
 
-        entry = RedBeatSchedulerEntry(app=app, **definition)
+        entry = cls(app=app, **definition)
         # celery.ScheduleEntry sets last_run_at = utcnow(), which is confusing and wrong
         entry.last_run_at = meta['last_run_at']
 
@@ -300,7 +300,7 @@ class RedBeatScheduler(Scheduler):
             logger.info('Scheduler: Sending due task %s (%s)', entry.name, entry.task)
             try:
                 result = self.apply_async(entry, **kwargs)
-            except Exception, exc:
+            except Exception as exc:
                 logger.exception('Message Error: %s', exc)
             else:
                 logger.debug('%s sent. id->%s', entry.task, result.id)
@@ -318,7 +318,7 @@ class RedBeatScheduler(Scheduler):
                 if next_time_to_run:
                     remaining_times.append(next_time_to_run)
         except RuntimeError:
-            pass
+            logger.debug('beat: RuntimeError', exc_info=True)
 
         return min(remaining_times + [self.max_interval])
 
