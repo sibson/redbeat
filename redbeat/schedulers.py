@@ -18,11 +18,12 @@ from celery.utils.log import get_logger
 from celery.signals import beat_init
 try:  # celery 3.x
     from celery.utils.timeutils import humanize_seconds
+    from kombu.utils import cached_property
 except ImportError:  # celery 4.x
     from celery.utils.time import humanize_seconds
+    from kombu.utils.objects import cached_property
 from celery.app import app_or_default
 from celery.five import values
-from kombu.utils.objects import cached_property
 
 from redis.client import StrictRedis
 
