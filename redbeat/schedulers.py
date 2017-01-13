@@ -16,8 +16,14 @@ except ImportError:
 from celery.beat import Scheduler, ScheduleEntry
 from celery.utils.log import get_logger
 from celery.signals import beat_init
-from celery.utils.timeutils import humanize_seconds
+try:  # celery 3.x
+    from celery.utils.timeutils import humanize_seconds
+    from kombu.utils import cached_property
+except ImportError:  # celery 4.x
+    from celery.utils.time import humanize_seconds
+    from kombu.utils.objects import cached_property
 from celery.app import app_or_default
+from celery.five import values
 
 from redis.client import StrictRedis
 
@@ -66,26 +72,55 @@ def from_timestamp(ts):
 class RedBeatSchedulerEntry(ScheduleEntry):
     _meta = None
 
-    def __init__(self, name=None, task=None, schedule=None, args=None, kwargs=None,
-                 enabled=True, **clsargs):
-        super(RedBeatSchedulerEntry, self).__init__(name, task, schedule=schedule,
+    def __init__(self, name=None, task=None, schedule=None, args=None, kwargs=None, enabled=True, **clsargs):
+        super(RedBeatSchedulerEntry, self).__init__(name=name, task=task, schedule=schedule,
                                                     args=args, kwargs=kwargs, **clsargs)
         self.enabled = enabled
 
     @staticmethod
-    def from_key(key, app=None):
-        data = redis(app).hgetall(key)
+    def load_definition(key, app=None, definition=None):
+        if definition is None:
+            definition = redis(app).hget(key, 'definition')
 
-        definition = json.loads(data.get('definition', '{}'), cls=RedBeatJSONDecoder)
         if not definition:
             raise KeyError(key)
 
-        entry = RedBeatSchedulerEntry(app=app, **definition)
-        meta = json.loads(data.get('meta', '{}'), cls=RedBeatJSONDecoder)
-        entry.last_run_at = meta.get('last_run_at')
-        entry.total_run_count = meta.get('total_run_count', 0)
+        definition = RedBeatSchedulerEntry.decode_definition(definition)
 
+        return definition
+
+    @staticmethod
+    def decode_definition(definition):
+        return json.loads(definition, cls=RedBeatJSONDecoder)
+
+    @staticmethod
+    def load_meta(key, app=None):
+        return RedBeatSchedulerEntry.decode_meta(redis(app).hget(key, 'meta'))
+
+    @staticmethod
+    def decode_meta(meta, app=None):
+        if not meta:
+            return {'last_run_at': None}
+
+        return json.loads(meta, cls=RedBeatJSONDecoder)
+
+    @classmethod
+    def from_key(cls, key, app=None):
+        with redis(app).pipeline() as pipe:
+            pipe.hget(key, 'definition')
+            pipe.hget(key, 'meta')
+            definition, meta = pipe.execute()
+
+        if not definition:
+            raise KeyError(key)
+
+        definition = cls.decode_definition(definition)
+        meta = cls.decode_meta(meta)
         definition.update(meta)
+
+        entry = cls(app=app, **definition)
+        # celery.ScheduleEntry sets last_run_at = utcnow(), which is confusing and wrong
+        entry.last_run_at = meta['last_run_at']
 
         return entry
 
@@ -256,15 +291,36 @@ class RedBeatScheduler(Scheduler):
 
             d[entry.name] = entry
 
-        logger.debug('Processing tasks')
-
         return d
 
-    def tick(self, **kwargs):
+    def maybe_due(self, entry, **kwargs):
+        is_due, next_time_to_run = entry.is_due()
+
+        if is_due:
+            logger.info('Scheduler: Sending due task %s (%s)', entry.name, entry.task)
+            try:
+                result = self.apply_async(entry, **kwargs)
+            except Exception as exc:
+                logger.exception('Message Error: %s', exc)
+            else:
+                logger.debug('%s sent. id->%s', entry.task, result.id)
+        return next_time_to_run
+
+    def tick(self, min=min, **kwargs):
         if self.lock:
             logger.debug('beat: Extending lock...')
             redis(self.app).pexpire(self.lock_key, int(self.lock_timeout * 1000))
-        return super(RedBeatScheduler, self).tick(**kwargs)
+
+        remaining_times = []
+        try:
+            for entry in values(self.schedule):
+                next_time_to_run = self.maybe_due(entry, **self._maybe_due_kwargs)
+                if next_time_to_run:
+                    remaining_times.append(next_time_to_run)
+        except RuntimeError:
+            logger.debug('beat: RuntimeError', exc_info=True)
+
+        return min(remaining_times + [self.max_interval])
 
     def close(self):
         if self.lock:
@@ -281,6 +337,13 @@ class RedBeatScheduler(Scheduler):
                 self.lock_key, humanize_seconds(self.lock_timeout), self.lock_timeout))
         return '\n'.join(info)
 
+    @cached_property
+    def _maybe_due_kwargs(self):
+        """ handle rename of publisher to producer """
+        try:
+            return {'producer': self.producer}  # celery 4.x
+        except AttributeError:
+            return {'publisher': self.publisher}  # celery 3.x
 
 @beat_init.connect
 def acquire_distributed_beat_lock(sender=None, **kwargs):

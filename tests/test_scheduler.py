@@ -1,7 +1,12 @@
 from datetime import datetime, timedelta
 
 from celery.schedules import schedule
-from celery.utils.timeutils import maybe_timedelta
+try:  # celery 3.x
+    from celery.utils.timeutils import maybe_timedelta
+except ImportError:  # celery 4.0
+    from celery.utils.time import maybe_timedelta
+
+from mock import patch, ANY
 
 from basecase import RedBeatCase
 from redbeat import RedBeatScheduler
@@ -19,29 +24,35 @@ class mocked_schedule(schedule):
 
 
 due_now = mocked_schedule(0)
+due_next = mocked_schedule(1)
 
 
-class test_RedBeatScheduler(RedBeatCase):
+class RedBeatSchedulerTestBase(RedBeatCase):
 
-    def create_scheduler(self):
-        return RedBeatScheduler(app=self.app)
+    def setUp(self):
+        super(RedBeatSchedulerTestBase, self).setUp()
+        self.s = RedBeatScheduler(app=self.app)
+        self.due_later = mocked_schedule(self.s.max_interval * 10)
+        self.send_task = patch.object(self.s, 'send_task')
+        self.send_task.start()
+
+    def tearDown(self):
+        self.send_task.stop()
+
+
+class test_RedBeatScheduler_schedule(RedBeatSchedulerTestBase):
 
     def test_empty_schedule(self):
-        s = self.create_scheduler()
-
-        self.assertEqual(s.schedule, {})
-        sleep = s.tick()
-        self.assertEqual(sleep, s.max_interval)
+        self.assertEqual(self.s.schedule, {})
 
     def test_schedule_includes_current_and_next(self):
-        s = self.create_scheduler()
-
         due = self.create_entry(name='due', s=due_now).save()
-        up_next = self.create_entry(name='up_next', s=mocked_schedule(1)).save()
-        up_next2 = self.create_entry(name='up_next2', s=mocked_schedule(1)).save()
-        way_out = self.create_entry(name='way_out', s=mocked_schedule(s.max_interval * 10)).save()
+        up_next = self.create_entry(name='up_next', s=due_next).save()
+        up_next2 = self.create_entry(name='up_next2', s=due_next).save()
+        later = self.create_entry(name='later', s=self.due_later).save()
 
-        schedule = s.schedule
+        schedule = self.s.schedule
+
         self.assertEqual(len(schedule), 2)
 
         self.assertIn(due.name, schedule)
@@ -51,24 +62,74 @@ class test_RedBeatScheduler(RedBeatCase):
         self.assertEqual(up_next.key, schedule[up_next.name].key)
 
         self.assertNotIn(up_next2.name, schedule)
-        self.assertNotIn(way_out.name, schedule)
+        self.assertNotIn(later.name, schedule)
+
+
+class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
+
+    def test_empty(self):
+        with patch.object(self.s, 'send_task') as send_task:
+            sleep = self.s.tick()
+            self.assertFalse(send_task.called)
+
+        self.assertEqual(sleep, self.s.max_interval)
+
+    def test_due_next_never_run(self):
+        e = self.create_entry(name='next', s=due_next).save()
+
+        with patch.object(self.s, 'send_task') as send_task:
+            sleep = self.s.tick()
+            send_task.assert_called_with(e.task, e.args, e.kwargs, **self.s._maybe_due_kwargs)
+            # would be more correct to
+            # self.assertFalse(send_task.called)
+
+        self.assertEqual(sleep, 1.0)
+
+    def test_due_next_just_ran(self):
+        e = self.create_entry(name='next', s=due_next)
+        e.save().reschedule()
+
+        with patch.object(self.s, 'send_task') as send_task:
+            sleep = self.s.tick()
+            self.assertFalse(send_task.called)
+        self.assertLess(0.8, sleep)
+        self.assertLess(sleep, 1.0)
+
+    def test_due_later_never_run(self):
+        self.create_entry(s=self.due_later).save()
+
+        with patch.object(self.s, 'send_task') as send_task:
+            sleep = self.s.tick()
+            self.assertFalse(send_task.called)
+
+        self.assertEqual(sleep, self.s.max_interval)
+
+    def test_due_now_never_run(self):
+        e = self.create_entry(name='now', s=due_now).save()
+
+        with patch.object(self.s, 'send_task') as send_task:
+            sleep = self.s.tick()
+            send_task.assert_called_with(e.task, e.args, e.kwargs, **self.s._maybe_due_kwargs)
+
+        self.assertEqual(sleep, 1.0)
 
     def test_old_static_entries_are_removed(self):
         conf = self.app.conf
+        redis = self.app.redbeat_redis
+
         conf.CELERYBEAT_SCHEDULE = {
             'test': {
                 'task': 'test',
                 'schedule': mocked_schedule(42)
             }
         }
-        s = self.create_scheduler()
-        redis = self.app.redbeat_redis
+        self.s.setup_schedule()
 
-        self.assertIn('test', s.schedule)
+        self.assertIn('test', self.s.schedule)
         self.assertIn('test', redis.smembers(conf.REDBEAT_STATICS_KEY))
 
         conf.CELERYBEAT_SCHEDULE = {}
-        s.setup_schedule()
+        self.s.setup_schedule()
 
-        self.assertNotIn('test', s.schedule)
+        self.assertNotIn('test', self.s.schedule)
         self.assertNotIn('test', redis.smembers(conf.REDBEAT_STATICS_KEY))
