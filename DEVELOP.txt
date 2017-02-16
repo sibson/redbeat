@@ -3,16 +3,11 @@
 
 Release
 ---------
+ - bump version and release to pypi
 
- - bump version in setup.py
- - tag and upload
-
-    git ci -m 'bump version' setup.py
-    git tag -a v$(python setup.py --version) -m "Release $(python setup.py --version)"
-    git push --tags
-    python setup.py sdist
-    twine upload -- dist/celery-redbeat-$(python setup.py --version).tar.gz
+    make version-NEWVERSION
+    make upload
 
  - create release in GitHub
 
-    open https://github.com/sibson/redbeat/releases/new
+    open https://github.com/sibson/redbeat/tags
