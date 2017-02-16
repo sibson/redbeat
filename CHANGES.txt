@@ -1,2 +1,7 @@
-0.5.0 (unreleased)
+0.10.0 (unreleased)
 ----------------------
+ - minor breaking changes due to reworked API
+ - celery 4.x support
+ - python 3 compatability, thanks Christopher Arndt
+ - be more consistent about using UTC everywhere
+ - various bugfixes, thanks Christopher Arndt
