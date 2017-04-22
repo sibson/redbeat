@@ -1,7 +1,5 @@
-.. image:: https://img.shields.io/pypi/v/celery-redbeat.svg
-   :width: 10%
-.. image:: https://img.shields.io/circleci/project/github/sibson/redbeat.svg   :target: 
-   :width: 10%
+.. image:: https://img.shields.io/pypi/v/celery-redbeat.svg :width: 10%
+.. image:: https://img.shields.io/circleci/project/github/sibson/redbeat.svg   :target: :width: 10%
 
 RedBeat
 =========
