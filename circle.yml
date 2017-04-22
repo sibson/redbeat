@@ -2,11 +2,13 @@ machine:
     services:
         - redis
     post:
-        - pyenv global 2.7.11 3.6.1
+        - pyenv install 2.7.11
+        - pyenv install 3.5.1
 
 dependencies:
   override:
     - pip install tox tox-pyenv
+    - pyenv global 2.7.11 3.5.1
 
 test:
     override:
