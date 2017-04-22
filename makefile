@@ -6,7 +6,6 @@ version-%:
 	git ci setup.py -m"bump version to $*"
 
 
-
 release: release-test release-tag upload
 
 release-test:
