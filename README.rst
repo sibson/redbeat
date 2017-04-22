@@ -1,12 +1,10 @@
 .. image:: https://img.shields.io/pypi/v/celery-redbeat.svg
    :target: https://pypi.python.org/pypi/celery-redbeat
    :alt: PyPI
-   :width: 20%
 
 .. image:: https://img.shields.io/circleci/project/github/sibson/redbeat.svg
    :target: https://circleci.com/gh/sibson/redbeat/
    :alt: Circle CI
-   :width: 20%
 
 RedBeat
 =========
