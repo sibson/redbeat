@@ -2,7 +2,7 @@ machine:
     services:
         - redis
     post:
-        - pyenv global 2.7.12 3.6.1
+        - pyenv global 2.7.11 3.6.1
 
 dependencies:
   override:
