@@ -14,7 +14,7 @@ except ImportError:  # celery 4.x
             self.setup()
 
 from fakeredis import FakeStrictRedis
-from redbeat.schedulers import RedBeatConfig, RedBeatSchedulerEntry
+from redbeat.schedulers import RedBeatSchedulerEntry
 
 
 class RedBeatCase(AppCase):
@@ -26,7 +26,6 @@ class RedBeatCase(AppCase):
         })
         self.app.redbeat_redis = FakeStrictRedis(decode_responses=True)
         self.app.redbeat_redis.flushdb()
-        self.app.redbeat_conf = RedBeatConfig(self.app)
 
     def create_entry(self, name=None, task=None, s=None, run_every=60, **kwargs):
 

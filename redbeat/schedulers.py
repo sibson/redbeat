@@ -35,9 +35,25 @@ from .decoder import RedBeatJSONEncoder, RedBeatJSONDecoder
 CELERY_4_OR_GREATER = StrictVersion(celery_version) >= StrictVersion('4.0')
 
 
+def ensure_conf(app):
+    """
+    Ensure for the given app the the redbeat_conf
+    attribute is set to an instance of the RedBeatConfig
+    class.
+    """
+    name = 'redbeat_conf'
+    app = app_or_default(app)
+    try:
+        config = getattr(app, name)
+    except AttributeError:
+        config = RedBeatConfig(app)
+        setattr(app, name, config)
+    return config
+
+
 def redis(app=None):
     app = app_or_default(app)
-    conf = getattr(app, 'redbeat_conf', RedBeatConfig(app))
+    conf = ensure_conf(app)
     if not hasattr(app, 'redbeat_redis') or app.redbeat_redis is None:
         app.redbeat_redis = StrictRedis.from_url(conf.redis_url,
                                                  decode_responses=True)
@@ -112,6 +128,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         super(RedBeatSchedulerEntry, self).__init__(name=name, task=task, schedule=schedule,
                                                     args=args, kwargs=kwargs, **clsargs)
         self.enabled = enabled
+        ensure_conf(self.app)
 
     @staticmethod
     def load_definition(key, app=None, definition=None):
@@ -142,6 +159,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @classmethod
     def from_key(cls, key, app=None):
+        ensure_conf(app)
         with redis(app).pipeline() as pipe:
             pipe.hget(key, 'definition')
             pipe.hget(key, 'meta')
@@ -255,7 +273,7 @@ class RedBeatScheduler(Scheduler):
     lock = None
 
     def __init__(self, app, **kwargs):
-        app.redbeat_conf = RedBeatConfig(app)
+        ensure_conf(app)  # set app.redbeat_conf
         self.lock_key = kwargs.pop('lock_key', app.redbeat_conf.lock_key)
         self.lock_timeout = kwargs.pop('lock_timeout', app.redbeat_conf.lock_timeout)
         super(RedBeatScheduler, self).__init__(app, **kwargs)
