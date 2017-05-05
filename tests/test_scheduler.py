@@ -6,7 +6,7 @@ try:  # celery 3.x
 except ImportError:  # celery 4.0
     from celery.utils.time import maybe_timedelta
 
-from mock import patch, ANY
+from mock import patch
 
 from basecase import RedBeatCase
 from redbeat import RedBeatScheduler
@@ -114,22 +114,21 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
         self.assertEqual(sleep, 1.0)
 
     def test_old_static_entries_are_removed(self):
-        conf = self.app.conf
         redis = self.app.redbeat_redis
-
-        conf.CELERYBEAT_SCHEDULE = {
+        schedule = {
             'test': {
                 'task': 'test',
                 'schedule': mocked_schedule(42)
             }
         }
+        self.app.redbeat_conf.schedule = schedule
         self.s.setup_schedule()
 
         self.assertIn('test', self.s.schedule)
-        self.assertIn('test', redis.smembers(conf.REDBEAT_STATICS_KEY))
+        self.assertIn('test', redis.smembers(self.app.redbeat_conf.statics_key))
 
-        conf.CELERYBEAT_SCHEDULE = {}
+        self.app.redbeat_conf.schedule = {}
         self.s.setup_schedule()
 
         self.assertNotIn('test', self.s.schedule)
-        self.assertNotIn('test', redis.smembers(conf.REDBEAT_STATICS_KEY))
+        self.assertNotIn('test', redis.smembers(self.app.redbeat_conf.statics_key))
