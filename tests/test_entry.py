@@ -23,13 +23,13 @@ class test_RedBeatEntry(RedBeatCase):
             'options': {},
             'enabled': True,
         }
-        expected_key = (self.app.conf.REDBEAT_KEY_PREFIX + 'test')
+        expected_key = (self.app.redbeat_conf.key_prefix + 'test')
 
         redis = self.app.redbeat_redis
         value = redis.hget(expected_key, 'definition')
         self.assertEqual(expected, json.loads(value, cls=RedBeatJSONDecoder))
-        self.assertEqual(redis.zrank(self.app.conf.REDBEAT_SCHEDULE_KEY, e.key), 0)
-        self.assertEqual(redis.zscore(self.app.conf.REDBEAT_SCHEDULE_KEY, e.key), e.score)
+        self.assertEqual(redis.zrank(self.app.redbeat_conf.schedule_key, e.key), 0)
+        self.assertEqual(redis.zscore(self.app.redbeat_conf.schedule_key, e.key), e.score)
 
     def test_from_key_nonexistent_key(self):
         with self.assertRaises(KeyError):
@@ -60,7 +60,7 @@ class test_RedBeatEntry(RedBeatCase):
 
         # new entry updated the schedule
         redis = self.app.redbeat_redis
-        self.assertEqual(redis.zscore(self.app.conf.REDBEAT_SCHEDULE_KEY, n.key), n.score)
+        self.assertEqual(redis.zscore(self.app.redbeat_conf.schedule_key, n.key), n.score)
 
     def test_next_only_update_last_run_at(self):
         initial = self.create_entry()
@@ -79,7 +79,7 @@ class test_RedBeatEntry(RedBeatCase):
         exists = self.app.redbeat_redis.exists(initial.key)
         self.assertFalse(exists)
 
-        score = self.app.redbeat_redis.zrank(self.app.conf.REDBEAT_SCHEDULE_KEY, initial.key)
+        score = self.app.redbeat_redis.zrank(self.app.redbeat_conf.schedule_key, initial.key)
         self.assertIsNone(score)
 
     def test_due_at_never_run(self):
@@ -114,7 +114,7 @@ class test_RedBeatEntry(RedBeatCase):
         self.assertGreater(due_at, before)
 
     def test_score(self):
-        run_every = 61*60
+        run_every = 61 * 60
         entry = self.create_entry(run_every=run_every)
         entry = entry._next_instance()
 

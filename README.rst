@@ -1,3 +1,6 @@
+RedBeat
+=======
+
 .. image:: https://img.shields.io/pypi/v/celery-redbeat.svg
    :target: https://pypi.python.org/pypi/celery-redbeat
    :alt: PyPI
@@ -6,54 +9,101 @@
    :target: https://circleci.com/gh/sibson/redbeat/
    :alt: Circle CI
 
-RedBeat
-=========
-`RedBeat <https://github.com/sibson/redbeat>`_ is a `Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_ that stores the scheduled tasks and runtime metadata in `Redis <http://redis.io/>`_.
-
+`RedBeat <https://github.com/sibson/redbeat>`_ is a
+`Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_
+that stores the scheduled tasks and runtime metadata in `Redis <http://redis.io/>`_.
 
 Why RedBeat
---------------
+-----------
 
-  1. Dynamic live task creation and modification, without lengthy downtime
-  2. Externally manage tasks from any language with Redis bindings
-  3. Shared data store; Beat isn't tied to a single drive or machine
-  4. Fast startup even with a large task count
-  5. Prevent accidentally running multiple Beat servers
-
+#. Dynamic live task creation and modification, without lengthy downtime
+#. Externally manage tasks from any language with Redis bindings
+#. Shared data store; Beat isn't tied to a single drive or machine
+#. Fast startup even with a large task count
+#. Prevent accidentally running multiple Beat servers
 
 Getting Started
-------------------
+---------------
 
-Install with pip::
+Install with pip:
 
-    # pip install celery-redbeat
+.. code-block:: console
 
-Configure RedBeat settings in your celery configuration file::
+    pip install celery-redbeat
 
-    REDBEAT_REDIS_URL = "redis://localhost:6379/1"
+Configure RedBeat settings in your Celery configuration file:
 
-Then specify the scheduler when running Celery Beat::
+.. code-block:: python
 
-    $ celery beat -S redbeat.RedBeatScheduler
+    redbeat_redis_url = "redis://localhost:6379/1"
+
+Then specify the scheduler when running Celery Beat:
+
+.. code-block:: console
+
+    celery beat -S redbeat.RedBeatScheduler
 
 RedBeat uses a distributed lock to prevent multiple instances running.
-To disable this feature, set::
+To disable this feature, set:
 
-    REDBEAT_LOCK_KEY = None
+.. code-block:: python
 
+    redbeat_lock_key = None
 
 Configuration
-----------------
-You can add any of the following parameters to your celery configuration::
+--------------
 
-    REDBEAT_REDIS_URL: URL to redis server used to store the schedule
-    REDBEAT_KEY_PREFIX: A prefix for all keys created by RedBeat, default 'redbeat'
-    REDBEAT_LOCK_KEY: Key used to ensure only a single beat instance runs at a time
-    REDBEAT_LOCK_TIMEOUT: Unless refreshed the lock will expire after this time
+You can add any of the following parameters to your Celery configuration
+(see Celery 3.x compatible configuration value names in below).
 
+``redbeat_redis_url``
+~~~~~~~~~~~~~~~~~~~~~
+
+URL to redis server used to store the schedule, defaults to value of
+`broker_url`_.
+
+``redbeat_key_prefix``
+~~~~~~~~~~~~~~~~~~~~~~
+
+A prefix for all keys created by RedBeat, defaults to ``'redbeat'``.
+
+``redbeat_lock_key``
+~~~~~~~~~~~~~~~~~~~~
+
+Key used to ensure only a single beat instance runs at a time,
+defaults to ``'<redbeat_key_prefix>:lock'``.
+
+``redbeat_lock_timeout``
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Unless refreshed the lock will expire after this time, in seconds.
+
+Defaults to five times of the default scheduler's loop interval
+(``300`` seconds), so ``1500`` seconds (``25`` minutes).
+
+See the `beat_max_loop_interval`_ Celery docs about for more information.
+
+.. _`broker_url`: http://docs.celeryproject.org/en/4.0/userguide/configuration.html#std:setting-broker_url
+.. _`beat_max_loop_interval`: http://docs.celeryproject.org/en/4.0/userguide/configuration.html#std:setting-beat_max_loop_interval
+
+Celery 3.x config names
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Here are the old names of the configuration values for use with
+Celery 3.x.
+
+===================================  ==============================================
+**Celery 4.x**                       **Celery 3.x**
+===================================  ==============================================
+``redbeat_redis_url``                ``REDBEAT_REDIS_URL``
+``redbeat_key_prefix``               ``REDBEAT_KEY_PREFIX``
+``redbeat_lock_key``                 ``REDBEAT_LOCK_KEY``
+``redbeat_lock_timeout``             ``REDBEAT_LOCK_TIMEOUT``
+===================================  ==============================================
 
 Design
----------
+------
+
 At its core RedBeat uses a Sorted Set to store the schedule as a priority queue.
 It stores task details using a hash key with the task definition and metadata.
 
@@ -61,26 +111,46 @@ The schedule set contains the task keys sorted by the next scheduled run time.
 
 For each tick of Beat
 
-  1. get list of due keys and due next tick
-  2. retrieve definitions and metadata for all keys from previous step
-  3. update task metadata and reschedule with next run time of task
-  4. call due tasks using async_apply
-  5. calculate time to sleep until start of next tick using remaining tasks
+#. get list of due keys and due next tick
 
+#. retrieve definitions and metadata for all keys from previous step
+
+#. update task metadata and reschedule with next run time of task
+
+#. call due tasks using async_apply
+
+#. calculate time to sleep until start of next tick using remaining tasks
 
 Creating Tasks
-------------------
-You can use the standard CELERYBEAT_SCHEDULE to define static tasks or you can insert tasks
-directly into Redis.
+---------------
 
-The easiest way to insert tasks from Python is it use ```RedBeatSchedulerEntry()```::
+You can use Celery's usual way to define static tasks or you can insert tasks
+directly into Redis. The config options is called `beat_schedule`_, e.g.:
+
+.. code-block:: python
+
+    app.conf.beat_schedule = {
+        'add-every-30-seconds': {
+            'task': 'tasks.add',
+            'schedule': 30.0,
+            'args': (16, 16)
+        },
+    }
+
+On Celery 3.x the config option was called `CELERYBEAT_SCHEDULE`_.
+
+The easiest way to insert tasks from Python is it use ``RedBeatSchedulerEntry()``::
 
     interval = celey.schedulers.schdule(run_every=60)  # seconds
     entry = RedBeatSchedulerEntry('task-name', 'tasks.some_task', interval, args=['arg1', 2])
     entry.save()
 
-Alternatively, you can insert directly into Redis by creating a new hash with a key of `REDBEAT_KEY_PREFIX:task-name`.
-It should contain a single key `definition` which is a JSON blob with the task details.
+Alternatively, you can insert directly into Redis by creating a new hash with
+a key of ``<redbeat_key_prefix>:task-name``. It should contain a single key
+``definition`` which is a JSON blob with the task details.
+
+.. _`CELERYBEAT_SCHEDULE`: http://docs.celeryproject.org/en/3.1/userguide/periodic-tasks.html#beat-entries
+.. _`beat_schedule`: http://docs.celeryproject.org/en/4.0/userguide/periodic-tasks.html#beat-entries
 
 Interval
 ~~~~~~~~
@@ -97,7 +167,7 @@ An interval task is defined with the JSON like::
         "args" : [  # optional
             "param1",
             "param2"
-        ], 
+        ],
         "kwargs" : {  # optional
             "max_targets" : 100
         },
@@ -122,7 +192,7 @@ An crontab task is defined with the JSON like::
         "args" : [  # optional
             "param1",
             "param2"
-        ], 
+        ],
         "kwargs" : {  # optional
             "max_targets" : 100
         },
@@ -132,9 +202,11 @@ An crontab task is defined with the JSON like::
 
 Scheduling
 ~~~~~~~~~~~~
-You will also need to insert the new task into the schedule with::
 
-    zadd REDBEAT_KEY_PREFIX::schedule 0 new-task-name
+Assuming your `redbeat_key_prefix` config values is set to `'redbeat:'`
+(default) you will also need to insert the new task into the schedule with::
+
+    zadd redbeat::schedule 0 new-task-name
 
 The score is the next time the task should run formatted as a UNIX timestamp.
 
