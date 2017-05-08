@@ -13,13 +13,10 @@ class test_RedBeatConfig(AppCase):
     def test_app(self):
         self.assertEqual(self.app, self.conf.app)
 
-    def test_max_loop_interval(self):
-        self.app.conf[RedBeatConfig.max_loop_interval_config] = 12
-        self.conf = RedBeatConfig(self.app)
-        self.assertEqual(self.conf.max_loop_interval, 12)
-
     def test_lock_timeout(self):
-        self.assertEqual(self.conf.lock_timeout, self.conf.max_loop_interval * 5)
+        # the config only has the lock_timeout if it was overidden
+        # via the REDBEAT_LOCK_TIMEOUT, see test_scheduler.py for real test
+        self.assertEqual(self.conf.lock_timeout, None)
 
     def test_key_prefix_default(self):
         self.assertEqual(self.conf.key_prefix, 'redbeat:')

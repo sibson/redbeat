@@ -132,3 +132,6 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
 
         self.assertNotIn('test', self.s.schedule)
         self.assertNotIn('test', redis.smembers(self.app.redbeat_conf.statics_key))
+
+    def test_lock_timeout(self):
+        self.assertEqual(self.s.lock_timeout, self.s.max_interval * 5)

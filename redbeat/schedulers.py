@@ -78,23 +78,14 @@ def from_timestamp(ts):
 
 
 class RedBeatConfig(object):
-    if CELERY_4_OR_GREATER:
-        max_loop_interval_config = 'beat_max_loop_interval'
-    else:
-        max_loop_interval_config = 'CELERYBEAT_MAX_LOOP_INTERVAL'
-
     def __init__(self, app=None):
         self.app = app_or_default(app)
         self.key_prefix = self.either_or('redbeat_key_prefix', 'redbeat:')
         self.schedule_key = self.key_prefix + ':schedule'
         self.statics_key = self.key_prefix + ':statics'
         self.lock_key = self.key_prefix + ':lock'
-        self.lock_timeout = self.either_or('redbeat_lock_timeout', self.max_loop_interval * 5)
+        self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
-
-    @property
-    def max_loop_interval(self):
-        return self.app.conf.get(self.max_loop_interval_config, DEFAULT_MAX_INTERVAL)
 
     @property
     def schedule(self):
@@ -272,10 +263,15 @@ class RedBeatScheduler(Scheduler):
 
     lock = None
 
-    def __init__(self, app, **kwargs):
+    #: The default lock timeout in seconds.
+    lock_timeout = DEFAULT_MAX_INTERVAL * 5
+
+    def __init__(self, app, lock_key=None, lock_timeout=None, **kwargs):
         ensure_conf(app)  # set app.redbeat_conf
-        self.lock_key = kwargs.pop('lock_key', app.redbeat_conf.lock_key)
-        self.lock_timeout = kwargs.pop('lock_timeout', app.redbeat_conf.lock_timeout)
+        self.lock_key = lock_key or app.redbeat_conf.lock_key
+        self.lock_timeout = (lock_timeout or
+                             self.max_interval * 5 or
+                             self.lock_timeout)
         super(RedBeatScheduler, self).__init__(app, **kwargs)
 
     def setup_schedule(self):
