@@ -1,3 +1,6 @@
+1.0.0 (unreleased)
+---------------------
+
 0.10.0 (2017-05-10)
 ----------------------
  - minor breaking changes due to reworked API

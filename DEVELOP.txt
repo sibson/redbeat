@@ -6,7 +6,7 @@ Release
  - bump version and release to pypi
 
     make version-NEWVERSION
-    make upload
+    make release
 
  - create release in GitHub
 
