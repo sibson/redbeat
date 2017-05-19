@@ -146,7 +146,7 @@ On Celery 3.x the config option was called `CELERYBEAT_SCHEDULE`_.
 
 The easiest way to insert tasks from Python is it use ``RedBeatSchedulerEntry()``::
 
-    interval = celery.schedulers.schedule(run_every=60)  # seconds
+    interval = celery.schedules.schedule(run_every=60)  # seconds
     entry = RedBeatSchedulerEntry('task-name', 'tasks.some_task', interval, args=['arg1', 2])
     entry.save()
 
