@@ -270,6 +270,7 @@ class RedBeatScheduler(Scheduler):
         ensure_conf(app)  # set app.redbeat_conf
         self.lock_key = lock_key or app.redbeat_conf.lock_key
         self.lock_timeout = (lock_timeout or
+                             app.redbeat_conf.lock_timeout or
                              self.max_interval * 5 or
                              self.lock_timeout)
         super(RedBeatScheduler, self).__init__(app, **kwargs)
