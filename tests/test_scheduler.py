@@ -85,11 +85,17 @@ class test_RedBeatScheduler_schedule(RedBeatSchedulerTestBase):
 
     def test_schedule_removes_expired_schedule(self):
         expired_schedule = mocked_expired_schedule()
-        self.create_entry(name='expired', s=expired_schedule).save()
+        due = self.create_entry(name='due', s=due_now).save()
+        expired = self.create_entry(name='expired', s=expired_schedule).save()
 
         schedule = self.s.schedule
 
-        self.assertEqual(len(schedule), 0)
+        self.assertEqual(len(schedule), 1)
+
+        self.assertIn(due.name, schedule)
+        self.assertEqual(due.key, schedule[due.name].key)
+
+        self.assertNotIn(expired.name, schedule)
 
 
 class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
