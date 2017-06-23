@@ -176,6 +176,9 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             return self._default_now()
 
         delta = self.schedule.remaining_estimate(self.last_run_at)
+        # if no delta, means no more events after the last_run_at.
+        if not delta:
+            return None
 
         # overdue => due now
         if delta.total_seconds() < 0:
@@ -189,6 +192,8 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def score(self):
+        if not self.due_at:
+            return -1
         return to_timestamp(self.due_at)
 
     @property
@@ -321,18 +326,22 @@ class RedBeatScheduler(Scheduler):
         client = redis(self.app)
 
         with client.pipeline() as pipe:
-            pipe.zrangebyscore(self.app.redbeat_conf.schedule_key, 0, max_due_at)
+            pipe.zrangebyscore(self.app.redbeat_conf.schedule_key, -1, max_due_at, withscores=True)
 
             # peek into the next tick to accuratly calculate sleep between ticks
             pipe.zrangebyscore(self.app.redbeat_conf.schedule_key,
                                '({}'.format(max_due_at),
                                max_due_at + self.max_interval,
-                               start=0, num=1)
+                               start=-1, num=1, withscores=True)
             due_tasks, maybe_due = pipe.execute()
 
         logger.info('Loading %d tasks', len(due_tasks) + len(maybe_due))
         d = {}
-        for key in due_tasks + maybe_due:
+        for key, score in due_tasks + maybe_due:
+            if score < 0:
+                logger.info('removing ended schedule %s', key)
+                client.zrem(self.app.redbeat_conf.schedule_key, key)
+                continue
             try:
                 entry = self.Entry.from_key(key, app=self.app)
             except KeyError:
