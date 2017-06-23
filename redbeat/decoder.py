@@ -32,12 +32,11 @@ class RedBeatJSONDecoder(json.JSONDecoder):
             return crontab(**d)
 
         if objtype == 'rrule':
-            rrule_dict = d
             # Decode timestamp values into datetime objects
             for key in ['dtstart', 'until']:
-                if rrule_dict[key] is not None:
-                    rrule_dict[key] = datetime.fromtimestamp(rrule_dict[key])
-            return rrule(**rrule_dict)
+                if d[key] is not None:
+                    d[key] = datetime.fromtimestamp(d[key])
+            return rrule(**d)
 
         d['__type__'] = objtype
 
