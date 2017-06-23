@@ -177,7 +177,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
         delta = self.schedule.remaining_estimate(self.last_run_at)
         # if no delta, means no more events after the last_run_at.
-        if not delta:
+        if delta is None:
             return None
 
         # overdue => due now
@@ -192,7 +192,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def score(self):
-        if not self.due_at:
+        if self.due_at is None:
             return -1
         return to_timestamp(self.due_at)
 
@@ -331,7 +331,7 @@ class RedBeatScheduler(Scheduler):
             pipe.zrangebyscore(self.app.redbeat_conf.schedule_key,
                                '({}'.format(max_due_at),
                                max_due_at + self.max_interval,
-                               start=-1, num=1, withscores=True)
+                               start=0, num=1, withscores=True)
             due_tasks, maybe_due = pipe.execute()
 
         logger.info('Loading %d tasks', len(due_tasks) + len(maybe_due))
