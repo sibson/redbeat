@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import time
 from datetime import datetime
 
 try:
@@ -8,6 +9,7 @@ except ImportError:
     import json
 
 from celery.schedules import schedule, crontab
+from .schedules import rrule
 
 
 class RedBeatJSONDecoder(json.JSONDecoder):
@@ -28,6 +30,14 @@ class RedBeatJSONDecoder(json.JSONDecoder):
 
         if objtype == 'crontab':
             return crontab(**d)
+
+        if objtype == 'rrule':
+            rrule_dict = d
+            # Decode timestamp values into datetime objects
+            for key in ['dtstart', 'until']:
+                if rrule_dict[key] is not None:
+                    rrule_dict[key] = datetime.fromtimestamp(rrule_dict[key])
+            return rrule(**rrule_dict)
 
         d['__type__'] = objtype
 
@@ -62,5 +72,30 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'every': obj.run_every.total_seconds(),
                 'relative': bool(obj.relative),
             }
+        if isinstance(obj, rrule):
+            # Convert datetime objects to timestamps
+            dtstart_ts = time.mktime(obj.dtstart.timetuple()) \
+                if obj.dtstart else None
+            until_ts = time.mktime(obj.until.timetuple()) \
+                if obj.until else None
 
+            return {
+                '__type__': 'rrule',
+                'freq': obj.freq,
+                'dtstart': dtstart_ts,
+                'interval': obj.interval,
+                'wkst': obj.wkst,
+                'count': obj.count,
+                'until': until_ts,
+                'bysetpos': obj.bysetpos,
+                'bymonth': obj.bymonth,
+                'bymonthday': obj.bymonthday,
+                'byyearday': obj.byyearday,
+                'byeaster': obj.byeaster,
+                'byweekno': obj.byweekno,
+                'byweekday': obj.byweekday,
+                'byhour': obj.byhour,
+                'byminute': obj.byminute,
+                'bysecond': obj.bysecond
+            }
         return super(RedBeatJSONEncoder, self).default(obj)
