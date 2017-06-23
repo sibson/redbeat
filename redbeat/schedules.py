@@ -42,8 +42,6 @@ class rrule(BaseSchedule):
     def remaining_estimate(self, last_run_at):
         last_run_at = self.maybe_make_aware(last_run_at)
         last_run_at_utc = localize(last_run_at, timezone.utc)
-        print last_run_at
-        print last_run_at_utc
         last_run_at_utc_naive = last_run_at_utc.replace(tzinfo=None)
         next_run_utc = self.rrule.after(last_run_at_utc_naive)
         if next_run_utc:
