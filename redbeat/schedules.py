@@ -2,22 +2,18 @@ import celery
 from dateutil.rrule import rrule as dateutil_rrule
 try:  # celery 4.x
     from celery.schedules import BaseSchedule as schedule
-    from celery.utils.time import (
-        localize,
-        timezone
-    )
 except ImportError:  # celery 3.x
     from celery.schedules import schedule
-    from celery.utils.timeutils import (
-        localize,
-        timezone
-    )
 
 
 class rrule(schedule):
-    RRULE_REPR = """\
-    <rrule: {0._freq} {0._interval}>\
-    """
+    RRULE_REPR = (
+        '<rrule: freq: {0.freq}, dtstart: {0.dtstart}, interval: {0.interval}, '
+        'wkst: {0.wkst}, count: {0.count}, until: {0.until}, bysetpos: {0.bysetpos}, '
+        'bymonth: {0.bymonth}, bymonthday: {0.bymonthday}, byyearday: {0.byyearday}, '
+        'byeaster: {0.byeaster}, byweekno: {0.byweekno}, byweekday: {0.byweekday}, '
+        'byhour: {0.byhour}, byminute: {0.byminute}, bysecond: {0.bysecond}>'
+    )
 
     def __init__(self, freq, dtstart=None,
                  interval=1, wkst=None, count=None, until=None, bysetpos=None,
