@@ -1,13 +1,20 @@
 import celery
 from dateutil.rrule import rrule as dateutil_rrule
-from celery.schedules import BaseSchedule
-from celery.utils.time import (
-    localize,
-    timezone
-)
+try:  # celery 4.x
+    from celery.schedules import BaseSchedule as schedule
+    from celery.utils.time import (
+        localize,
+        timezone
+    )
+except ImportError:  # celery 3.x
+    from celery.schedules import schedule
+    from celery.utils.timeutils import (
+        localize,
+        timezone
+    )
 
 
-class rrule(BaseSchedule):
+class rrule(schedule):
     RRULE_REPR = """\
     <rrule: {0._freq} {0._interval}>\
     """
