@@ -1,5 +1,14 @@
 import celery
-from dateutil.rrule import rrule as dateutil_rrule
+from dateutil.rrule import (
+    rrule as dateutil_rrule,
+    YEARLY,
+    MONTHLY,
+    WEEKLY,
+    DAILY,
+    HOURLY,
+    MINUTELY,
+    SECONDLY
+)
 try:  # celery 4.x
     from celery.schedules import BaseSchedule as schedule
 except ImportError:  # celery 3.x
@@ -15,12 +24,27 @@ class rrule(schedule):
         'byhour: {0.byhour}, byminute: {0.byminute}, bysecond: {0.bysecond}>'
     )
 
+    FREQ_MAP = {
+        'YEARLY': YEARLY,
+        'MONTHLY': MONTHLY,
+        'WEEKLY': WEEKLY,
+        'DAILY': DAILY,
+        'HOURLY': HOURLY,
+        'MINUTELY': MINUTELY,
+        'SECONDLY': SECONDLY
+    }
+
     def __init__(self, freq, dtstart=None,
                  interval=1, wkst=None, count=None, until=None, bysetpos=None,
                  bymonth=None, bymonthday=None, byyearday=None, byeaster=None,
                  byweekno=None, byweekday=None,
                  byhour=None, byminute=None, bysecond=None,
                  **kwargs):
+        if type(freq) == str:
+            freq_str = freq.upper()
+            assert freq_str in rrule.FREQ_MAP
+            freq = rrule.FREQ_MAP[freq_str]
+
         self.freq = freq
         self.dtstart = dtstart
         self.interval = interval
@@ -57,15 +81,15 @@ class rrule(schedule):
 
     def is_due(self, last_run_at):
         rem_delta = self.remaining_estimate(last_run_at)
-        if rem_delta:
+        if rem_delta is not None:
             rem = max(rem_delta.total_seconds(), 0)
             due = rem == 0
             if due:
                 rem_delta = self.remaining_estimate(self.now())
-                if rem_delta:
+                if rem_delta is not None:
                     rem = max(rem_delta.total_seconds(), 0)
                 else:
-                    rem = 0
+                    rem = None
             return celery.schedules.schedstate(due, rem)
         return celery.schedules.schedstate(False, None)
 
