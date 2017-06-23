@@ -68,11 +68,7 @@ class rrule(schedule):
 
     def remaining_estimate(self, last_run_at):
         # This expects last_run_at to be in UTC time.
-        # Set tzinfo to None because last_run_at has tzinfo set if there is no metadata,
-        # however naive UTC times are used everywhere else and cannot be compared against
-        # tz-aware datetimes.
-        last_run_at_utc = last_run_at.replace(tzinfo=None)
-        next_run_utc = self.rrule.after(last_run_at_utc)
+        next_run_utc = self.rrule.after(last_run_at)
         if next_run_utc:
             now_utc = self.now()
             delta = next_run_utc - now_utc
