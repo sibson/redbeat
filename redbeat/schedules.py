@@ -47,14 +47,15 @@ class rrule(schedule):
         super(rrule, self).__init__(**kwargs)
 
     def remaining_estimate(self, last_run_at):
-        last_run_at = self.maybe_make_aware(last_run_at)
-        last_run_at_utc = localize(last_run_at, timezone.utc)
-        last_run_at_utc_naive = last_run_at_utc.replace(tzinfo=None)
-        next_run_utc = self.rrule.after(last_run_at_utc_naive)
+        # This expects last_run_at to be in UTC time.
+        # Set tzinfo to None because last_run_at has tzinfo set if there is no metadata,
+        # however naive UTC times are used everywhere else and cannot be compared against
+        # tz-aware datetimes.
+        last_run_at_utc = last_run_at.replace(tzinfo=None)
+        next_run_utc = self.rrule.after(last_run_at_utc)
         if next_run_utc:
-            next = self.maybe_make_aware(next_run_utc)
-            now = self.maybe_make_aware(self.now())
-            delta = next - now
+            now_utc = self.now()
+            delta = next_run_utc - now_utc
             return delta
         return None
 

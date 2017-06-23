@@ -339,7 +339,7 @@ class RedBeatScheduler(Scheduler):
         d = {}
         for key, score in due_tasks + maybe_due:
             if score < 0:
-                logger.info('removing ended schedule %s', key)
+                logger.info('Scheduler: Removing ended schedule %s', key)
                 client.zrem(self.app.redbeat_conf.schedule_key, key)
                 continue
             try:
