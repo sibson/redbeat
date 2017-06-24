@@ -3,10 +3,12 @@ from datetime import (
     timedelta
 )
 from unittest import TestCase
+from mock import patch
 
 from redbeat.schedules import rrule
 
 
+@patch.object(rrule, 'now', datetime.utcnow)
 class test_rrule_remaining_estimate(TestCase):
 
     def test_freq(self):
@@ -33,6 +35,7 @@ class test_rrule_remaining_estimate(TestCase):
         self.assertEquals(eta_after_two_minutes, None)
 
 
+@patch.object(rrule, 'now', datetime.utcnow)
 class test_rrule_is_due(TestCase):
 
     def test_freq__starting_now(self):
