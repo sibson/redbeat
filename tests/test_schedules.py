@@ -9,6 +9,7 @@ from redbeat.schedules import rrule
 
 
 @patch.object(rrule, 'now', datetime.utcnow)
+@patch.object(rrule, 'utc_enabled', True)
 class test_rrule_remaining_estimate(TestCase):
 
     def test_freq(self):
@@ -36,6 +37,7 @@ class test_rrule_remaining_estimate(TestCase):
 
 
 @patch.object(rrule, 'now', datetime.utcnow)
+@patch.object(rrule, 'utc_enabled', True)
 class test_rrule_is_due(TestCase):
 
     def test_freq__starting_now(self):
