@@ -4,12 +4,17 @@ from datetime import (
 )
 from unittest import TestCase
 from mock import patch
+try:  # celery 3.x
+    from celery.utils.timeutils import timezone
+except ImportError:  # celery 4.x
+    from celery.utils.time import timezone
 
 from redbeat.schedules import rrule
 
 
 @patch.object(rrule, 'now', datetime.utcnow)
 @patch.object(rrule, 'utc_enabled', True)
+@patch.object(rrule, 'tz', timezone.utc)
 class test_rrule_remaining_estimate(TestCase):
 
     def test_freq(self):
@@ -38,6 +43,7 @@ class test_rrule_remaining_estimate(TestCase):
 
 @patch.object(rrule, 'now', datetime.utcnow)
 @patch.object(rrule, 'utc_enabled', True)
+@patch.object(rrule, 'tz', timezone.utc)
 class test_rrule_is_due(TestCase):
 
     def test_freq__starting_now(self):
