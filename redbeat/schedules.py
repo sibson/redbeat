@@ -40,10 +40,15 @@ class rrule(schedule):
                  byweekno=None, byweekday=None,
                  byhour=None, byminute=None, bysecond=None,
                  **kwargs):
+        super(rrule, self).__init__(**kwargs)
+
         if type(freq) == str:
             freq_str = freq.upper()
             assert freq_str in rrule.FREQ_MAP
             freq = rrule.FREQ_MAP[freq_str]
+
+        dtstart = self.maybe_make_aware(dtstart) if dtstart else None
+        until = self.maybe_make_aware(until) if until else None
 
         self.freq = freq
         self.dtstart = dtstart
@@ -64,14 +69,14 @@ class rrule(schedule):
         self.rrule = dateutil_rrule(freq, dtstart, interval, wkst, count, until,
                                     bysetpos, bymonth, bymonthday, byyearday, byeaster,
                                     byweekno, byweekday, byhour, byminute, bysecond)
-        super(rrule, self).__init__(**kwargs)
 
     def remaining_estimate(self, last_run_at):
-        # This expects last_run_at to be in UTC time.
-        next_run_utc = self.rrule.after(last_run_at)
-        if next_run_utc:
-            now_utc = self.now()
-            delta = next_run_utc - now_utc
+        last_run_at = self.maybe_make_aware(last_run_at)
+        next_run = self.rrule.after(last_run_at)
+        if next_run:
+            next_run = self.maybe_make_aware(next_run)
+            now = self.maybe_make_aware(self.now())
+            delta = next_run - now
             return delta
         return None
 
