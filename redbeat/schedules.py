@@ -47,7 +47,8 @@ class rrule(schedule):
             assert freq_str in rrule.FREQ_MAP
             freq = rrule.FREQ_MAP[freq_str]
 
-        dtstart = self.maybe_make_aware(dtstart) if dtstart else None
+        dtstart = self.maybe_make_aware(dtstart) if dtstart else \
+            self.maybe_make_aware(self.now())
         until = self.maybe_make_aware(until) if until else None
 
         self.freq = freq
