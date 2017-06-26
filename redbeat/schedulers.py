@@ -193,6 +193,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     @property
     def score(self):
         if self.due_at is None:
+            # Scores < zero are ignored on each tick.
             return -1
         return to_timestamp(self.due_at)
 
@@ -326,22 +327,18 @@ class RedBeatScheduler(Scheduler):
         client = redis(self.app)
 
         with client.pipeline() as pipe:
-            pipe.zrangebyscore(self.app.redbeat_conf.schedule_key, -1, max_due_at, withscores=True)
+            pipe.zrangebyscore(self.app.redbeat_conf.schedule_key, 0, max_due_at)
 
             # peek into the next tick to accuratly calculate sleep between ticks
             pipe.zrangebyscore(self.app.redbeat_conf.schedule_key,
                                '({}'.format(max_due_at),
                                max_due_at + self.max_interval,
-                               start=0, num=1, withscores=True)
+                               start=0, num=1)
             due_tasks, maybe_due = pipe.execute()
 
         logger.info('Loading %d tasks', len(due_tasks) + len(maybe_due))
         d = {}
-        for key, score in due_tasks + maybe_due:
-            if score < 0:
-                logger.info('Scheduler: Removing ended schedule %s', key)
-                client.zrem(self.app.redbeat_conf.schedule_key, key)
-                continue
+        for key in due_tasks + maybe_due:
             try:
                 entry = self.Entry.from_key(key, app=self.app)
             except KeyError:
