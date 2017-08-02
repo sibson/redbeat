@@ -176,6 +176,9 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             return self._default_now()
 
         delta = self.schedule.remaining_estimate(self.last_run_at)
+        # if no delta, means no more events after the last_run_at.
+        if delta is None:
+            return None
 
         # overdue => due now
         if delta.total_seconds() < 0:
@@ -189,6 +192,9 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def score(self):
+        if self.due_at is None:
+            # Scores < zero are ignored on each tick.
+            return -1
         return to_timestamp(self.due_at)
 
     @property

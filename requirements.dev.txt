@@ -7,3 +7,4 @@ pytest-catchlog
 pytest-cov
 redis
 toX
+python-dateutil

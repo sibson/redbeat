@@ -1,13 +1,18 @@
 from datetime import datetime, timedelta
 
-from celery.schedules import schedule
+from celery.schedules import (
+    schedule,
+    schedstate
+)
 try:  # celery 3.x
     from celery.utils.timeutils import maybe_timedelta
 except ImportError:  # celery 4.0
     from celery.utils.time import maybe_timedelta
 
-from mock import patch
-
+from mock import (
+    patch,
+    Mock
+)
 from basecase import RedBeatCase
 from redbeat import RedBeatScheduler
 
@@ -21,6 +26,20 @@ class mocked_schedule(schedule):
 
     def remaining_estimate(self, last_run_at):
         return self._remaining
+
+
+class mocked_expired_schedule(schedule):
+
+    def __init__(self):
+        self.nowfun = datetime.utcnow
+        self.run_every = Mock()
+        self.run_every.total_seconds.return_value = 1
+
+    def remaining_estimate(self, last_run_at):
+        return None
+
+    def is_due(self, last_run_at):
+        return schedstate(False, None)
 
 
 due_now = mocked_schedule(0)
