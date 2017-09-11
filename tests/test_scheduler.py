@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime, timedelta
 
 from celery.schedules import (
@@ -8,13 +9,18 @@ try:  # celery 3.x
     from celery.utils.timeutils import maybe_timedelta
 except ImportError:  # celery 4.0
     from celery.utils.time import maybe_timedelta
+try:  # celery 3.x
+    from celery.tests.case import UnitApp
+except ImportError:  # celery 4.x
+    from celery.contrib.testing.app import UnitApp
 
 from mock import (
     patch,
     Mock
 )
-from basecase import RedBeatCase
+from basecase import RedBeatCase, AppCase
 from redbeat import RedBeatScheduler
+from redbeat.schedulers import redis
 
 
 class mocked_schedule(schedule):
@@ -154,3 +160,35 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
 
     def test_lock_timeout(self):
         self.assertEqual(self.s.lock_timeout, self.s.max_interval * 5)
+
+
+class NotSentinelRedBeatCase(AppCase):
+
+    def test_sentinel_scheduler(self):
+        redis_client = redis(app=self.app)
+        assert 'Sentinel' not in str(redis_client.connection_pool)
+
+class SentinelRedBeatCase(AppCase):
+
+    def Celery(self, *args, **kwargs):
+        return UnitApp(*args, broker='redis-sentinel://redis-sentinel:26379/0', **kwargs)
+
+    def setup(self):
+        print(self.app.conf['BROKER_TRANSPORT_OPTIONS'])
+        self.app.conf.add_defaults(deepcopy({
+            'REDBEAT_KEY_PREFIX': 'rb-tests:',
+            'redbeat_key_prefix': 'rb-tests:',
+            'BROKER_URL': 'redis-sentinel://redis-sentinel:26379/0',
+            'BROKER_TRANSPORT_OPTIONS': {
+                'sentinels': [('192.168.1.1', 26379),
+                              ('192.168.1.2', 26379),
+                              ('192.168.1.3', 26379)],
+                'service_name': 'master',
+                'socket_timeout': 0.1,
+            },
+            'CELERY_RESULT_BACKEND' : 'redis-sentinel://redis-sentinel:26379/1',
+        }))
+
+    def test_sentinel_scheduler(self):
+        redis_client = redis(app=self.app)
+        assert 'Sentinel' in str(redis_client.connection_pool)
