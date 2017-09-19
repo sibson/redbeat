@@ -174,7 +174,6 @@ class SentinelRedBeatCase(AppCase):
         return UnitApp(*args, broker='redis-sentinel://redis-sentinel:26379/0', **kwargs)
 
     def setup(self):
-        print(self.app.conf['BROKER_TRANSPORT_OPTIONS'])
         self.app.conf.add_defaults(deepcopy({
             'REDBEAT_KEY_PREFIX': 'rb-tests:',
             'redbeat_key_prefix': 'rb-tests:',
