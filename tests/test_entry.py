@@ -1,6 +1,11 @@
 from datetime import datetime, timedelta
 import json
 
+try:  # celery 3.x
+    from celery.utils.timeutils import maybe_make_aware
+except ImportError:  # celery 4.x
+    from celery.utils.time import maybe_make_aware
+
 from basecase import RedBeatCase
 
 from redbeat import RedBeatSchedulerEntry
@@ -45,6 +50,8 @@ class test_RedBeatEntry(RedBeatCase):
     def test_next(self):
         initial = self.create_entry().save()
         now = self.app.now()
+        # 3.x is naive but 4.x is aware
+        now = maybe_make_aware(now)
 
         n = initial.next(last_run_at=now)
 
@@ -121,6 +128,9 @@ class test_RedBeatEntry(RedBeatCase):
         score = entry.score
         expected = entry.last_run_at + timedelta(seconds=run_every)
         expected = expected.replace(microsecond=0)  # discard microseconds, lost in timestamp
+        # 3.x returns naive, but 4.x returns aware
+        expected = maybe_make_aware(expected)
+
 
         self.assertEqual(score, to_timestamp(expected))
         self.assertEqual(expected, from_timestamp(score))

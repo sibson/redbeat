@@ -5,7 +5,7 @@
 
 from __future__ import absolute_import
 
-import time
+import calendar
 import warnings
 from datetime import datetime, MINYEAR
 from distutils.version import StrictVersion
@@ -20,10 +20,10 @@ from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL
 from celery.utils.log import get_logger
 from celery.signals import beat_init
 try:  # celery 3.x
-    from celery.utils.timeutils import humanize_seconds
+    from celery.utils.timeutils import humanize_seconds, timezone
     from kombu.utils import cached_property
 except ImportError:  # celery 4.x
-    from celery.utils.time import humanize_seconds
+    from celery.utils.time import humanize_seconds, timezone
     from kombu.utils.objects import cached_property
 from celery.app import app_or_default
 from celery.five import values
@@ -70,11 +70,13 @@ logger = get_logger(__name__)
 
 
 def to_timestamp(dt):
-    return time.mktime(dt.timetuple())
+    """ convert UTC datetime to seconds since the epoch """
+    return calendar.timegm(dt.timetuple())
 
 
-def from_timestamp(ts):
-    return datetime.fromtimestamp(ts)
+def from_timestamp(seconds):
+    """ convert seconds since the epoch to an UTC aware datetime """
+    return datetime.fromtimestamp(seconds, tz=timezone.utc)
 
 
 class RedBeatConfig(object):

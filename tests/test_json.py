@@ -3,6 +3,10 @@ import json
 from unittest import TestCase
 
 from celery.schedules import schedule, crontab
+try:  # celery 3.x
+    from celery.utils.timeutils import timezone
+except ImportError:  # celery 4.x
+    from celery.utils.time import timezone
 
 from redbeat.decoder import RedBeatJSONDecoder, RedBeatJSONEncoder
 
@@ -82,7 +86,7 @@ class RedBeatJSONDecoderTestCase(JSONTestCase):
         result = self.loads(json.dumps(d))
 
         d.pop('__type__')
-        self.assertEqual(result, datetime(**d))
+        self.assertEqual(result, datetime(tzinfo=timezone.utc, **d))
 
     def test_schedule(self):
         d = self.schedule()

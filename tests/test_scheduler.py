@@ -114,7 +114,7 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
         self.assertLess(0.8, sleep)
         self.assertLess(sleep, 1.0)
 
-    def test_due_later_never_run(self):
+    def test_due_later_task_never_run(self):
         self.create_entry(s=self.due_later).save()
 
         with patch.object(self.s, 'send_task') as send_task:
