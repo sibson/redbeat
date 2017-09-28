@@ -8,6 +8,11 @@ try:
 except ImportError:
     import json
 
+try:  # celery 3.x
+    from celery.utils.timeutils import timezone
+except ImportError:  # celery 4.x
+    from celery.utils.time import timezone
+
 from celery.schedules import schedule, crontab
 from .schedules import rrule
 
@@ -23,7 +28,7 @@ class RedBeatJSONDecoder(json.JSONDecoder):
         objtype = d.pop('__type__')
 
         if objtype == 'datetime':
-            return datetime(**d)
+            return datetime(tzinfo=timezone.utc, **d)
 
         if objtype == 'interval':
             return schedule(run_every=d['every'], relative=d['relative'])
