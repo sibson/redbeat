@@ -1,4 +1,4 @@
-BROKER_URL = 'redis://foo:base@localhost:2323'
+BROKER_URL = 'redis://'
 
 CELERYBEAT_SCHEDULER = 'redbeat.RedBeatScheduler'
 CELERYBEAT_MAX_LOOP_INTERVAL = 5  # redbeat likes fast loops
