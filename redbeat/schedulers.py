@@ -27,6 +27,7 @@ except ImportError:  # celery 4.x
     from kombu.utils.objects import cached_property
 from celery.app import app_or_default
 from celery.five import values
+from kombu.utils.url import maybe_sanitize_url
 
 from redis.client import StrictRedis
 
