@@ -390,7 +390,7 @@ class RedBeatScheduler(Scheduler):
 
     @property
     def info(self):
-        info = ['       . redis -> {}'.format(self.app.redbeat_conf.redis_url)]
+        info = ['       . redis -> {}'.format(self.app.connection().as_uri())]
         if self.lock_key:
             info.append('       . lock -> `{}` {} ({}s)'.format(
                 self.lock_key, humanize_seconds(self.lock_timeout), self.lock_timeout))
