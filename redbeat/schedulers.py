@@ -27,6 +27,7 @@ except ImportError:  # celery 4.x
     from kombu.utils.objects import cached_property
 from celery.app import app_or_default
 from celery.five import values
+from kombu.utils.url import maybe_sanitize_url
 
 from redis.client import StrictRedis
 
@@ -390,7 +391,7 @@ class RedBeatScheduler(Scheduler):
 
     @property
     def info(self):
-        info = ['       . redis -> {}'.format(self.app.redbeat_conf.redis_url)]
+        info = ['       . redis -> {}'.format(maybe_sanitize_url(self.app.redbeat_conf.redis_url))]
         if self.lock_key:
             info.append('       . lock -> `{}` {} ({}s)'.format(
                 self.lock_key, humanize_seconds(self.lock_timeout), self.lock_timeout))
