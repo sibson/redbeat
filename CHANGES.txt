@@ -1,3 +1,7 @@
+0.10.0 (2017-10-03)
+----------------------
+ - SECURITY, redact password when logging Redis URL
+
 0.10.0 (2017-05-10)
 ----------------------
  - minor breaking changes due to reworked API
