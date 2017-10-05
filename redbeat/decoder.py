@@ -17,6 +17,16 @@ from celery.schedules import schedule, crontab
 from .schedules import rrule
 
 
+def to_timestamp(dt):
+    """ convert UTC datetime to seconds since the epoch """
+    return calendar.timegm(dt.timetuple())
+
+
+def from_timestamp(seconds):
+    """ convert seconds since the epoch to an UTC aware datetime """
+    return datetime.fromtimestamp(seconds, tz=timezone.utc)
+
+
 class RedBeatJSONDecoder(json.JSONDecoder):
     def __init__(self, *args, **kargs):
         super(RedBeatJSONDecoder, self).__init__(object_hook=self.dict_to_object, *args, **kargs)
@@ -40,7 +50,7 @@ class RedBeatJSONDecoder(json.JSONDecoder):
             # Decode timestamp values into datetime objects
             for key in ['dtstart', 'until']:
                 if d[key] is not None:
-                    d[key] = datetime.utcfromtimestamp(d[key])
+                    d[key] = from_timestamp(d[key])
             return rrule(**d)
 
         d['__type__'] = objtype
@@ -72,9 +82,9 @@ class RedBeatJSONEncoder(json.JSONEncoder):
             }
         if isinstance(obj, rrule):
             # Convert datetime objects to timestamps
-            dtstart_ts = calendar.timegm(obj.dtstart.timetuple()) \
+            dtstart_ts = to_timestamp(obj.dtstart) \
                 if obj.dtstart else None
-            until_ts = calendar.timegm(obj.until.timetuple()) \
+            until_ts = to_timestamp(obj.until) \
                 if obj.until else None
 
             return {
