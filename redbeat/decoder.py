@@ -1,6 +1,6 @@
 # coding: utf-8
 
-import time
+import calendar
 from datetime import datetime
 
 try:
@@ -40,7 +40,7 @@ class RedBeatJSONDecoder(json.JSONDecoder):
             # Decode timestamp values into datetime objects
             for key in ['dtstart', 'until']:
                 if d[key] is not None:
-                    d[key] = datetime.fromtimestamp(d[key])
+                    d[key] = datetime.utcfromtimestamp(d[key])
             return rrule(**d)
 
         d['__type__'] = objtype
@@ -72,9 +72,9 @@ class RedBeatJSONEncoder(json.JSONEncoder):
             }
         if isinstance(obj, rrule):
             # Convert datetime objects to timestamps
-            dtstart_ts = time.mktime(obj.dtstart.timetuple()) \
+            dtstart_ts = calendar.timegm(obj.dtstart.timetuple()) \
                 if obj.dtstart else None
-            until_ts = time.mktime(obj.until.timetuple()) \
+            until_ts = calendar.timegm(obj.until.timetuple()) \
                 if obj.until else None
 
             return {

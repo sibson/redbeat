@@ -59,7 +59,7 @@ class JSONTestCase(TestCase):
         d = {
             '__type__': 'rrule',
             'freq': 5,
-            'dtstart': 1451473162.0,
+            'dtstart': 1451480362,
             'interval': 1,
             'wkst': None,
             'count': 1,
