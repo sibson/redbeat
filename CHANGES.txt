@@ -1,3 +1,7 @@
+0.10.3 (2017-10-05)
+----------------------
+ - Backport change to allow configuration of lock_timeout
+
 0.10.0 (2017-10-03)
 ----------------------
  - SECURITY, redact password when logging Redis URL
