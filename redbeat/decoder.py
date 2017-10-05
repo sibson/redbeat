@@ -70,12 +70,6 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'day_of_month': obj._orig_day_of_month,
                 'month_of_year': obj._orig_month_of_year,
             }
-        if isinstance(obj, schedule):
-            return {
-                '__type__': 'interval',
-                'every': obj.run_every.total_seconds(),
-                'relative': bool(obj.relative),
-            }
         if isinstance(obj, rrule):
             # Convert datetime objects to timestamps
             dtstart_ts = time.mktime(obj.dtstart.timetuple()) \
@@ -101,5 +95,11 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'byhour': obj.byhour,
                 'byminute': obj.byminute,
                 'bysecond': obj.bysecond
+            }
+        if isinstance(obj, schedule):
+            return {
+                '__type__': 'interval',
+                'every': obj.run_every.total_seconds(),
+                'relative': bool(obj.relative),
             }
         return super(RedBeatJSONEncoder, self).default(obj)
