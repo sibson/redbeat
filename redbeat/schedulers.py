@@ -31,7 +31,10 @@ from kombu.utils.url import maybe_sanitize_url
 
 from redis.client import StrictRedis
 
-from .decoder import RedBeatJSONEncoder, RedBeatJSONDecoder
+from .decoder import (
+    RedBeatJSONEncoder, RedBeatJSONDecoder,
+    from_timestamp, to_timestamp
+    )
 
 CELERY_4_OR_GREATER = StrictVersion(celery_version) >= StrictVersion('4.0')
 
@@ -68,16 +71,6 @@ Couldn't add entry %r to redis schedule: %r. Contents: %r
 """
 
 logger = get_logger(__name__)
-
-
-def to_timestamp(dt):
-    """ convert UTC datetime to seconds since the epoch """
-    return calendar.timegm(dt.timetuple())
-
-
-def from_timestamp(seconds):
-    """ convert seconds since the epoch to an UTC aware datetime """
-    return datetime.fromtimestamp(seconds, tz=timezone.utc)
 
 
 class RedBeatConfig(object):

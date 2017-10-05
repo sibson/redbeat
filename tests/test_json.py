@@ -9,6 +9,7 @@ except ImportError:  # celery 4.x
     from celery.utils.time import timezone
 
 from redbeat.decoder import RedBeatJSONDecoder, RedBeatJSONEncoder
+from redbeat.schedules import rrule
 
 
 class JSONTestCase(TestCase):
@@ -54,6 +55,29 @@ class JSONTestCase(TestCase):
         d.update(kwargs)
         return d
 
+    def rrule(self, **kwargs):
+        d = {
+            '__type__': 'rrule',
+            'freq': 5,
+            'dtstart': 1451480362,
+            'interval': 1,
+            'wkst': None,
+            'count': 1,
+            'until': None,
+            'bysetpos': None,
+            'bymonth': None,
+            'bymonthday': None,
+            'byyearday': None,
+            'byeaster': None,
+            'byweekno': None,
+            'byweekday': None,
+            'byhour': None,
+            'byminute': None,
+            'bysecond': None,
+        }
+        d.update(kwargs)
+        return d
+
 
 class RedBeatJSONEncoderTestCase(JSONTestCase):
 
@@ -76,6 +100,11 @@ class RedBeatJSONEncoderTestCase(JSONTestCase):
         c = crontab()
         result = self.dumps(c)
         self.assertEqual(result, json.dumps(self.crontab()))
+
+    def test_rrule(self):
+        r = rrule('MINUTELY', dtstart=datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc), count=1)
+        result = self.dumps(r)
+        self.assertEqual(result, json.dumps(self.rrule()))
 
 
 class RedBeatJSONDecoderTestCase(JSONTestCase):
@@ -103,3 +132,14 @@ class RedBeatJSONDecoderTestCase(JSONTestCase):
 
         d.pop('__type__')
         self.assertEqual(result, crontab())
+
+    def test_rrule(self):
+        d = self.rrule()
+
+        result = self.loads(json.dumps(d))
+
+        d.pop('__type__')
+        self.assertEqual(
+            result,
+            rrule('MINUTELY', dtstart=datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc), count=1),
+            )

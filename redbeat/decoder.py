@@ -1,6 +1,6 @@
 # coding: utf-8
 
-import time
+import calendar
 from datetime import datetime
 
 try:
@@ -15,6 +15,16 @@ except ImportError:  # celery 4.x
 
 from celery.schedules import schedule, crontab
 from .schedules import rrule
+
+
+def to_timestamp(dt):
+    """ convert UTC datetime to seconds since the epoch """
+    return calendar.timegm(dt.timetuple())
+
+
+def from_timestamp(seconds):
+    """ convert seconds since the epoch to an UTC aware datetime """
+    return datetime.fromtimestamp(seconds, tz=timezone.utc)
 
 
 class RedBeatJSONDecoder(json.JSONDecoder):
@@ -40,7 +50,7 @@ class RedBeatJSONDecoder(json.JSONDecoder):
             # Decode timestamp values into datetime objects
             for key in ['dtstart', 'until']:
                 if d[key] is not None:
-                    d[key] = datetime.fromtimestamp(d[key])
+                    d[key] = from_timestamp(d[key])
             return rrule(**d)
 
         d['__type__'] = objtype
@@ -70,17 +80,11 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'day_of_month': obj._orig_day_of_month,
                 'month_of_year': obj._orig_month_of_year,
             }
-        if isinstance(obj, schedule):
-            return {
-                '__type__': 'interval',
-                'every': obj.run_every.total_seconds(),
-                'relative': bool(obj.relative),
-            }
         if isinstance(obj, rrule):
             # Convert datetime objects to timestamps
-            dtstart_ts = time.mktime(obj.dtstart.timetuple()) \
+            dtstart_ts = to_timestamp(obj.dtstart) \
                 if obj.dtstart else None
-            until_ts = time.mktime(obj.until.timetuple()) \
+            until_ts = to_timestamp(obj.until) \
                 if obj.until else None
 
             return {
@@ -101,5 +105,11 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'byhour': obj.byhour,
                 'byminute': obj.byminute,
                 'bysecond': obj.bysecond
+            }
+        if isinstance(obj, schedule):
+            return {
+                '__type__': 'interval',
+                'every': obj.run_every.total_seconds(),
+                'relative': bool(obj.relative),
             }
         return super(RedBeatJSONEncoder, self).default(obj)
