@@ -102,7 +102,7 @@ class RedBeatJSONEncoderTestCase(JSONTestCase):
         self.assertEqual(result, json.dumps(self.crontab()))
 
     def test_rrule(self):
-        r = rrule('MINUTELY', dtstart=datetime(2015, 12, 30, 12, 59, 22), count=1)
+        r = rrule('MINUTELY', dtstart=datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc), count=1)
         result = self.dumps(r)
         self.assertEqual(result, json.dumps(self.rrule()))
 
@@ -141,5 +141,5 @@ class RedBeatJSONDecoderTestCase(JSONTestCase):
         d.pop('__type__')
         self.assertEqual(
             result,
-            rrule('MINUTELY', dtstart=datetime(2015, 12, 30, 12, 59, 22), count=1),
+            rrule('MINUTELY', dtstart=datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc), count=1),
             )
