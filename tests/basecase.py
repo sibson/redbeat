@@ -10,7 +10,10 @@ except ImportError:  # celery 4.x
 
     class AppCase(TestCase):
         def setUp(self):
-            self.app = TestApp()
+            try:
+                self.app = TestApp(config=self.config_dict)
+            except:
+                self.app = TestApp()
             self.setup()
 
 from fakeredis import FakeStrictRedis

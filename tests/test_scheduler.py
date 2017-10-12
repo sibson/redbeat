@@ -12,7 +12,7 @@ except ImportError:  # celery 4.0
 try:  # celery 3.x
     from celery.tests.case import UnitApp
 except ImportError:  # celery 4.x
-    from celery.contrib.testing.app import UnitApp
+    import celery.contrib.testing.app
 
 from mock import (
     patch,
@@ -164,17 +164,16 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
 
 class NotSentinelRedBeatCase(AppCase):
 
+    def setup(self):
+        pass
+
     def test_sentinel_scheduler(self):
         redis_client = redis(app=self.app)
         assert 'Sentinel' not in str(redis_client.connection_pool)
 
 class SentinelRedBeatCase(AppCase):
 
-    def Celery(self, *args, **kwargs):
-        return UnitApp(*args, broker='redis-sentinel://redis-sentinel:26379/0', **kwargs)
-
-    def setup(self):
-        self.app.conf.add_defaults(deepcopy({
+    config_dict = {
             'REDBEAT_KEY_PREFIX': 'rb-tests:',
             'redbeat_key_prefix': 'rb-tests:',
             'BROKER_URL': 'redis-sentinel://redis-sentinel:26379/0',
@@ -186,7 +185,13 @@ class SentinelRedBeatCase(AppCase):
                 'socket_timeout': 0.1,
             },
             'CELERY_RESULT_BACKEND' : 'redis-sentinel://redis-sentinel:26379/1',
-        }))
+        }
+
+    def Celery(self, *args, **kwargs):
+        return UnitApp(*args, broker='redis-sentinel://redis-sentinel:26379/0', **kwargs)
+
+    def setup(self): # celery3
+        self.app.conf.add_defaults(deepcopy(self.config_dict))
 
     def test_sentinel_scheduler(self):
         redis_client = redis(app=self.app)
