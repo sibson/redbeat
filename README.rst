@@ -236,6 +236,33 @@ The meta key contains a JSON blob as follows::
 For instance by default ```last_run_at``` corresponds to when Beat dispatched the task, but depending on queue latency it might not run immediately, but the application could update the metadata with
 the actual run time, allowing intervals to be relative to last execution rather than last dispatch.
 
+Sentinel support
+~~~~~~~~~~~~~~~~
+
+The redis connexion can use a Redis/Sentinel cluster. The
+configuration syntax is inspired from `celery-redis-sentinel
+<https://github.com/dealertrack/celery-redis-sentinel>`_ ::
+
+    # celeryconfig.py
+    BROKER_URL = 'redis-sentinel://redis-sentinel:26379/0'
+    BROKER_TRANSPORT_OPTIONS = {
+        'sentinels': [('192.168.1.1', 26379),
+                      ('192.168.1.2', 26379),
+                      ('192.168.1.3', 26379)],
+        'service_name': 'master',
+        'socket_timeout': 0.1,
+    }
+
+    CELERY_RESULT_BACKEND = 'redis-sentinel://redis-sentinel:26379/1'
+    CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = BROKER_TRANSPORT_OPTIONS
+
+Some notes about the configuration:
+
+* note the use of ``redis-sentinel`` schema within the URL for broker and results
+  backend.
+
+* hostname and port are ignored within the actual URL. Sentinel uses transport options
+  ``sentinels`` setting to create a ``Sentinel()`` instead of configuration URL.
 
 Development
 --------------

@@ -59,8 +59,17 @@ def redis(app=None):
     app = app_or_default(app)
     conf = ensure_conf(app)
     if not hasattr(app, 'redbeat_redis') or app.redbeat_redis is None:
-        app.redbeat_redis = StrictRedis.from_url(conf.redis_url,
-                                                 decode_responses=True)
+        BROKER_TRANSPORT_OPTIONS = conf.app.conf.get('BROKER_TRANSPORT_OPTIONS')
+        if conf.redis_url.startswith('redis-sentinel') and  'sentinels' in BROKER_TRANSPORT_OPTIONS:
+            from redis.sentinel import Sentinel
+            sentinel = Sentinel(BROKER_TRANSPORT_OPTIONS['sentinels'],
+                                socket_timeout=0.1)
+            service_name = BROKER_TRANSPORT_OPTIONS.get('service_name', 'master')
+            app.redbeat_redis = sentinel.master_for(service_name,
+                                                    socket_timeout=0.1)
+        else:
+            app.redbeat_redis = StrictRedis.from_url(conf.redis_url,
+                                                     decode_responses=True)
 
     return app.redbeat_redis
 
