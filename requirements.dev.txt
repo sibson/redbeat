@@ -5,6 +5,6 @@ nose
 pytest
 pytest-catchlog
 pytest-cov
-redis
-toX
 python-dateutil
+redis
+tox
