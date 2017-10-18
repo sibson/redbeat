@@ -1,5 +1,8 @@
 .PHONY: upload release release-test release-tag upload
 
+version:
+	python setup.py --version
+
 version-%: OLDVERSION:=$(shell python setup.py --version)
 version-%: 
 	sed -i -e s/$(OLDVERSION)/$*/ setup.py
