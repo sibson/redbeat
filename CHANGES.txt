@@ -1,5 +1,10 @@
-1.0.0 (unreleased)
+0.11.0 (2017-10-18)
 ---------------------
+ - SECURITY, redact password when logging redis URL
+ - Celery 3/4 compatibility fixes, thanks Jannis Leidel
+ - Recurrance Rule support, thanks Aric Huang
+ - Redis Cluster support, thanks Arthur Lutz
+
 
 0.10.2 (2017-10-10)
 ----------------------
