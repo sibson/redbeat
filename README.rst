@@ -18,8 +18,8 @@ RedBeat
 `Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_
 that stores the scheduled tasks and runtime metadata in `Redis <http://redis.io/>`_.
 
-Why RedBeat
------------
+Why RedBeat?
+-------------
 
 #. Dynamic live task creation and modification, without lengthy downtime
 #. Externally manage tasks from any language with Redis bindings
