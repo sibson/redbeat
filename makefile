@@ -9,10 +9,12 @@ version-%:
 	git ci setup.py -m"bump version to $*"
 
 
-release: release-test release-tag upload
+release: release-check release-tag upload
 
-release-test:
+release-check:
+	git pull
 	tox
+
 release-tag: VERSION:=$(shell python setup.py --version)
 release-tag:
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
