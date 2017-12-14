@@ -63,7 +63,8 @@ def redis(app=None):
         if conf.redis_url.startswith('redis-sentinel') and  'sentinels' in BROKER_TRANSPORT_OPTIONS:
             from redis.sentinel import Sentinel
             sentinel = Sentinel(BROKER_TRANSPORT_OPTIONS['sentinels'],
-                                socket_timeout=0.1)
+                                socket_timeout=0.1,
+                                decode_responses=True)
             service_name = BROKER_TRANSPORT_OPTIONS.get('service_name', 'master')
             app.redbeat_redis = sentinel.master_for(service_name,
                                                     socket_timeout=0.1)
