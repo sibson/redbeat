@@ -196,3 +196,31 @@ class SentinelRedBeatCase(AppCase):
     def test_sentinel_scheduler(self):
         redis_client = redis(app=self.app)
         assert 'Sentinel' in str(redis_client.connection_pool)
+
+
+class SeparateOptionsForSchedulerCase(AppCase):
+
+    config_dict = {
+            'REDBEAT_KEY_PREFIX': 'rb-tests:',
+            'redbeat_key_prefix': 'rb-tests:',
+            'REDBEAT_REDIS_URL': 'redis-sentinel://redis-sentinel:26379/0',
+            'REDBEAT_REDIS_OPTIONS': {
+                'sentinels': [('192.168.1.1', 26379),
+                              ('192.168.1.2', 26379),
+                              ('192.168.1.3', 26379)],
+                'password': '123',
+                'service_name': 'master',
+                'socket_timeout': 0.1,
+            },
+            'CELERY_RESULT_BACKEND' : 'redis-sentinel://redis-sentinel:26379/1',
+        }
+
+    def Celery(self, *args, **kwargs):
+        return UnitApp(*args, broker='redis-sentinel://redis-sentinel:26379/0', **kwargs)
+
+    def setup(self): # celery3
+        self.app.conf.add_defaults(deepcopy(self.config_dict))
+
+    def test_sentinel_scheduler(self):
+        redis_client = redis(app=self.app)
+        assert 'Sentinel' in str(redis_client.connection_pool)
