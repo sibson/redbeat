@@ -249,6 +249,7 @@ configuration syntax is inspired from `celery-redis-sentinel
         'sentinels': [('192.168.1.1', 26379),
                       ('192.168.1.2', 26379),
                       ('192.168.1.3', 26379)],
+        'password': '123',
         'service_name': 'master',
         'socket_timeout': 0.1,
     }
@@ -263,6 +264,25 @@ Some notes about the configuration:
 
 * hostname and port are ignored within the actual URL. Sentinel uses transport options
   ``sentinels`` setting to create a ``Sentinel()`` instead of configuration URL.
+
+* ``password`` is going to be used for Celery queue backend as well.
+
+If other backend is configured for Celery queue use
+``REDBEAT_REDIS_URL`` instead of ``BROKER_URL`` and
+``REDBEAT_REDIS_OPTIONS`` instead of ``BROKER_TRANSPORT_OPTIONS``. to
+avoid conflicting options. Here follows the example:::
+
+    # celeryconfig.py
+    REDBEAT_REDIS_URL = 'redis-sentinel://redis-sentinel:26379/0'
+    REDBEAT_REDIS_OPTIONS = {
+        'sentinels': [('192.168.1.1', 26379),
+                      ('192.168.1.2', 26379),
+                      ('192.168.1.3', 26379)],
+        'password': '123',
+        'service_name': 'master',
+        'socket_timeout': 0.1,
+    }
+
 
 Development
 --------------
