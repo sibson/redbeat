@@ -1,11 +1,14 @@
 .PHONY: upload release release-test release-tag upload
 
+VERSION_FILE?=setup.py
+
 version:
 	python setup.py --version
 
 version-%: OLDVERSION:=$(shell python setup.py --version)
+version-%: NEWVERSION=$(subst -,.,$*)
 version-%: 
-	sed -i -e s/$(OLDVERSION)/$*/ setup.py
+	sed -i -e s/$(OLDVERSION)/$(NEWVERSION)/ $(VERSION_FILE)
 	git ci setup.py -m"bump version to $*"
 
 
