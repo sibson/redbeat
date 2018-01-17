@@ -9,6 +9,7 @@ import calendar
 import warnings
 from datetime import datetime, MINYEAR
 from distutils.version import StrictVersion
+from time import sleep
 
 try:
     import simplejson as json
@@ -38,6 +39,8 @@ from .decoder import (
 
 CELERY_4_OR_GREATER = StrictVersion(celery_version) >= StrictVersion('4.0')
 
+logger = get_logger(__name__)
+
 
 def ensure_conf(app):
     """
@@ -55,6 +58,16 @@ def ensure_conf(app):
     return config
 
 
+def try_redis(instance, timeout=2):
+    try:
+        instance.ping()
+    except Exception as e:
+        logger.error(e)
+        logger.info('Trying again in {} seconds'.format(timeout))
+        sleep(timeout)
+        try_redis(instance, timeout=timeout + 2)
+
+
 def redis(app=None):
     app = app_or_default(app)
     conf = ensure_conf(app)
@@ -62,7 +75,7 @@ def redis(app=None):
         redis_options = conf.app.conf.get(
             'REDBEAT_REDIS_OPTIONS',
             conf.app.conf.get('BROKER_TRANSPORT_OPTIONS', {}))
-        if conf.redis_url.startswith('redis-sentinel') and  'sentinels' in redis_options:
+        if conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
             from redis.sentinel import Sentinel
             sentinel = Sentinel(redis_options['sentinels'],
                                 socket_timeout=redis_options.get('socket_timeout'),
@@ -73,6 +86,7 @@ def redis(app=None):
             app.redbeat_redis = StrictRedis.from_url(conf.redis_url,
                                                      decode_responses=True)
 
+    try_redis(app.redbeat_redis)
     return app.redbeat_redis
 
 
@@ -80,8 +94,6 @@ ADD_ENTRY_ERROR = """\
 
 Couldn't add entry %r to redis schedule: %r. Contents: %r
 """
-
-logger = get_logger(__name__)
 
 
 class RedBeatConfig(object):
@@ -389,7 +401,10 @@ class RedBeatScheduler(Scheduler):
     def close(self):
         if self.lock:
             logger.debug('beat: Releasing Lock')
-            self.lock.release()
+            try:
+                self.lock.release()
+            except Exception as e:
+                logger.error('Lock is unavailable. It will be released after expiration time.')
             self.lock = None
         super(RedBeatScheduler, self).close()
 
