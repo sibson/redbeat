@@ -20,7 +20,7 @@ from mock import (
 )
 from basecase import RedBeatCase, AppCase
 from redbeat import RedBeatScheduler
-from redbeat.schedulers import redis
+from redbeat.schedulers import get_redis
 
 
 class mocked_schedule(schedule):
@@ -168,7 +168,7 @@ class NotSentinelRedBeatCase(AppCase):
         pass
 
     def test_sentinel_scheduler(self):
-        redis_client = redis(app=self.app)
+        redis_client = get_redis(app=self.app)
         assert 'Sentinel' not in str(redis_client.connection_pool)
 
 class SentinelRedBeatCase(AppCase):
@@ -194,7 +194,7 @@ class SentinelRedBeatCase(AppCase):
         self.app.conf.add_defaults(deepcopy(self.config_dict))
 
     def test_sentinel_scheduler(self):
-        redis_client = redis(app=self.app)
+        redis_client = get_redis(app=self.app)
         assert 'Sentinel' in str(redis_client.connection_pool)
 
 
@@ -221,5 +221,5 @@ class SeparateOptionsForSchedulerCase(AppCase):
         self.app.conf.add_defaults(deepcopy(self.config_dict))
 
     def test_sentinel_scheduler(self):
-        redis_client = redis(app=self.app)
+        redis_client = get_redis(app=self.app)
         assert 'Sentinel' in str(redis_client.connection_pool)
