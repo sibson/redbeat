@@ -336,12 +336,15 @@ class RedBeatScheduler(Scheduler):
         with client.pipeline() as pipe:
             pipe.zrangebyscore(self.app.redbeat_conf.schedule_key, 0, max_due_at)
 
+            # TODO: put a proper fix to remove duplicate tasks instead of the following hack
             # peek into the next tick to accuratly calculate sleep between ticks
-            pipe.zrangebyscore(self.app.redbeat_conf.schedule_key,
-                               '({}'.format(max_due_at),
-                               max_due_at + self.max_interval,
-                               start=0, num=1)
-            due_tasks, maybe_due = pipe.execute()
+            # pipe.zrangebyscore(self.app.redbeat_conf.schedule_key,
+            #                    '({}'.format(max_due_at),
+            #                    max_due_at + self.max_interval,
+            #                    start=0, num=1)
+            # due_tasks, maybe_due = pipe.execute()
+            due_tasks = pipe.execute()[0]
+            maybe_due = []
 
         logger.info('Loading %d tasks', len(due_tasks) + len(maybe_due))
         d = {}
