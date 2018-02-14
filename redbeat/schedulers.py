@@ -372,8 +372,10 @@ class RedBeatScheduler(Scheduler):
 
     def tick(self, min=min, **kwargs):
         if self.lock:
-            logger.debug('beat: Extending lock...')
-            redis(self.app).pexpire(self.lock_key, int(self.lock_timeout * 1000))
+            logger.debug('beat: Extending lock by {} seconds...'.format(self.lock_timeout))
+            res = redis(self.app).pexpire(self.lock_key, int(self.lock_timeout * 1000))
+            if res != 1:
+                logger.warning('The key does not exist')
 
         remaining_times = []
         try:
