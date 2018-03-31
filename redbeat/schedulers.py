@@ -8,13 +8,13 @@ from __future__ import absolute_import
 import calendar
 import warnings
 from datetime import datetime, MINYEAR
-from distutils.version import StrictVersion
 
 try:
     import simplejson as json
 except ImportError:
     import json
 
+from packaging.version import parse as parse_version
 from celery import __version__ as celery_version
 from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL
 from celery.utils.log import get_logger
@@ -36,7 +36,7 @@ from .decoder import (
     from_timestamp, to_timestamp
     )
 
-CELERY_4_OR_GREATER = StrictVersion(celery_version) >= StrictVersion('4.0')
+CELERY_4_OR_GREATER = parse_version(celery_version) >= parse_version('4.0')
 
 
 def ensure_conf(app):
