@@ -375,7 +375,8 @@ class RedBeatScheduler(Scheduler):
             logger.debug('beat: Extending lock by {} seconds...'.format(self.lock_timeout))
             res = redis(self.app).pexpire(self.lock_key, int(self.lock_timeout * 1000))
             if res != 1:
-                logger.warning('The key does not exist')
+                logger.warning('The key does not exist. Check if there\'s another instance with '
+                               'smaller lock_timeout running, or check redis maxmemory-policy')
 
         remaining_times = []
         try:
