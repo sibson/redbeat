@@ -7,7 +7,7 @@ from __future__ import absolute_import
 
 import calendar
 import warnings
-from datetime import datetime, MINYEAR
+from datetime import datetime
 from distutils.version import StrictVersion
 
 try:
@@ -266,7 +266,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             return False, 5.0  # 5 second delay for re-enable.
 
         return self.schedule.is_due(self.last_run_at or
-                                    datetime(MINYEAR, 1, 1, tzinfo=self.schedule.tz))
+                                    datetime(1970, 1, 2, tzinfo=self.schedule.tz))
 
 
 class RedBeatScheduler(Scheduler):
