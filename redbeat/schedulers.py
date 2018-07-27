@@ -73,7 +73,34 @@ def redis(app=None):
             app.redbeat_redis = StrictRedis.from_url(conf.redis_url,
                                                      decode_responses=True)
 
+        _ensure_connected(app.redbeat_redis)
+
     return app.redbeat_redis
+
+
+def _ensure_connected(redis_cli):
+
+    from kombu.utils.functional import retry_over_time
+    from kombu.transport.redis import get_redis_error_classes
+    errors = get_redis_error_classes()
+
+    def errback(exc, intervals, retries):
+        interval = next(intervals)
+        logger.error(
+            'redbeat: Connection error %r on try %d.'
+            ' Trying again in %.1f seconds...',
+            exc, retries + 1, interval)
+        return interval
+
+    retry_over_time(
+        redis_cli.ping,
+        catch=errors.connection_errors + errors.channel_errors,
+        errback=errback,
+        max_retries=100,  # self.app.conf.broker_connection_max_retries
+        interval_start=0.5,
+        interval_step=0.3,
+        interval_max=3,
+    )
 
 
 ADD_ENTRY_ERROR = """\
