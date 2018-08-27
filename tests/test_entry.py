@@ -55,8 +55,7 @@ class test_RedBeatEntry(RedBeatCase):
 
         n = initial.next(last_run_at=now)
 
-        # new entry has updated run info
-        self.assertNotEqual(initial, n)
+        self.assertIsNotNone(now.tzinfo)
         self.assertEqual(n.last_run_at, now)
         self.assertEqual(initial.total_run_count + 1, n.total_run_count)
 

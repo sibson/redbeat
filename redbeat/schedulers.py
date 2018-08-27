@@ -15,7 +15,7 @@ try:
 except ImportError:
     import json
 
-from celery import __version__ as celery_version
+from celery import VERSION as CELERY_VERSION
 from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL
 from celery.utils.log import get_logger
 from celery.signals import beat_init
@@ -36,7 +36,7 @@ from .decoder import (
     from_timestamp, to_timestamp
     )
 
-CELERY_4_OR_GREATER = StrictVersion(celery_version) >= StrictVersion('4.0')
+CELERY_4_OR_GREATER = CELERY_VERSION[0] >= 4
 
 
 def ensure_conf(app):
