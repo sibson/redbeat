@@ -281,7 +281,13 @@ avoid conflicting options. Here follows the example:::
         'password': '123',
         'service_name': 'master',
         'socket_timeout': 0.1,
+        'retry_period': 60,
     }
+
+If ``retry_period`` is given, retry connection for ``retry_period``
+seconds. If not set, retrying mechanism is not triggered. If set
+to ``-1`` retry infinitely.
+
 
 
 Development

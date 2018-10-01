@@ -32,7 +32,8 @@ setup(
     install_requires=[
         'redis',
         'celery',
-        'python-dateutil'
+        'python-dateutil',
+        'tenacity'
     ],
     tests_require=[
         'pytest',
