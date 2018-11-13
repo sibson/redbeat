@@ -75,8 +75,7 @@ A prefix for all keys created by RedBeat, defaults to ``'redbeat'``.
 ``redbeat_lock_key``
 ~~~~~~~~~~~~~~~~~~~~
 
-Key used to ensure only a single beat instance runs at a time,
-defaults to ``'<redbeat_key_prefix>:lock'``.
+Key used to ensure only a single beat instance runs at a time. Omit or set to None to disable this feature.
 
 ``redbeat_lock_timeout``
 ~~~~~~~~~~~~~~~~~~~~~~~~

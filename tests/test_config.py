@@ -24,7 +24,7 @@ class test_RedBeatConfig(AppCase):
     def test_other_keys(self):
         self.assertEqual(self.conf.schedule_key, self.conf.key_prefix + ':schedule')
         self.assertEqual(self.conf.statics_key, self.conf.key_prefix + ':statics')
-        self.assertEqual(self.conf.lock_key, self.conf.key_prefix + ':lock')
+        self.assertEqual(self.conf.lock_key, None)
 
     @pytest.mark.skipif(not CELERY_4_OR_GREATER, reason="requires Celery >= 4.x")
     def test_key_prefix_override_4(self):

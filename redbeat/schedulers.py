@@ -141,7 +141,7 @@ class RedBeatConfig(object):
         self.key_prefix = self.either_or('redbeat_key_prefix', 'redbeat:')
         self.schedule_key = self.key_prefix + ':schedule'
         self.statics_key = self.key_prefix + ':statics'
-        self.lock_key = self.either_or('redbeat_lock_key', self.key_prefix + ':lock')
+        self.lock_key = self.either_or('redbeat_lock_key', None)
         self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
 
