@@ -106,6 +106,17 @@ class RedBeatJSONEncoderTestCase(JSONTestCase):
         result = self.dumps(r)
         self.assertEqual(result, json.dumps(self.rrule()))
 
+    def test_rrule_timezone(self):
+        tz = timezone.get_timezone('US/Eastern')
+
+        start1 = datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc)
+        start2 = start1.astimezone(tz)
+
+        r1 = rrule('MINUTELY', dtstart=start1, count=1)
+        r2 = rrule('MINUTELY', dtstart=start2, count=1)
+
+        self.assertEqual(self.dumps(r1), self.dumps(r2))
+
 
 class RedBeatJSONDecoderTestCase(JSONTestCase):
 
