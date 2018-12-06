@@ -1,3 +1,10 @@
+0.12.0 (2018-12-06)
+--------------------
+  - better Celery 4 support, thanks @az-wegift
+  - configurably, automatically reconnect to Redis on timeout error rather than terminate, thanks @az-wegift
+  - password support for Redis Sentinal connections, thanks @az-wegift
+  - bugfix, rrule serialization under Celery 3, thanks @noamkush
+
 0.11.1 (2018-01-03)
 --------------------
  - config options and password support for Redis Sentinel, thanks Amadeusz Zolnowski
