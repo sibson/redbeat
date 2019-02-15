@@ -22,6 +22,7 @@ from basecase import RedBeatCase, AppCase
 from redbeat import RedBeatScheduler
 from redbeat.schedulers import get_redis
 
+import ssl
 
 class mocked_schedule(schedule):
 
@@ -227,3 +228,98 @@ class SeparateOptionsForSchedulerCase(AppCase):
     def test_sentinel_scheduler(self):
         redis_client = get_redis(app=self.app)
         assert 'Sentinel' in str(redis_client.connection_pool)
+
+class SSLConnectionToRedis(AppCase):
+
+    config_dict = {
+            'REDBEAT_KEY_PREFIX': 'rb-tests:',
+            'REDBEAT_REDIS_URL': 'rediss://redishost:26379/0',
+            'REDBEAT_REDIS_OPTIONS': {
+                'password': '123',
+                'service_name': 'master',
+                'socket_timeout': 0.1,
+            },
+            'CELERY_RESULT_BACKEND' : 'redis-sentinel://redis-sentinel:26379/1',
+            'REDBEAT_REDIS_USE_SSL': {
+                'ssl_cert_reqs': ssl.CERT_REQUIRED,
+                'ssl_keyfile': '/path/to/file.key',
+                'ssl_certfile': '/path/to/cert.pem',
+                'ssl_ca_certs': '/path/to/ca.pem',
+            },
+        }
+
+    def Celery(self, *args, **kwargs):
+        return UnitApp(*args, broker='rediss://redishost:26379/0', **kwargs)
+
+    def setup(self): # celery3
+        self.app.conf.add_defaults(deepcopy(self.config_dict))
+
+    def test_ssl_connection_scheduler(self):
+        redis_client = get_redis(app=self.app)
+        assert 'SSLConnection' in str(redis_client.connection_pool)
+        assert redis_client.connection_pool.connection_kwargs['ssl_cert_reqs'] == ssl.CERT_REQUIRED
+        assert redis_client.connection_pool.connection_kwargs['ssl_keyfile'] == '/path/to/file.key'
+        assert redis_client.connection_pool.connection_kwargs['ssl_certfile'] == '/path/to/cert.pem'
+        assert redis_client.connection_pool.connection_kwargs['ssl_ca_certs'] == '/path/to/ca.pem'
+
+class SSLConnectionToRedisDefaultBrokerSSL(AppCase):
+
+    config_dict = {
+            'REDBEAT_KEY_PREFIX': 'rb-tests:',
+            'REDBEAT_REDIS_URL': 'rediss://redishost:26379/0',
+            'REDBEAT_REDIS_OPTIONS': {
+                'password': '123',
+                'service_name': 'master',
+                'socket_timeout': 0.1,
+            },
+            'CELERY_RESULT_BACKEND' : 'redis-sentinel://redis-sentinel:26379/1',
+            'BROKER_USE_SSL': {
+                'ssl_cert_reqs': ssl.CERT_REQUIRED,
+                'ssl_keyfile': '/path/to/file.key',
+                'ssl_certfile': '/path/to/cert.pem',
+                'ssl_ca_certs': '/path/to/ca.pem',
+            },
+        }
+
+    def Celery(self, *args, **kwargs):
+        return UnitApp(*args, broker='rediss://redishost:26379/0', **kwargs)
+
+    def setup(self): # celery3
+        self.app.conf.add_defaults(deepcopy(self.config_dict))
+
+    def test_ssl_connection_scheduler(self):
+        redis_client = get_redis(app=self.app)
+        assert 'SSLConnection' in str(redis_client.connection_pool)
+        assert redis_client.connection_pool.connection_kwargs['ssl_cert_reqs'] == ssl.CERT_REQUIRED
+        assert redis_client.connection_pool.connection_kwargs['ssl_keyfile'] == '/path/to/file.key'
+        assert redis_client.connection_pool.connection_kwargs['ssl_certfile'] == '/path/to/cert.pem'
+        assert redis_client.connection_pool.connection_kwargs['ssl_ca_certs'] == '/path/to/ca.pem'
+
+class SSLConnectionToRedisNoCerts(AppCase):
+
+    config_dict = {
+            'REDBEAT_KEY_PREFIX': 'rb-tests:',
+            'REDBEAT_REDIS_URL': 'rediss://redishost:26379/0',
+            'REDBEAT_REDIS_OPTIONS': {
+                'password': '123',
+                'service_name': 'master',
+                'socket_timeout': 0.1,
+            },
+            'CELERY_RESULT_BACKEND' : 'redis-sentinel://redis-sentinel:26379/1',
+            'REDBEAT_REDIS_USE_SSL': True
+        }
+
+    def Celery(self, *args, **kwargs):
+        return UnitApp(*args, broker='rediss://redishost:26379/0', **kwargs)
+
+    def setup(self): # celery3
+        self.app.conf.add_defaults(deepcopy(self.config_dict))
+
+    def test_ssl_connection_scheduler(self):
+        redis_client = get_redis(app=self.app)
+        assert 'SSLConnection' in str(redis_client.connection_pool)
+        assert redis_client.connection_pool.connection_kwargs['ssl_cert_reqs'] == ssl.CERT_REQUIRED
+        assert 'ssl_keyfile' not in redis_client.connection_pool.connection_kwargs
+        assert 'ssl_certfile' not in redis_client.connection_pool.connection_kwargs
+        assert 'ssl_ca_certs' not in redis_client.connection_pool.connection_kwargs
+
