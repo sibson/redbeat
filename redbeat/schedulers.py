@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import calendar
 import logging
 import warnings
-from datetime import datetime, timedelta, MINYEAR
+from datetime import datetime, MINYEAR
 from distutils.version import StrictVersion
 
 try:
