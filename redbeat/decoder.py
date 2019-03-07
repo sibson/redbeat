@@ -14,6 +14,7 @@ except ImportError:  # celery 4.x
     from celery.utils.time import timezone
 
 from celery.schedules import schedule, crontab
+from pytz import FixedOffset
 from .schedules import rrule
 
 
@@ -22,9 +23,10 @@ def to_timestamp(dt):
     return calendar.timegm(dt.utctimetuple())
 
 
-def from_timestamp(seconds):
+def from_timestamp(seconds, tz_minutes=0):
     """ convert seconds since the epoch to an UTC aware datetime """
-    return datetime.fromtimestamp(seconds, tz=timezone.utc)
+    tz = FixedOffset(tz_minutes) if tz_minutes else timezone.utc
+    return datetime.fromtimestamp(seconds, tz=tz)
 
 
 class RedBeatJSONDecoder(json.JSONDecoder):
@@ -48,9 +50,12 @@ class RedBeatJSONDecoder(json.JSONDecoder):
 
         if objtype == 'rrule':
             # Decode timestamp values into datetime objects
-            for key in ['dtstart', 'until']:
-                if d[key] is not None:
-                    d[key] = from_timestamp(d[key])
+            for key, tz_key in [
+                    ('dtstart', 'dtstart_tz'), ('until', 'until_tz')]:
+                timestamp = d.get(key)
+                tz_minutes = d.pop(tz_key, 0)
+                if timestamp is not None:
+                    d[key] = from_timestamp(timestamp, tz_minutes)
             return rrule(**d)
 
         d['__type__'] = objtype
