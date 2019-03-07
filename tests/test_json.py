@@ -60,10 +60,12 @@ class JSONTestCase(TestCase):
             '__type__': 'rrule',
             'freq': 5,
             'dtstart': 1451480362,
+            'dtstart_tz': 0,
             'interval': 1,
             'wkst': None,
             'count': 1,
-            'until': None,
+            'until': 1451566762,
+            'until_tz': 0,
             'bysetpos': None,
             'bymonth': None,
             'bymonthday': None,
@@ -102,9 +104,14 @@ class RedBeatJSONEncoderTestCase(JSONTestCase):
         self.assertEqual(result, json.dumps(self.crontab()))
 
     def test_rrule(self):
-        r = rrule('MINUTELY', dtstart=datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc), count=1)
+        r = rrule(
+            'MINUTELY',
+            dtstart=datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc),
+            until=datetime(2015, 12, 31, 12, 59, 22, tzinfo=timezone.utc),
+            count=1,
+            )
         result = self.dumps(r)
-        self.assertEqual(result, json.dumps(self.rrule()))
+        self.assertEqual(json.loads(result), self.rrule())
 
     def test_rrule_timezone(self):
         tz = timezone.get_timezone('US/Eastern')
@@ -115,7 +122,17 @@ class RedBeatJSONEncoderTestCase(JSONTestCase):
         r1 = rrule('MINUTELY', dtstart=start1, count=1)
         r2 = rrule('MINUTELY', dtstart=start2, count=1)
 
-        self.assertEqual(self.dumps(r1), self.dumps(r2))
+        r1_json = self.dumps(r1)
+        r2_json = self.dumps(r2)
+
+        r1_parsed = self.loads(r1_json)
+        self.assertEqual(r1_parsed.dtstart.utcoffset(), r1.dtstart.utcoffset())
+
+        r2_parsed = self.loads(r2_json)
+        self.assertEqual(r2_parsed.dtstart.utcoffset(), r2.dtstart.utcoffset())
+
+        self.assertEqual(r1_parsed.dtstart, r2_parsed.dtstart)
+        self.assertNotEqual(r1_parsed.dtstart.utcoffset(), r2_parsed.dtstart.utcoffset())
 
 
 class RedBeatJSONDecoderTestCase(JSONTestCase):
