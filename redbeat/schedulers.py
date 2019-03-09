@@ -37,6 +37,7 @@ from tenacity import (before_sleep_log,
 
 import redis.exceptions
 from redis.client import StrictRedis
+from redis import VERSION as REDIS_VERSION
 
 from .decoder import (
     RedBeatJSONEncoder, RedBeatJSONDecoder,
@@ -44,6 +45,7 @@ from .decoder import (
     )
 
 CELERY_4_OR_GREATER = CELERY_VERSION[0] >= 4
+REDIS_3_OR_GREATER = REDIS_VERSION[0] >= 3
 
 
 class RetryingConnection(object):
@@ -125,6 +127,14 @@ def get_redis(app=None):
             app.redbeat_redis = RetryingConnection(retry_period, connection)
 
     return app.redbeat_redis
+
+
+if REDIS_3_OR_GREATER:
+    def zadd(pipe, name, mapping):
+        pipe.zadd(name, mapping)
+else:
+    def zadd(pipe, name, mapping):
+        pipe.zadd(name, **mapping)
 
 
 ADD_ENTRY_ERROR = """\
@@ -271,7 +281,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         }
         with get_redis(self.app).pipeline() as pipe:
             pipe.hset(self.key, 'definition', json.dumps(definition, cls=RedBeatJSONEncoder))
-            pipe.zadd(self.app.redbeat_conf.schedule_key, self.score, self.key)
+            zadd(pipe, self.app.redbeat_conf.schedule_key, {self.key: self.score})
             pipe.execute()
 
         return self
@@ -296,7 +306,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
         with get_redis(self.app).pipeline() as pipe:
             pipe.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
-            pipe.zadd(self.app.redbeat_conf.schedule_key, entry.score, entry.key)
+            zadd(pipe, self.app.redbeat_conf.schedule_key, {entry.key: entry.score})
             pipe.execute()
 
         return entry
@@ -309,7 +319,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         }
         with get_redis(self.app).pipeline() as pipe:
             pipe.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
-            pipe.zadd(self.app.redbeat_conf.schedule_key, self.score, self.key)
+            zadd(pipe, self.app.redbeat_conf.schedule_key, {self.key: self.score})
             pipe.execute()
 
     def is_due(self):

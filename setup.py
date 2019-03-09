@@ -30,7 +30,7 @@ setup(
         'Operating System :: OS Independent',
     ],
     install_requires=[
-        'redis<3.0',
+        'redis',
         'celery',
         'python-dateutil',
         'tenacity'
