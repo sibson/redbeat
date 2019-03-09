@@ -9,11 +9,6 @@ RedBeat
    :target: https://circleci.com/gh/sibson/redbeat/
    :alt: Circle CI
 
-.. image:: https://img.shields.io/travis/sibson/redbeat.svg
-    :target: https://travis-ci.org/sibson/redbeat
-    :alt: Travis CI
-
-
 `RedBeat <https://github.com/sibson/redbeat>`_ is a
 `Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_
 that stores the scheduled tasks and runtime metadata in `Redis <http://redis.io/>`_.
