@@ -1,0 +1,31 @@
+version: 2
+jobs:
+  test:
+    docker:
+      - image: circleci/python:3.6
+      - image: circleci/redis:4
+
+    steps:
+      - checkout
+
+      - run:
+          name: install dependencies
+          command: |
+            pip install tox tox-pyenv
+            pyenv global 2.7.11 3.6.4
+            pyenv install 2.7.11
+            pyenv install 3.6.4
+      - run:
+          name: run tests
+          command: |
+            mkdir /tmp/tox_test_results
+            tox -- --cov=redbeat --junitxml=/tmp/tox_test_results/unittests.xml
+      - store_test_results:
+          path: /tmp/tox_test_results
+
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - test
