@@ -49,4 +49,5 @@ workflows:
   version: 2
   test:
     jobs:
-      - test
+      - python36
+      - python27
