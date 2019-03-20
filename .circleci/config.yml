@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  test:
+  python36:
     docker:
       - image: circleci/python:3.6
       - image: circleci/redis:4
@@ -11,12 +11,9 @@ jobs:
       - run:
           name: install dependencies
           command: |
-            pip install --user tox tox-pyenv
+            pip install --user tox
             echo 'export PATH="$PATH":"$HOME"/.local/bin' >> $BASH_ENV
             source $BASH_ENV
-            pyenv global 2.7.11 3.6.4
-            pyenv install 2.7.11
-            pyenv install 3.6.4
       - run:
           name: run tests
           command: |
@@ -24,6 +21,28 @@ jobs:
             tox -- --cov=redbeat --junitxml=/tmp/tox_test_results/unittests.xml
       - store_test_results:
           path: /tmp/tox_test_results
+  python27:
+    docker:
+      - image: circleci/python:2.7
+      - image: circleci/redis:4
+
+    steps:
+      - checkout
+
+      - run:
+          name: install dependencies
+          command: |
+            pip install --user tox
+            echo 'export PATH="$PATH":"$HOME"/.local/bin' >> $BASH_ENV
+            source $BASH_ENV
+      - run:
+          name: run tests
+          command: |
+            mkdir /tmp/tox_test_results
+            tox -- --cov=redbeat --junitxml=/tmp/tox_test_results/unittests.xml
+      - store_test_results:
+          path: /tmp/tox_test_results
+
 
 
 workflows:
