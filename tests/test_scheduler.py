@@ -165,7 +165,7 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
 class NotSentinelRedBeatCase(AppCase):
 
     config_dict = {
-            'BROKER_URL': 'redis://',
+            'BROKER_URL': 'redis://localhost:6379/0',
         }
 
     def setup(self):
