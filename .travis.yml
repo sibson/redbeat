@@ -2,6 +2,7 @@ language: python
 sudo: false
 services:
   - redis-server
+cache: pip
 python:
 - '2.7'
 - '3.6'
