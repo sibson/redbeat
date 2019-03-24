@@ -1,5 +1,4 @@
 celery
-fakeredis>=0.8.1
 mock
 nose
 pytest

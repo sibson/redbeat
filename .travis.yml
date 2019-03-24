@@ -1,5 +1,7 @@
 language: python
 sudo: false
+services:
+  - redis-server
 python:
 - '2.7'
 - '3.6'
