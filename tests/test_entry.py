@@ -24,7 +24,7 @@ class test_RedBeatEntry(RedBeatCase):
             'task': 'tasks.test',
             'schedule': e.schedule,
             'args': None,
-            'kwargs': None,
+            'kwargs': {},
             'options': {},
             'enabled': True,
         }
