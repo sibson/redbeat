@@ -10,7 +10,6 @@ jobs:
       - run:
           name: install dependencies
           command: |
-            pip install --user tox
             echo 'export PATH="$PATH":"$HOME"/.local/bin' >> $BASH_ENV
             source $BASH_ENV
       - run:
