@@ -16,7 +16,7 @@ jobs:
       - run:
           name: run tests
           command: |
-            mkdir /tmp/tox_test_results
+            mkdir /tmp/tox
             tox --skip-missing-interpreters -- --cov=redbeat --junitxml=/tmp/tox/{envname}.xml
       - store_test_results:
           path: /tmp/tox
@@ -36,7 +36,7 @@ jobs:
       - run:
           name: run tests
           command: |
-            mkdir /tmp/tox_test_results
+            mkdir /tmp/tox
             tox --skip-missing-interpreters -- --cov=redbeat --junitxml=/tmp/tox/{envname}.xml
       - store_test_results:
           path: /tmp/tox
