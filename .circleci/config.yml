@@ -17,9 +17,9 @@ jobs:
           name: run tests
           command: |
             mkdir /tmp/tox_test_results
-            tox --skip-missing-interpreters -- --cov=redbeat --junitxml=/tmp/tox_test_results/unittests.xml
+            tox --skip-missing-interpreters -- --cov=redbeat --junitxml=/tmp/tox/{envname}.xml
       - store_test_results:
-          path: /tmp/tox_test_results
+          path: /tmp/tox
   python27:
     docker:
       - image: circleci/python:2.7
@@ -37,9 +37,9 @@ jobs:
           name: run tests
           command: |
             mkdir /tmp/tox_test_results
-            tox --skip-missing-interpreters -- --cov=redbeat --junitxml=/tmp/tox_test_results/unittests.xml
+            tox --skip-missing-interpreters -- --cov=redbeat --junitxml=/tmp/tox/{envname}.xml
       - store_test_results:
-          path: /tmp/tox_test_results
+          path: /tmp/tox
 
 
 
