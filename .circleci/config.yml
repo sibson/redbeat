@@ -16,7 +16,7 @@ jobs:
       - run:
           name: Run Tests
           environment:
-                TEST_RESULTS_DIR: /tmp/tox
+                TEST_RESULTS_DIR: /tmp/tox/
           command: |
             mkdir /tmp/tox
             tox --skip-missing-interpreters
@@ -38,7 +38,7 @@ jobs:
       - run:
           name: Run Tests
           environment:
-                TEST_RESULTS_DIR: /tmp/tox
+                TEST_RESULTS_DIR: /tmp/tox/
           command: |
             mkdir /tmp/tox
             tox --skip-missing-interpreters
