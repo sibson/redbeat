@@ -8,16 +8,18 @@ jobs:
     steps:
       - checkout
       - run:
-          name: install dependencies
+          name: Install Tox
           command: |
             pip install --user tox
             echo 'export PATH="$PATH":"$HOME"/.local/bin' >> $BASH_ENV
             source $BASH_ENV
       - run:
-          name: run tests
+          name: Run Tests
+          environment:
+                TEST_RESULTS_DIR: /tmp/tox
           command: |
             mkdir /tmp/tox
-            tox --skip-missing-interpreters -- --cov=redbeat --junitxml=/tmp/tox/{envname}.xml
+            tox --skip-missing-interpreters
       - store_test_results:
           path: /tmp/tox
   python27:
@@ -28,16 +30,18 @@ jobs:
       - checkout
 
       - run:
-          name: install dependencies
+          name: Install Tox
           command: |
             pip install --user tox
             echo 'export PATH="$PATH":"$HOME"/.local/bin' >> $BASH_ENV
             source $BASH_ENV
       - run:
-          name: run tests
+          name: Run Tests
+          environment:
+                TEST_RESULTS_DIR: /tmp/tox
           command: |
             mkdir /tmp/tox
-            tox --skip-missing-interpreters -- --cov=redbeat --junitxml=/tmp/tox/{envname}.xml
+            tox --skip-missing-interpreters
       - store_test_results:
           path: /tmp/tox
 
@@ -45,7 +49,7 @@ jobs:
 
 workflows:
   version: 2
-  test:
+  testing:
     jobs:
       - python36
       - python27
