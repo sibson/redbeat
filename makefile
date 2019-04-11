@@ -24,5 +24,5 @@ release-tag:
 	git push --tags
 
 upload:
-	python setup.py sdist
-	twine upload dist/$(shell python setup.py --fullname).*
+	python setup.py sdist bdist_wheel
+	twine upload dist/$(shell python setup.py --fullname)*
