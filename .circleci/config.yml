@@ -1,9 +1,9 @@
 version: 2
 jobs:
   # TODO: add caching
-  python36:
+  python37:
     docker:
-      - image: circleci/python:3.6
+      - image: circleci/python:3.7
 
     steps:
       - checkout
@@ -19,7 +19,7 @@ jobs:
                 TEST_RESULTS_DIR: /tmp/tox/
           command: |
             mkdir /tmp/tox
-            tox --skip-missing-interpreters
+            tox
       - store_test_results:
           path: /tmp/tox
   python27:
@@ -41,7 +41,7 @@ jobs:
                 TEST_RESULTS_DIR: /tmp/tox/
           command: |
             mkdir /tmp/tox
-            tox --skip-missing-interpreters
+            tox
       - store_test_results:
           path: /tmp/tox
 
@@ -51,5 +51,5 @@ workflows:
   version: 2
   testing:
     jobs:
-      - python36
+      - python37
       - python27
