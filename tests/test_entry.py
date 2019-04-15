@@ -3,8 +3,10 @@ import json
 
 try:  # celery 3.x
     from celery.utils.timeutils import maybe_make_aware
+    celery_main_version = 3
 except ImportError:  # celery 4.x
     from celery.utils.time import maybe_make_aware
+    celery_main_version = 4
 
 from basecase import RedBeatCase
 
@@ -19,12 +21,17 @@ class test_RedBeatEntry(RedBeatCase):
         e = self.create_entry()
         e.save()
 
+        if celery_main_version < 4:
+            kwargs_default = None
+        else:
+            kwargs_default = {}
+
         expected = {
             'name': 'test',
             'task': 'tasks.test',
             'schedule': e.schedule,
             'args': None,
-            'kwargs': {},
+            'kwargs': kwargs_default,
             'options': {},
             'enabled': True,
         }
