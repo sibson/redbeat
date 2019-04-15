@@ -19,7 +19,7 @@ jobs:
                 TEST_RESULTS_DIR: /tmp/tox/
           command: |
             mkdir /tmp/tox
-            tox
+            tox --skip-missing-interpreters
       - store_test_results:
           path: /tmp/tox
   python27:
@@ -41,7 +41,7 @@ jobs:
                 TEST_RESULTS_DIR: /tmp/tox/
           command: |
             mkdir /tmp/tox
-            tox
+            tox --skip-missing-interpreters
       - store_test_results:
           path: /tmp/tox
 
