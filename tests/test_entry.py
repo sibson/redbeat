@@ -3,8 +3,10 @@ import json
 
 try:  # celery 3.x
     from celery.utils.timeutils import maybe_make_aware
+    CELERY_CONFIG_DEFAULT_KWARGS = None
 except ImportError:  # celery 4.x
     from celery.utils.time import maybe_make_aware
+    CELERY_CONFIG_DEFAULT_KWARGS = {}
 
 from basecase import RedBeatCase
 
@@ -24,7 +26,7 @@ class test_RedBeatEntry(RedBeatCase):
             'task': 'tasks.test',
             'schedule': e.schedule,
             'args': None,
-            'kwargs': {},
+            'kwargs': CELERY_CONFIG_DEFAULT_KWARGS,
             'options': {},
             'enabled': True,
         }

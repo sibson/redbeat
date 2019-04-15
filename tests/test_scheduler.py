@@ -165,11 +165,11 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
 class NotSentinelRedBeatCase(AppCase):
 
     config_dict = {
-            'BROKER_URL': 'redis://',
-        }
+        'BROKER_URL': 'redis://',
+    }
 
     def setup(self):
-        self.app.conf.add_defaults(deepcopy(self.config_dict))
+        self.app.conf.update(self.config_dict)
 
     def test_sentinel_scheduler(self):
         redis_client = get_redis(app=self.app)

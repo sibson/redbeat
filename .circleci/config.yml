@@ -1,9 +1,9 @@
 version: 2
 jobs:
   # TODO: add caching
-  python36:
+  python37:
     docker:
-      - image: circleci/python:3.6
+      - image: circleci/python:3.7
 
     steps:
       - checkout
@@ -51,5 +51,5 @@ workflows:
   version: 2
   testing:
     jobs:
-      - python36
+      - python37
       - python27
