@@ -2,6 +2,9 @@
 --------------------
   - support py-redis>=3. thanks noamkush
     - see https://github.com/sibson/redbeat/pull/108 for dependency issues
+  - use CircleCI 2.0, thanks Christopher Dignam
+  - build wheel for distribution on pypi, thanks @noamkush
+  - test fixes for py37/celery3/4, thanks @laixintao
 
 0.12.0 (2018-12-06)
 --------------------
