@@ -29,7 +29,7 @@ class test_rrule_remaining_estimate(TestCase):
         eta_from_now = r.remaining_estimate(datetime.utcnow())
         eta_after_one_minute = r.remaining_estimate(datetime.utcnow() + timedelta(minutes=1))
         self.assertTrue(eta_from_now.total_seconds() > 0)
-        self.assertEquals(eta_after_one_minute, None)
+        self.assertEqual(eta_after_one_minute, None)
 
     def test_freq__with_multiple_count(self):
         r = rrule('MINUTELY', dtstart=datetime.utcnow() + timedelta(minutes=1), count=2)
@@ -38,7 +38,7 @@ class test_rrule_remaining_estimate(TestCase):
         eta_after_two_minutes = r.remaining_estimate(datetime.utcnow() + timedelta(minutes=2))
         self.assertTrue(eta_from_now.total_seconds() > 0)
         self.assertTrue(eta_after_one_minute.total_seconds() > 0)
-        self.assertEquals(eta_after_two_minutes, None)
+        self.assertEqual(eta_after_two_minutes, None)
 
 
 @patch.object(rrule, 'now', datetime.utcnow)
@@ -65,11 +65,11 @@ class test_rrule_is_due(TestCase):
         # no ETA for the following occurrence.
         is_due, next = r.is_due(datetime(1970, 1, 1))
         self.assertTrue(is_due)
-        self.assertEquals(next, None)
+        self.assertEqual(next, None)
         # It should not be due if it was already run once.
         is_due, next = r.is_due(datetime.utcnow())
         self.assertFalse(is_due)
-        self.assertEquals(next, None)
+        self.assertEqual(next, None)
 
     def test_freq__with_multiple_count(self):
         r = rrule('MINUTELY', dtstart=datetime.utcnow(), count=2)
@@ -84,4 +84,4 @@ class test_rrule_is_due(TestCase):
         # There should be no more occurrences after one minute.
         is_due, next = r.is_due(datetime.utcnow() + timedelta(minutes=1))
         self.assertFalse(is_due)
-        self.assertEquals(next, None)
+        self.assertEqual(next, None)
