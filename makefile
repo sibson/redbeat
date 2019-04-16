@@ -25,4 +25,4 @@ release-tag:
 
 upload:
 	python setup.py sdist bdist_wheel
-	twine upload dist/$(shell python setup.py --fullname)*
+	twine upload dist/*
