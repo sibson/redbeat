@@ -9,3 +9,4 @@ python-dateutil
 redis
 tenacity
 tox
+twine
