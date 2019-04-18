@@ -23,6 +23,11 @@ release-tag:
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags
 
+upload: VERSION:=$(shell python setup.py --version)
 upload:
 	python setup.py sdist bdist_wheel
-	twine upload dist/*
+	twine upload $(wildcard dist/celery*$(VERSION)*)
+
+
+clean:
+	rm -f dist/*
