@@ -21,6 +21,24 @@ class test_RedBeatConfig(AppCase):
     def test_key_prefix_default(self):
         self.assertEqual(self.conf.key_prefix, 'redbeat:')
 
+    def test_lock_key_default(self):
+        self.assertTrue("REDBEAT_LOCK_KEY" not in self.app.conf.keys())
+        self.assertTrue("redbeat_lock_key" not in self.app.conf.keys())
+        self.conf = RedBeatConfig(self.app)
+        self.assertEqual(self.conf.lock_key, 'redbeat::lock')
+
+    def test_disable_lock_key_4(self):
+        self.app.conf.redbeat_lock_key = None
+        self.assertTrue("redbeat_lock_key" in self.app.conf.keys())
+        self.conf = RedBeatConfig(self.app)
+        self.assertEqual(self.conf.lock_key, None)
+
+    def test_disable_lock_key_3(self):
+        self.app.conf.REDBEAT_LOCK_KEY = None
+        self.assertTrue("REDBEAT_LOCK_KEY" in self.app.conf.keys())
+        self.conf = RedBeatConfig(self.app)
+        self.assertEqual(self.conf.lock_key, None)
+
     def test_other_keys(self):
         self.assertEqual(self.conf.schedule_key, self.conf.key_prefix + ':schedule')
         self.assertEqual(self.conf.statics_key, self.conf.key_prefix + ':statics')
@@ -45,14 +63,14 @@ class test_RedBeatConfig(AppCase):
 
     @pytest.mark.skipif(CELERY_4_OR_GREATER, reason="requires Celery < 4.x")
     @mock.patch('warnings.warn')
-    def test_either_or_3(self, warn_mock):
-        broker_url = self.conf.either_or('BROKER_URL')
+    def test_key_has_value_or_3(self, warn_mock):
+        broker_url = self.conf.key_has_value_or('BROKER_URL')
         self.assertFalse(warn_mock.called)
         self.assertEqual(broker_url, self.app.conf.BROKER_URL)
 
     @pytest.mark.skipif(not CELERY_4_OR_GREATER, reason="requires Celery >= 4.x")
     @mock.patch('warnings.warn')
-    def test_either_or_4(self, warn_mock):
-        broker_url = self.conf.either_or('BROKER_URL')
+    def test_key_has_value_or_4(self, warn_mock):
+        broker_url = self.conf.key_has_value_or('BROKER_URL')
         self.assertTrue(warn_mock.called)
         self.assertEqual(broker_url, self.app.conf.broker_url)
