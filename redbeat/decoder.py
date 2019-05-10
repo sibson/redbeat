@@ -18,8 +18,8 @@ from .schedules import rrule
 
 
 def to_timestamp(dt):
-    """ convert UTC datetime to seconds since the epoch """
-    return calendar.timegm(dt.timetuple())
+    """ convert datetime to seconds since the epoch """
+    return calendar.timegm(dt.utctimetuple())
 
 
 def from_timestamp(seconds):
