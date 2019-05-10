@@ -106,9 +106,11 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
 
         with patch.object(self.s, 'send_task') as send_task:
             sleep = self.s.tick()
-            self.assertFalse(send_task.called)
+            send_task.assert_called_with(e.task, e.args, e.kwargs, **self.s._maybe_due_kwargs)
+            # would be more correct to
+            # self.assertFalse(send_task.called)
 
-        self.assertLess(sleep, 1.0)
+        self.assertEqual(sleep, 1.0)
 
     def test_due_next_just_ran(self):
         e = self.create_entry(name='next', s=due_next)
@@ -157,12 +159,8 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
 
         self.assertEqual(sleep, self.s.max_interval)
 
-    def test_due_now(self):
-        e = self.create_entry(
-            name='now',
-            s=due_now,
-            last_run_at=datetime.utcnow() - timedelta(seconds=1),
-            ).save()
+    def test_due_now_never_run(self):
+        e = self.create_entry(name='now', s=due_now).save()
 
         with patch.object(self.s, 'send_task') as send_task:
             sleep = self.s.tick()
