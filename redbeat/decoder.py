@@ -19,8 +19,8 @@ from .schedules import rrule
 
 
 def to_timestamp(dt):
-    """ convert datetime to seconds since the epoch """
-    return calendar.timegm(dt.utctimetuple())
+    """ convert UTC datetime to seconds since the epoch """
+    return calendar.timegm(dt.timetuple())
 
 
 def get_utcoffset_minutes(dt):

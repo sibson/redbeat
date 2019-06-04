@@ -1,4 +1,3 @@
-import pytz
 from copy import deepcopy
 from datetime import datetime, timedelta
 
@@ -119,34 +118,6 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
             self.assertFalse(send_task.called)
         self.assertLess(0.8, sleep)
         self.assertLess(sleep, 1.0)
-
-    def test_due_next_never_run_tz_positive(self):
-        self.app.timezone = pytz.timezone('Europe/Moscow')
-
-        e = self.create_entry(name='next', s=due_next).save()
-
-        with patch.object(self.s, 'send_task') as send_task:
-            sleep = self.s.tick()
-            send_task.assert_called_with(e.task, e.args, e.kwargs, **self.s._maybe_due_kwargs)
-            # would be more correct to
-            # self.assertFalse(send_task.called)
-
-        self.assertEqual(sleep, 1.0)
-        self.app.timezone = pytz.utc
-
-    def test_due_next_never_run_tz_negative(self):
-        self.app.timezone = pytz.timezone('America/Chicago')
-
-        e = self.create_entry(name='next', s=due_next).save()
-
-        with patch.object(self.s, 'send_task') as send_task:
-            sleep = self.s.tick()
-            send_task.assert_called_with(e.task, e.args, e.kwargs, **self.s._maybe_due_kwargs)
-            # would be more correct to
-            # self.assertFalse(send_task.called)
-
-        self.assertEqual(sleep, 1.0)
-        self.app.timezone = pytz.utc
 
     def test_due_later_task_never_run(self):
         self.create_entry(s=self.due_later).save()
