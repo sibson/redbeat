@@ -48,8 +48,12 @@ from .decoder import (
 CELERY_4_OR_GREATER = CELERY_VERSION[0] >= 4
 REDIS_3_OR_GREATER = REDIS_VERSION[0] >= 3
 
-# Copy from:
+# Copied from:
 # https://github.com/andymccurdy/redis-py/blob/master/redis/lock.py#L33
+# Changes:
+#     The second line from the bottom: The original Lua script intends
+#     to extend time to (lock remaining time + additional time); while
+#     the script here extend time to a expected expiration time.
 # KEYS[1] - lock name
 # ARGS[1] - token
 # ARGS[2] - additional milliseconds
