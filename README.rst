@@ -252,6 +252,7 @@ configuration syntax is inspired from `celery-redis-sentinel
                       ('192.168.1.2', 26379),
                       ('192.168.1.3', 26379)],
         'password': '123',
+        'db': 0,
         'service_name': 'master',
         'socket_timeout': 0.1,
     }
@@ -268,6 +269,8 @@ Some notes about the configuration:
   ``sentinels`` setting to create a ``Sentinel()`` instead of configuration URL.
 
 * ``password`` is going to be used for Celery queue backend as well.
+
+* ``db`` is optional and defaults to ``0``.
 
 If other backend is configured for Celery queue use
 ``REDBEAT_REDIS_URL`` instead of ``BROKER_URL`` and
