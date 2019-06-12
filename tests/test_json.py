@@ -116,9 +116,6 @@ class RedBeatJSONEncoderTestCase(JSONTestCase):
         result = self.dumps(r)
         self.assertEqual(json.loads(result), self.rrule())
 
-    @pytest.mark.skipif(
-        CELERY_VERSION < (4, 1, 0),
-        reason="requires Celery >= 4.1, see https://github.com/celery/celery/issues/3849")
     def test_rrule_timezone(self):
         tz = timezone.get_timezone('US/Eastern')
 

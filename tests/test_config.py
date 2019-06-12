@@ -26,15 +26,8 @@ class test_RedBeatConfig(AppCase):
         self.assertEqual(self.conf.statics_key, self.conf.key_prefix + ':statics')
         self.assertEqual(self.conf.lock_key, self.conf.key_prefix + ':lock')
 
-    @pytest.mark.skipif(not CELERY_4_OR_GREATER, reason="requires Celery >= 4.x")
-    def test_key_prefix_override_4(self):
+    def test_key_prefix_override(self):
         self.app.conf.redbeat_key_prefix = 'test-prefix:'
-        self.conf = RedBeatConfig(self.app)
-        self.assertEqual(self.conf.key_prefix, 'test-prefix:')
-
-    @pytest.mark.skipif(CELERY_4_OR_GREATER, reason="requires Celery < 4.x")
-    def test_key_prefix_override_3(self):
-        self.app.conf.REDBEAT_KEY_PREFIX = 'test-prefix:'
         self.conf = RedBeatConfig(self.app)
         self.assertEqual(self.conf.key_prefix, 'test-prefix:')
 
@@ -43,16 +36,8 @@ class test_RedBeatConfig(AppCase):
         self.conf.schedule = schedule
         self.assertEqual(self.conf.schedule, schedule)
 
-    @pytest.mark.skipif(CELERY_4_OR_GREATER, reason="requires Celery < 4.x")
     @mock.patch('warnings.warn')
-    def test_either_or_3(self, warn_mock):
-        broker_url = self.conf.either_or('BROKER_URL')
-        self.assertFalse(warn_mock.called)
-        self.assertEqual(broker_url, self.app.conf.BROKER_URL)
-
-    @pytest.mark.skipif(not CELERY_4_OR_GREATER, reason="requires Celery >= 4.x")
-    @mock.patch('warnings.warn')
-    def test_either_or_4(self, warn_mock):
+    def test_either_or(self, warn_mock):
         broker_url = self.conf.either_or('BROKER_URL')
         self.assertTrue(warn_mock.called)
         self.assertEqual(broker_url, self.app.conf.broker_url)
