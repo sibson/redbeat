@@ -9,7 +9,7 @@ RedBeat
    :target: https://circleci.com/gh/sibson/redbeat/
    :alt: Circle CI
 
-.. impage:: https://readthedocs.org/projects/redbeat/badge/?version=latest&style=flat
+.. image:: https://readthedocs.org/projects/redbeat/badge/?version=latest&style=flat
    :target: https://redbeat.readthedocs.io/en/latest/
    :alt: ReadTheDocs
 
