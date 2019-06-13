@@ -2,7 +2,10 @@ from datetime import datetime
 import json
 from unittest import TestCase
 
+import pytest
+from celery import VERSION as CELERY_VERSION
 from celery.schedules import schedule, crontab
+
 try:  # celery 3.x
     from celery.utils.timeutils import timezone
 except ImportError:  # celery 4.x
@@ -113,6 +116,9 @@ class RedBeatJSONEncoderTestCase(JSONTestCase):
         result = self.dumps(r)
         self.assertEqual(json.loads(result), self.rrule())
 
+    @pytest.mark.skipif(
+        CELERY_VERSION < (4, 1, 0),
+        reason="requires Celery >= 4.1, see https://github.com/celery/celery/issues/3849")
     def test_rrule_timezone(self):
         tz = timezone.get_timezone('US/Eastern')
 
