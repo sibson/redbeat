@@ -9,6 +9,10 @@ RedBeat
    :target: https://circleci.com/gh/sibson/redbeat/
    :alt: Circle CI
 
+.. impage:: https://readthedocs.org/projects/redbeat/badge/?version=latest&style=flat
+   :target: https://redbeat.readthedocs.io/en/latest/
+   :alt: ReadTheDocs
+
 `RedBeat <https://github.com/sibson/redbeat>`_ is a
 `Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_
 that stores the scheduled tasks and runtime metadata in `Redis <http://redis.io/>`_.
@@ -49,6 +53,8 @@ To disable this feature, set:
 .. code-block:: python
 
     redbeat_lock_key = None
+
+More details availble on [Read the Docs](https://redbeat.readthedocs.io/en/latest/)
 
 Development
 --------------
