@@ -3,13 +3,9 @@ import json
 from unittest import TestCase
 
 import pytest
-from celery import VERSION as CELERY_VERSION
 from celery.schedules import schedule, crontab
 
-try:  # celery 3.x
-    from celery.utils.timeutils import timezone
-except ImportError:  # celery 4.x
-    from celery.utils.time import timezone
+from celery.utils.time import timezone
 
 from redbeat.decoder import RedBeatJSONDecoder, RedBeatJSONEncoder
 from redbeat.schedules import rrule

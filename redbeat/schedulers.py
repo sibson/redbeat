@@ -17,7 +17,6 @@ try:
 except ImportError:
     import json
 
-from celery import VERSION as CELERY_VERSION
 from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL
 from celery.utils.log import get_logger
 from celery.signals import beat_init
@@ -38,15 +37,11 @@ from tenacity import (before_sleep_log,
 
 import redis.exceptions
 from redis.client import StrictRedis
-from redis import VERSION as REDIS_VERSION
 
 from .decoder import (
     RedBeatJSONEncoder, RedBeatJSONDecoder,
     from_timestamp, to_timestamp
     )
-
-CELERY_4_OR_GREATER = CELERY_VERSION[0] >= 4
-REDIS_3_OR_GREATER = REDIS_VERSION[0] >= 3
 
 
 class RetryingConnection(object):
@@ -135,14 +130,6 @@ def get_redis(app=None):
     return app.redbeat_redis
 
 
-if REDIS_3_OR_GREATER:
-    def zadd(pipe, name, mapping):
-        pipe.zadd(name, mapping)
-else:
-    def zadd(pipe, name, mapping):
-        pipe.zadd(name, **mapping)
-
-
 ADD_ENTRY_ERROR = """\
 
 Couldn't add entry %r to redis schedule: %r. Contents: %r
@@ -164,20 +151,14 @@ class RedBeatConfig(object):
 
     @property
     def schedule(self):
-        if CELERY_4_OR_GREATER:
-            return self.app.conf.beat_schedule
-        else:
-            return self.app.conf.CELERYBEAT_SCHEDULE
+       return self.app.conf.beat_schedule
 
     @schedule.setter
     def schedule(self, value):
-        if CELERY_4_OR_GREATER:
-            self.app.conf.beat_schedule = value
-        else:
-            self.app.conf.CELERYBEAT_SCHEDULE = value
+        self.app.conf.beat_schedule = value
 
     def either_or(self, name, default=None):
-        if CELERY_4_OR_GREATER and name == name.upper():
+        if name == name.upper():
             warnings.warn(
                 'Celery v4 installed, but detected Celery v3 '
                 'configuration %s (use %s instead).' % (name, name.lower()),
@@ -292,7 +273,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         with get_redis(self.app).pipeline() as pipe:
             pipe.hset(self.key, 'definition', json.dumps(definition, cls=RedBeatJSONEncoder))
             pipe.hsetnx(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
-            zadd(pipe, self.app.redbeat_conf.schedule_key, {self.key: self.score})
+            pipe.zadd(self.app.redbeat_conf.schedule_key, {self.key: self.score})
             pipe.execute()
 
         return self
@@ -317,7 +298,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
         with get_redis(self.app).pipeline() as pipe:
             pipe.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
-            zadd(pipe, self.app.redbeat_conf.schedule_key, {entry.key: entry.score})
+            pipe.zadd(self.app.redbeat_conf.schedule_key, {entry.key: entry.score})
             pipe.execute()
 
         return entry
@@ -330,7 +311,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         }
         with get_redis(self.app).pipeline() as pipe:
             pipe.hset(self.key, 'meta', json.dumps(meta, cls=RedBeatJSONEncoder))
-            zadd(pipe, self.app.redbeat_conf.schedule_key, {self.key: self.score})
+            pipe.zadd(self.app.redbeat_conf.schedule_key, {self.key: self.score})
             pipe.execute()
 
     def is_due(self):
@@ -475,11 +456,7 @@ class RedBeatScheduler(Scheduler):
     @cached_property
     def _maybe_due_kwargs(self):
         """ handle rename of publisher to producer """
-        if CELERY_4_OR_GREATER:
-            return {'producer': self.producer}  # celery 4.x
-        else:
-            return {'publisher': self.publisher}  # celery 3.x
-
+        return {'producer': self.producer}
 
 @beat_init.connect
 def acquire_distributed_beat_lock(sender=None, **kwargs):

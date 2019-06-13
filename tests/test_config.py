@@ -1,6 +1,6 @@
 import mock
 import pytest
-from redbeat.schedulers import RedBeatConfig, CELERY_4_OR_GREATER
+from redbeat.schedulers import RedBeatConfig
 
 from basecase import AppCase
 
