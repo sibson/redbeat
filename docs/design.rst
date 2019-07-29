@@ -9,6 +9,8 @@ The schedule set contains the task keys sorted by the next scheduled run time.
 
 For each tick of Beat
 
+#. check if it still owns the lock, if not, exit with ``LockNotOwnedError``
+
 #. get list of due keys and due next tick
 
 #. retrieve definitions and metadata for all keys from previous step
@@ -49,3 +51,15 @@ The meta key contains a JSON blob as follows::
 
 For instance by default ```last_run_at``` corresponds to when Beat dispatched the task, but depending on queue latency it might not run immediately, but the application could update the metadata with
 the actual run time, allowing intervals to be relative to last execution rather than last dispatch.
+
+High Availability
+~~~~~~~~~~~~~~~~~
+
+Redbeat use a lock in redis to prevent multiple node running.
+You can safely start multiple nodes as backup, when the running node fails or
+experience network problems, after ``redbeat_lock_timeout`` seconds,
+another node will acquire the lock and start running.
+
+When the previous node back online, it will notice that itself no longer holds
+the lock and exit with an Exception(Would be better if you use systemd or supervisord
+to restart it as a backup node).
