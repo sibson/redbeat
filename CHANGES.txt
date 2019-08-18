@@ -1,3 +1,12 @@
+2.0.0 (unreleased)
+---------------------
+  - BREAKING CHANGES
+    - Drop support for celery<4.2
+    - Drop support for pyredis<3
+
+1.0.0 (unreleased)
+--------------------
+
 0.13.0 (2019-03-08)
 --------------------
   - support py-redis>=3. thanks noamkush
