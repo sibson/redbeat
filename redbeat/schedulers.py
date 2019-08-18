@@ -43,9 +43,6 @@ from .decoder import (
     from_timestamp, to_timestamp
     )
 
-CELERY_4_OR_GREATER = CELERY_VERSION[0] >= 4
-REDIS_3_OR_GREATER = REDIS_VERSION[0] >= 3
-
 # Copied from:
 # https://github.com/andymccurdy/redis-py/blob/master/redis/lock.py#L33
 # Changes:
