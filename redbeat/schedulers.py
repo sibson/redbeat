@@ -43,6 +43,35 @@ from .decoder import (
     from_timestamp, to_timestamp
     )
 
+CELERY_4_OR_GREATER = CELERY_VERSION[0] >= 4
+REDIS_3_OR_GREATER = REDIS_VERSION[0] >= 3
+
+# Copied from:
+# https://github.com/andymccurdy/redis-py/blob/master/redis/lock.py#L33
+# Changes:
+#     The second line from the bottom: The original Lua script intends
+#     to extend time to (lock remaining time + additional time); while
+#     the script here extend time to a expected expiration time.
+# KEYS[1] - lock name
+# ARGS[1] - token
+# ARGS[2] - additional milliseconds
+# return 1 if the locks time was extended, otherwise 0
+LUA_EXTEND_TO_SCRIPT = """
+    local token = redis.call('get', KEYS[1])
+    if not token or token ~= ARGV[1] then
+        return 0
+    end
+    local expiration = redis.call('pttl', KEYS[1])
+    if not expiration then
+        expiration = 0
+    end
+    if expiration < 0 then
+        return 0
+    end
+    redis.call('pexpire', KEYS[1], ARGV[2])
+    return 1
+"""
+
 
 class RetryingConnection(object):
     """A proxy for the Redis connection that delegates all the calls to
@@ -112,6 +141,7 @@ def get_redis(app=None):
             sentinel = Sentinel(redis_options['sentinels'],
                                 socket_timeout=redis_options.get('socket_timeout'),
                                 password=redis_options.get('password'),
+                                db=redis_options.get('db', 0),
                                 decode_responses=True)
             connection = sentinel.master_for(redis_options.get('service_name', 'master'))
         elif conf.redis_url.startswith('rediss'):
@@ -425,7 +455,7 @@ class RedBeatScheduler(Scheduler):
     def tick(self, min=min, **kwargs):
         if self.lock:
             logger.debug('beat: Extending lock...')
-            get_redis(self.app).pexpire(self.lock_key, int(self.lock_timeout * 1000))
+            self.lock.extend(int(self.lock_timeout))
 
         remaining_times = []
         try:
@@ -465,11 +495,16 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
         return
 
     logger.debug('beat: Acquiring lock...')
+    redis_client = get_redis(scheduler.app)
 
-    lock = get_redis(scheduler.app).lock(
+    lock = redis_client.lock(
         scheduler.lock_key,
         timeout=scheduler.lock_timeout,
         sleep=scheduler.max_interval,
     )
+    # overwrite redis-py's extend script
+    # which will add additional timeout instead of extend to a new timeout
+    lock.lua_extend = redis_client.register_script(LUA_EXTEND_TO_SCRIPT)
     lock.acquire()
+
     scheduler.lock = lock

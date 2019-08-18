@@ -28,6 +28,9 @@ upload:
 	python setup.py sdist bdist_wheel
 	twine upload $(wildcard dist/celery*$(VERSION)*)
 
+docs:
+		$(MAKE) -C docs/ html
 
 clean:
 	rm -f dist/*
+	rm -rf docs/_build docs/_static docs/_templates
