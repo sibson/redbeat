@@ -26,6 +26,8 @@ Why RedBeat?
 #. Fast startup even with a large task count
 #. Prevent accidentally running multiple Beat servers
 
+For more background on the genesis of RedBeat see this [blog post](https://blog.heroku.com/redbeat-celery-beat-scheduler)
+
 Getting Started
 ---------------
 
