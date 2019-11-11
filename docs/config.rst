@@ -141,8 +141,8 @@ Alternatively you can use
  Here follows the example:::
 
     # celeryconfig.py
-    BROKER_URL = 'redis-cluster://redis-cluster:30001/0'
-    BROKER_TRANSPORT_OPTIONS = {
+    REDBEAT_REDIS_URL = 'redis-cluster://redis-cluster:30001/0'
+    REDBEAT_REDIS_OPTIONS = {
         'startup_nodes': [{"host": "192.168.1.1", "port": "30001"},
                           {"host": "192.168.1.2", "port": "30002"},
                           {"host": "192.168.1.3", "port": "30003"},
