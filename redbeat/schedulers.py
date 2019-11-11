@@ -148,8 +148,9 @@ def get_redis(app=None):
             connection = StrictRedis.from_url(conf.redis_url, decode_responses=True, **ssl_options)
         elif conf.redis_url.startswith('redis-cluster'):
             from rediscluster import RedisCluster
-            redbeat_redis_cluster_options = conf.redbeat_redis_cluster_options
-            connection = RedisCluster(decode_responses=True, **redbeat_redis_cluster_options)
+            if not redis_options.get('startup_nodes'):
+                redis_options = {'startup_nodes': [{"host": "localhost", "port": "30001"}]}
+            connection = RedisCluster(decode_responses=True, **redis_options)
         else:
             connection = StrictRedis.from_url(conf.redis_url, decode_responses=True)
 
@@ -179,9 +180,6 @@ class RedBeatConfig(object):
         self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
         self.redis_use_ssl = self.either_or('redbeat_redis_use_ssl', app.conf['BROKER_USE_SSL'])
-        self.redbeat_redis_cluster_options = self.either_or('redbeat_redis_cluster_options', {
-            'startup_nodes': [{"host": "localhost", "port": "30001"}]
-        })
 
     @property
     def schedule(self):
