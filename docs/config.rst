@@ -59,7 +59,7 @@ Celery 3.x.
 Sentinel support
 ~~~~~~~~~~~~~~~~
 
-The redis connexion can use a Redis/Sentinel cluster. The
+The redis connection can use a Redis/Sentinel cluster. The
 configuration syntax is inspired from `celery-redis-sentinel
 <https://github.com/dealertrack/celery-redis-sentinel>`_ ::
 
@@ -111,4 +111,42 @@ If ``retry_period`` is given, retry connection for ``retry_period``
 seconds. If not set, retrying mechanism is not triggered. If set
 to ``-1`` retry infinitely.
 
+Redis Cluster support
+~~~~~~~~~~~~~~~~~~~~~
+
+The redis connection can use a Redis cluster. 
+
+    # celeryconfig.py
+    BROKER_URL = 'redis-cluster://redis-cluster:30001/0'
+    BROKER_TRANSPORT_OPTIONS = {
+        'startup_nodes': [{"host": "192.168.1.1", "port": "30001"},
+                          {"host": "192.168.1.2", "port": "30002"},
+                          {"host": "192.168.1.3", "port": "30003"},
+                          {"host": "192.168.1.4", "port": "30004"}]
+        'password': '123',
+    }
+
+Some notes about the configuration:
+
+* note the use of ``redis-cluster`` schema within the URL for broker and results
+  backend.
+
+* hostname and port are ignored within the actual URL. Redis Cluster 
+  uses transport options keys and sends them as keyword arguments to
+  the RedisCluster() instead of configuration url.
+
+Alternatively you can use 
+``REDBEAT_REDIS_URL`` instead of ``BROKER_URL`` and
+``REDBEAT_REDIS_OPTIONS`` instead of ``BROKER_TRANSPORT_OPTIONS``.
+ Here follows the example:::
+
+    # celeryconfig.py
+    REDBEAT_REDIS_URL = 'redis-cluster://redis-cluster:30001/0'
+    REDBEAT_REDIS_OPTIONS = {
+        'startup_nodes': [{"host": "192.168.1.1", "port": "30001"},
+                          {"host": "192.168.1.2", "port": "30002"},
+                          {"host": "192.168.1.3", "port": "30003"},
+                          {"host": "192.168.1.4", "port": "30004"}]
+        'password': '123',
+    }
 
