@@ -14,8 +14,6 @@ directly into Redis. The config options is called `beat_schedule`_, e.g.:
         },
     }
 
-On Celery 3.x the config option was called `CELERYBEAT_SCHEDULE`_.
-
 The easiest way to insert tasks from Python is it use ``RedBeatSchedulerEntry()``::
 
     interval = celery.schedules.schedule(run_every=60)  # seconds

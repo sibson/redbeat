@@ -9,10 +9,7 @@ from dateutil.rrule import (
     MINUTELY,
     SECONDLY
 )
-try:  # celery 4.x
-    from celery.schedules import BaseSchedule as schedule
-except ImportError:  # celery 3.x
-    from celery.schedules import schedule
+from celery.schedules import BaseSchedule as schedule
 
 
 class rrule(schedule):

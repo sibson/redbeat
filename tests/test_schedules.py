@@ -4,10 +4,7 @@ from datetime import (
 )
 from unittest import TestCase
 from mock import patch
-try:  # celery 3.x
-    from celery.utils.timeutils import timezone
-except ImportError:  # celery 4.x
-    from celery.utils.time import timezone
+from celery.utils.time import timezone
 
 from redbeat.schedules import rrule
 
