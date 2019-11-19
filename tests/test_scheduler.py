@@ -157,6 +157,7 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
     def test_due_now(self):
         e = self.create_entry(
             name='now',
+            args=[],
             s=due_now,
             last_run_at=datetime.utcnow() - timedelta(seconds=1),
             ).save()
