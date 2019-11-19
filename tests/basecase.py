@@ -1,23 +1,19 @@
 
+from unittest import TestCase
+
+from celery.contrib.testing.app import TestApp
 from celery.schedules import schedule
-
-
-try:  # celery 3.x
-    from celery.tests.case import AppCase
-except ImportError:  # celery 4.x
-    from unittest import TestCase
-    from celery.contrib.testing.app import TestApp
-
-    class AppCase(TestCase):
-        def setUp(self):
-            try:
-                self.app = TestApp(config=self.config_dict)
-            except:
-                self.app = TestApp()
-            self.setup()
-
 from fakeredis import FakeStrictRedis
 from redbeat.schedulers import RedBeatSchedulerEntry
+
+
+class AppCase(TestCase):
+    def setUp(self):
+        try:
+            self.app = TestApp(config=self.config_dict)
+        except Exception:
+            self.app = TestApp()
+        self.setup()
 
 
 class RedBeatCase(AppCase):

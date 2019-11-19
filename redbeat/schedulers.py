@@ -20,12 +20,8 @@ except ImportError:
 from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL
 from celery.utils.log import get_logger
 from celery.signals import beat_init
-try:  # celery 3.x
-    from celery.utils.timeutils import humanize_seconds, timezone
-    from kombu.utils import cached_property
-except ImportError:  # celery 4.x
-    from celery.utils.time import humanize_seconds, timezone
-    from kombu.utils.objects import cached_property
+from celery.utils.time import humanize_seconds, timezone
+from kombu.utils.objects import cached_property
 from celery.app import app_or_default
 from celery.five import values
 from kombu.utils.url import maybe_sanitize_url

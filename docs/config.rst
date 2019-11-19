@@ -1,8 +1,7 @@
 Configuration
 --------------
 
-You can add any of the following parameters to your Celery configuration
-(see Celery 3.x compatible configuration value names in below).
+You can add any of the following parameters to your Celery configuration:
 
 ``redbeat_redis_url``
 ~~~~~~~~~~~~~~~~~~~~~
@@ -39,22 +38,6 @@ See the `beat_max_loop_interval`_ Celery docs about for more information.
 .. _`broker_url`: http://docs.celeryproject.org/en/4.0/userguide/configuration.html#std:setting-broker_url
 .. _`broker_use_ssl`: http://docs.celeryproject.org/en/4.0/userguide/configuration.html#std:setting-broker_use_ssl
 .. _`beat_max_loop_interval`: http://docs.celeryproject.org/en/4.0/userguide/configuration.html#std:setting-beat_max_loop_interval
-
-Celery 3.x config names
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Here are the old names of the configuration values for use with
-Celery 3.x.
-
-===================================  ==============================================
-**Celery 4.x**                       **Celery 3.x**
-===================================  ==============================================
-``redbeat_redis_url``                ``REDBEAT_REDIS_URL``
-``redbeat_redis_use_ssl``            ``REDBEAT_REDIS_USE_SSL``
-``redbeat_key_prefix``               ``REDBEAT_KEY_PREFIX``
-``redbeat_lock_key``                 ``REDBEAT_LOCK_KEY``
-``redbeat_lock_timeout``             ``REDBEAT_LOCK_TIMEOUT``
-===================================  ==============================================
 
 Sentinel support
 ~~~~~~~~~~~~~~~~

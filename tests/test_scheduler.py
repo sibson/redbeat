@@ -7,14 +7,8 @@ from celery.schedules import (
     schedule,
     schedstate
 )
-try:  # celery 3.x
-    from celery.utils.timeutils import maybe_timedelta
-except ImportError:  # celery 4.0
-    from celery.utils.time import maybe_timedelta
-try:  # celery 3.x
-    from celery.tests.case import UnitApp
-except ImportError:  # celery 4.x
-    import celery.contrib.testing.app
+from celery.utils.time import maybe_timedelta
+import celery.contrib.testing.app
 
 from mock import (
     patch,

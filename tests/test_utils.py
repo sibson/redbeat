@@ -1,7 +1,4 @@
-try:  # celery 3.x
-    from celery.utils.timeutils import maybe_make_aware
-except ImportError:  # celery 4.x
-    from celery.utils.time import maybe_make_aware
+from celery.utils.time import maybe_make_aware
 
 from basecase import RedBeatCase
 from redbeat.schedulers import to_timestamp, from_timestamp

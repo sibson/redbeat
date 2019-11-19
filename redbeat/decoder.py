@@ -8,10 +8,7 @@ try:
 except ImportError:
     import json
 
-try:  # celery 3.x
-    from celery.utils.timeutils import timezone
-except ImportError:  # celery 4.x
-    from celery.utils.time import timezone
+from celery.utils.time import timezone
 
 from celery.schedules import schedule, crontab
 from pytz import FixedOffset
