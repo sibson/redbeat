@@ -28,7 +28,7 @@ class JSONTestCase(TestCase):
             'hour': 12,
             'minute': 59,
             'second': 22,
-            'microsecond': 333,
+            'microsecond': 333
         }
         d.update(kwargs)
         return d
@@ -83,14 +83,19 @@ class JSONTestCase(TestCase):
 class RedBeatJSONEncoderTestCase(JSONTestCase):
 
     def test_datetime(self):
-        dt = datetime.now()
-        result = self.dumps(dt)
+        for zone, expected_zone in ((None, 'UTC'), ('Asia/Shanghai', 'Asia/Shanghai')):
+            dt = datetime.now()
 
-        expected = self.datetime()
-        for key in (k for k in expected if hasattr(dt, k)):
-            expected[key] = getattr(dt, key)
+            if zone:
+                dt = dt.astimezone(timezone.get_timezone(zone))
 
-        self.assertEqual(result, json.dumps(expected))
+            result = self.dumps(dt)
+
+            expected = self.datetime(timezone=expected_zone)
+            for key in (k for k in expected if hasattr(dt, k)):
+                expected[key] = getattr(dt, key)
+
+            self.assertEqual(result, json.dumps(expected))
 
     def test_schedule(self):
         s = schedule(run_every=60.0)
@@ -108,7 +113,7 @@ class RedBeatJSONEncoderTestCase(JSONTestCase):
             dtstart=datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc),
             until=datetime(2015, 12, 31, 12, 59, 22, tzinfo=timezone.utc),
             count=1,
-            )
+        )
         result = self.dumps(r)
         self.assertEqual(json.loads(result), self.rrule())
 
@@ -137,12 +142,16 @@ class RedBeatJSONEncoderTestCase(JSONTestCase):
 class RedBeatJSONDecoderTestCase(JSONTestCase):
 
     def test_datetime(self):
-        d = self.datetime()
+        for zone in (None, 'UTC', 'Asia/Shanghai'):
+            d = self.datetime(timezone=zone) if zone else self.datetime()
 
-        result = self.loads(json.dumps(d))
+            result = self.loads(json.dumps(d))
 
-        d.pop('__type__')
-        self.assertEqual(result, datetime(tzinfo=timezone.utc, **d))
+            d.pop('__type__')
+            d.pop('timezone') if zone else None
+
+            tz = timezone.get_timezone(zone) if zone else timezone.utc
+            self.assertEqual(result, datetime(tzinfo=tz, **d))
 
     def test_schedule(self):
         d = self.schedule()
@@ -168,5 +177,6 @@ class RedBeatJSONDecoderTestCase(JSONTestCase):
         d.pop('__type__')
         self.assertEqual(
             result,
-            rrule('MINUTELY', dtstart=datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc), count=1),
-            )
+            rrule('MINUTELY', dtstart=datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc),
+                  count=1),
+        )

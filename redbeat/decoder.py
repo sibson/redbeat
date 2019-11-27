@@ -12,6 +12,7 @@ from celery.utils.time import timezone
 
 from celery.schedules import schedule, crontab
 from pytz import FixedOffset
+from pytz import BaseTzInfo
 from .schedules import rrule
 
 
@@ -46,7 +47,8 @@ class RedBeatJSONDecoder(json.JSONDecoder):
         objtype = d.pop('__type__')
 
         if objtype == 'datetime':
-            return datetime(tzinfo=timezone.utc, **d)
+            zone = d.pop('timezone', 'UTC')
+            return datetime(tzinfo=timezone.get_timezone(zone), **d)
 
         if objtype == 'interval':
             return schedule(run_every=d['every'], relative=d['relative'])
@@ -72,6 +74,7 @@ class RedBeatJSONDecoder(json.JSONDecoder):
 class RedBeatJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
+            zone = obj.tzinfo.zone if isinstance(obj.tzinfo, BaseTzInfo) else 'UTC'
             return {
                 '__type__': 'datetime',
                 'year': obj.year,
@@ -81,6 +84,7 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'minute': obj.minute,
                 'second': obj.second,
                 'microsecond': obj.microsecond,
+                'timezone': zone
             }
         if isinstance(obj, crontab):
             return {
