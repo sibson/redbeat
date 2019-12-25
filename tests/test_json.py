@@ -2,10 +2,9 @@ from datetime import datetime
 import json
 from unittest import TestCase
 
-import pytest
 from celery.schedules import schedule, crontab
-
 from celery.utils.time import timezone
+from dateutil import rrule as dateutil_rrule
 
 from redbeat.decoder import RedBeatJSONDecoder, RedBeatJSONEncoder
 from redbeat.schedules import rrule
@@ -79,6 +78,14 @@ class JSONTestCase(TestCase):
         d.update(kwargs)
         return d
 
+    def weekday(self, **kwargs):
+        d = {
+            '__type__': 'weekday',
+            'wkday': 5,
+        }
+        d.update(kwargs)
+        return d
+
 
 class RedBeatJSONEncoderTestCase(JSONTestCase):
 
@@ -133,6 +140,48 @@ class RedBeatJSONEncoderTestCase(JSONTestCase):
         self.assertEqual(r1_parsed.dtstart, r2_parsed.dtstart)
         self.assertNotEqual(r1_parsed.dtstart.utcoffset(), r2_parsed.dtstart.utcoffset())
 
+    def test_weekday(self):
+        w = dateutil_rrule.weekday(5)
+        result = self.dumps(w)
+        self.assertEqual(json.loads(result), self.weekday())
+
+    def test_weekday_in_rrule(self):
+        r = rrule(
+            dateutil_rrule.WEEKLY,
+            dtstart=datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc),
+            until=datetime(2015, 12, 31, 12, 59, 22, tzinfo=timezone.utc),
+            byweekday=(dateutil_rrule.MO, dateutil_rrule.WE, dateutil_rrule.FR)
+        )
+        result = self.dumps(r)
+        self.assertEqual(
+            json.loads(result),
+            {
+                '__type__': 'rrule',
+                'freq': 2,
+                'dtstart': 1451480362,
+                'dtstart_tz': 0,
+                'interval': 1,
+                'wkst': None,
+                'count': None,
+                'until': 1451566762,
+                'until_tz': 0,
+                'bysetpos': None,
+                'bymonth': None,
+                'bymonthday': None,
+                'byyearday': None,
+                'byeaster': None,
+                'byweekno': None,
+                'byweekday': [
+                    {'__type__': 'weekday', 'wkday': 0},
+                    {'__type__': 'weekday', 'wkday': 2},
+                    {'__type__': 'weekday', 'wkday': 4},
+                ],
+                'byhour': None,
+                'byminute': None,
+                'bysecond': None,
+            }
+        )
+
 
 class RedBeatJSONDecoderTestCase(JSONTestCase):
 
@@ -170,3 +219,11 @@ class RedBeatJSONDecoderTestCase(JSONTestCase):
             result,
             rrule('MINUTELY', dtstart=datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc), count=1),
             )
+
+    def test_weekday(self):
+        d = self.weekday()
+
+        result = self.loads(json.dumps(d))
+
+        d.pop('__type__')
+        self.assertEqual(result, dateutil_rrule.weekday(5))
