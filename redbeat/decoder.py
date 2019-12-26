@@ -55,7 +55,7 @@ class RedBeatJSONDecoder(json.JSONDecoder):
         if objtype == 'crontab':
             return crontab(**d)
 
-        if objtype == "weekday":
+        if objtype == 'weekday':
             return weekday(**d)
 
         if objtype == 'rrule':
@@ -125,7 +125,7 @@ class RedBeatJSONEncoder(json.JSONEncoder):
 
             return res
         if isinstance(obj, weekday):
-            return {"__type__": "weekday", "wkday": obj.weekday}
+            return {'__type__': 'weekday', 'wkday': obj.weekday}
         if isinstance(obj, schedule):
             return {
                 '__type__': 'interval',
