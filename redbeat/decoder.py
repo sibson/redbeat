@@ -8,10 +8,11 @@ try:
 except ImportError:
     import json
 
-from celery.utils.time import timezone
-
 from celery.schedules import schedule, crontab
+from celery.utils.time import timezone
+from dateutil.rrule import weekday
 from pytz import FixedOffset
+
 from .schedules import rrule
 
 
@@ -53,6 +54,9 @@ class RedBeatJSONDecoder(json.JSONDecoder):
 
         if objtype == 'crontab':
             return crontab(**d)
+
+        if objtype == 'weekday':
+            return weekday(**d)
 
         if objtype == 'rrule':
             # Decode timestamp values into datetime objects
@@ -120,6 +124,8 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 res['until_tz'] = get_utcoffset_minutes(obj.until)
 
             return res
+        if isinstance(obj, weekday):
+            return {'__type__': 'weekday', 'wkday': obj.weekday}
         if isinstance(obj, schedule):
             return {
                 '__type__': 'interval',
