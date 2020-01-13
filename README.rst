@@ -26,7 +26,7 @@ Why RedBeat?
 #. Fast startup even with a large task count
 #. Prevent accidentally running multiple Beat servers
 
-For more background on the genesis of RedBeat see this [blog post](https://blog.heroku.com/redbeat-celery-beat-scheduler)
+For more background on the genesis of RedBeat see this `blog post <https://blog.heroku.com/redbeat-celery-beat-scheduler>`_
 
 Getting Started
 ---------------
@@ -56,7 +56,7 @@ To disable this feature, set:
 
     redbeat_lock_key = None
 
-More details availble on [Read the Docs](https://redbeat.readthedocs.io/en/latest/)
+More details available on `Read the Docs <https://redbeat.readthedocs.io/en/latest/>`_
 
 Development
 --------------
