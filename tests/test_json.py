@@ -99,6 +99,17 @@ class RedBeatJSONEncoderTestCase(JSONTestCase):
 
         self.assertEqual(result, json.dumps(expected))
 
+    def test_datetime_with_tz(self):
+        dt = datetime.now().replace(tzinfo=timezone.get_timezone('US/Eastern'))
+        result = self.dumps(dt)
+
+        expected = self.datetime(timezone='US/Eastern')
+        for key in (k for k in expected if hasattr(dt, k)):
+            expected[key] = getattr(dt, key)
+
+        self.assertEqual(result, json.dumps(expected))
+
+
     def test_schedule(self):
         s = schedule(run_every=60.0)
         result = self.dumps(s)
@@ -192,6 +203,16 @@ class RedBeatJSONDecoderTestCase(JSONTestCase):
 
         d.pop('__type__')
         self.assertEqual(result, datetime(tzinfo=timezone.utc, **d))
+
+    def test_datetime_with_tz(self):
+        d = self.datetime(timezone="US/Eastern")
+
+        result = self.loads(json.dumps(d))
+
+        d.pop('__type__')
+        d.pop('timezone')
+        self.assertEqual(result, datetime(tzinfo=timezone.get_timezone("US/Eastern"), **d))
+
 
     def test_schedule(self):
         d = self.schedule()

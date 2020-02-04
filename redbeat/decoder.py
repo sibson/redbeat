@@ -47,7 +47,11 @@ class RedBeatJSONDecoder(json.JSONDecoder):
         objtype = d.pop('__type__')
 
         if objtype == 'datetime':
-            return datetime(tzinfo=timezone.utc, **d)
+            tzinfo = timezone.utc
+            if 'timezone' in d:
+                tz_name = d.pop("timezone")
+                tzinfo = timezone.get_timezone(tz_name)
+            return datetime(tzinfo=tzinfo, **d)
 
         if objtype == 'interval':
             return schedule(run_every=d['every'], relative=d['relative'])
@@ -76,7 +80,7 @@ class RedBeatJSONDecoder(json.JSONDecoder):
 class RedBeatJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
-            return {
+            d = {
                 '__type__': 'datetime',
                 'year': obj.year,
                 'month': obj.month,
@@ -86,6 +90,11 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'second': obj.second,
                 'microsecond': obj.microsecond,
             }
+            if obj.tzinfo:
+                tz_name = str(obj.tzinfo)
+                d.update({'timezone': tz_name})
+            return d
+
         if isinstance(obj, crontab):
             return {
                 '__type__': 'crontab',
