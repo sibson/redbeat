@@ -346,7 +346,9 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         if not self.enabled:
             return False, 5.0  # 5 second delay for re-enable.
 
-        return self.schedule.is_due(self.last_run_at or datetime(MINYEAR, 1, 2, tzinfo=self.schedule.tz))
+        dt = datetime(MINYEAR, 1, 2)
+        dt_tz = self.schedule.tz.localize(dt)
+        return self.schedule.is_due(self.last_run_at or dt_tz)
 
 
 class RedBeatScheduler(Scheduler):
