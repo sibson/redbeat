@@ -1,4 +1,6 @@
 BROKER_URL = 'redis://'
+#ELERY_ENABLE_UTC = True
+#CELERY_TIMEZONE = 'UTC'
 
 CELERYBEAT_SCHEDULER = 'redbeat.RedBeatScheduler'
 CELERYBEAT_MAX_LOOP_INTERVAL = 5  # redbeat likes fast loops

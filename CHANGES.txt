@@ -3,9 +3,11 @@
   - BREAKING CHANGES
     - Drop support for celery<4.2
     - Drop support for pyredis<3
+    - Abort if CELERY_TIMEZONE isn't configured for UTC
 
 1.0.0 (unreleased)
 --------------------
+    - warn if CELERY_TIMEZONE isn't configured for UTC
 
 0.13.0 (2019-03-08)
 --------------------

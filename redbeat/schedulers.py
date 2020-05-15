@@ -33,6 +33,7 @@ from tenacity import (before_sleep_log,
 
 import redis.exceptions
 from redis.client import StrictRedis
+import pytz
 
 from .decoder import (
     RedBeatJSONEncoder, RedBeatJSONDecoder,
@@ -118,6 +119,7 @@ def ensure_conf(app):
     except AttributeError:
         config = RedBeatConfig(app)
         setattr(app, name, config)
+
     return config
 
 
@@ -165,7 +167,6 @@ Couldn't add entry %r to redis schedule: %r. Contents: %r
 
 logger = get_logger(__name__)
 
-
 class RedBeatConfig(object):
     def __init__(self, app=None):
         self.app = app_or_default(app)
@@ -176,6 +177,16 @@ class RedBeatConfig(object):
         self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
         self.redis_use_ssl = self.either_or('redbeat_redis_use_ssl', app.conf['BROKER_USE_SSL'])
+
+        self.validate_timezone()
+
+    def validate_timezone(self):
+        tz = self.app.timezone
+
+        if tz == pytz.utc:
+            return
+
+        warnings.warn('RedBeat only supports UTC, timezone set to %s' % (tz))
 
     @property
     def schedule(self):
