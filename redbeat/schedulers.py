@@ -34,7 +34,7 @@ from tenacity import (before_sleep_log,
                       retry_if_exception_type,
                       stop_after_delay,
                       wait_exponential)
-
+import pytz
 import redis.exceptions
 from redis.client import StrictRedis
 from redis import VERSION as REDIS_VERSION
@@ -154,6 +154,16 @@ class RedBeatConfig(object):
         self.lock_key = self.either_or('redbeat_lock_key', self.key_prefix + ':lock')
         self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
+
+        self.validate_timezone()
+
+    def validate_timezone(self):
+        tz = self.app.timezone
+
+        if tz == pytz.utc:
+            return
+
+        warnings.warn('Celery configured with %s, RedBeat only supports UTC' % (tz))
 
     @property
     def schedule(self):
