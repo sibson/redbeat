@@ -5,9 +5,10 @@
     - Drop support for pyredis<3
     - Abort if CELERY_TIMEZONE isn't configured for UTC
 
-1.0.0 (unreleased)
+1.0.0 (2020-05-16)
 --------------------
-    - warn if CELERY_TIMEZONE isn't configured for UTC
+  - version bump of 0.13.0
+  - add warning for non-UTC timezones
 
 0.13.0 (2019-03-08)
 --------------------
