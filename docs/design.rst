@@ -1,7 +1,6 @@
 
 Design
 ------
-
 At its core RedBeat uses a Sorted Set to store the schedule as a priority queue.
 It stores task details using a hash key with the task definition and metadata.
 
@@ -9,21 +8,15 @@ The schedule set contains the task keys sorted by the next scheduled run time.
 
 For each tick of Beat
 
-#. check if it still owns the lock, if not, exit with ``LockNotOwnedError``
-
-#. get list of due keys and due next tick
-
-#. retrieve definitions and metadata for all keys from previous step
-
-#. update task metadata and reschedule with next run time of task
-
-#. call due tasks using async_apply
-
-#. calculate time to sleep until start of next tick using remaining tasks
+  #. check if it still owns the lock, if not, exit with ``LockNotOwnedError``
+  #. get list of due keys and due next tick
+  #. retrieve definitions and metadata for all keys from previous step
+  #. update task metadata and reschedule with next run time of task
+  #. call due tasks using async_apply
+  #. calculate time to sleep until start of next tick using remaining tasks
 
 Scheduling
 ~~~~~~~~~~~~
-
 Assuming your `redbeat_key_prefix` config values is set to `'redbeat:'`
 (default) you will also need to insert the new task into the schedule with::
 
@@ -54,7 +47,6 @@ the actual run time, allowing intervals to be relative to last execution rather 
 
 High Availability
 ~~~~~~~~~~~~~~~~~
-
 Redbeat use a lock in redis to prevent multiple node running.
 You can safely start multiple nodes as backup, when the running node fails or
 experience network problems, after ``redbeat_lock_timeout`` seconds,
