@@ -2,18 +2,18 @@
 Design
 ------
 At its core RedBeat uses a Sorted Set to store the schedule as a priority queue.
-It stores task details using a hash key with the task definition and metadata.
+Additionally, task details are stored within a hash key mapping to the task definition and metadata.
 
-The schedule set contains the task keys sorted by the next scheduled run time.
+The sortted schedule set contains task keys sorted by the next scheduled run time, as time since epoch.
 
 For each tick of Beat
 
   #. check if it still owns the lock, if not, exit with ``LockNotOwnedError``
   #. get list of due keys and due next tick
   #. retrieve definitions and metadata for all keys from previous step
-  #. update task metadata and reschedule with next run time of task
-  #. call due tasks using async_apply
-  #. calculate time to sleep until start of next tick using remaining tasks
+  #. update task metadata and reschedule with next run time for task
+  #. call due tasks using async_apply, this enqueues tasks for workers to run
+  #. calculate time to sleep until start of next tick using due next tick tasks
 
 Scheduling
 ~~~~~~~~~~~~
@@ -55,3 +55,19 @@ another node will acquire the lock and start running.
 When the previous node back online, it will notice that itself no longer holds
 the lock and exit with an Exception(Would be better if you use systemd or supervisord
 to restart it as a backup node).
+
+
+Timezone
+~~~~~~~~~~~
+To support non-UTC timezones it's useful to be able to reason about which values are localized and which are always UTC.
+
+Regardless, of what timezone is used, the ```redbeat_key_prefix:schedule``` sorted set is sorted by the UNIX timestamp, of time since the UNIX epoch in UTC.
+
+Every task schedule maybe created with a timezone independent of the host timezone.
+As a result most datetime objects need to be timezone aware.
+
+    last_run_at, aware datetime
+    now(), returns aware datetime
+    due_at, returns aware datetime
+    to_timestamp(), accepts aware datetime, returns seconds since epoch (UTC)
+    score(), returns seconds since epoch for due_at
