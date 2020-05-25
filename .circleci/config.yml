@@ -6,8 +6,7 @@ orbs:
 jobs:
   build-and-test:
     executor: python/default
-    parameters:
-      dependency-file: requirements.dev.txt
+    dependency-file: requirements.dev.txt
     steps:
       - checkout
       - python/load-cache
