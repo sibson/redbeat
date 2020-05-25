@@ -8,11 +8,11 @@ jobs:
     executor: python/default
     steps:
       - checkout
-      - python/load-cache
+      - python/load-cache:
         dependency-file: requirements.dev.txt
       - python/install-deps:
         dependency-file: requirements.dev.txt
-      - python/save-cache
+      - python/save-cache:
         dependency-file: requirements.dev.txt
       - run:
           command: tox
