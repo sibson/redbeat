@@ -187,8 +187,6 @@ class RedBeatConfig(object):
         if tz == pytz.utc:
             return
 
-        warnings.warn('RedBeat only supports UTC, timezone set to %s' % (tz))
-
         self.validate_timezone()
 
     def validate_timezone(self):
