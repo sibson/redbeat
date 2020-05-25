@@ -1,30 +1,21 @@
-version: 2
-jobs:
-  # TODO: add caching
-  python:
-    docker:
-      - image: circleci/python:3.7
+version: 2.1
 
+orbs:
+  python: circleci/python@0.2.1
+
+jobs:
+  build-and-test:
+    executor: python/default
     steps:
       - checkout
+      - python/load-cache
+      - python/install-deps
+      - python/save-cache
       - run:
-          name: Install Tox
-          command: |
-            pip install --user tox
-            echo 'export PATH="$PATH":"$HOME"/.local/bin' >> $BASH_ENV
-            source $BASH_ENV
-      - run:
-          name: Run Tests
-          environment:
-                TEST_RESULTS_DIR: /tmp/tox/
-          command: |
-            mkdir /tmp/tox
-            tox
-      - store_test_results:
-          path: /tmp/tox
+          command: tox
+          name: Test
 
 workflows:
-  version: 2
-  UnitTests:
+  main:
     jobs:
-      - python
+      - build-and-test
