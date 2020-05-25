@@ -6,12 +6,12 @@ orbs:
 jobs:
   build-and-test:
     executor: python/default
-    parameters:
-      dependency-file: requirements.dev.txt
     steps:
       - checkout
       - python/load-cache
       - python/install-deps:
+        parameters:
+          dependency-file: "requirements.dev.txt"
       - python/save-cache
       - run:
           command: tox
