@@ -9,9 +9,11 @@ jobs:
     steps:
       - checkout
       - python/load-cache
+        dependency-file: requirements.dev.txt
       - python/install-deps:
         dependency-file: requirements.dev.txt
       - python/save-cache
+        dependency-file: requirements.dev.txt
       - run:
           command: tox
           name: Test
