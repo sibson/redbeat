@@ -3,7 +3,7 @@ import json
 from unittest import TestCase
 
 from celery.schedules import schedule, crontab
-from celery.utils.time import timezone
+from celery.utils.time import timezone, FixedOffset
 from dateutil import rrule as dateutil_rrule
 
 from redbeat.decoder import RedBeatJSONDecoder, RedBeatJSONEncoder
@@ -18,9 +18,8 @@ class JSONTestCase(TestCase):
     def loads(self, d):
         return json.loads(d, cls=RedBeatJSONDecoder)
 
-    def datetime(self, **kwargs):
+    def datetime_as_dict(self, **kwargs):
         d = {
-            '__type__': 'datetime',
             'year': 2015,
             'month': 12,
             'day': 30,
@@ -31,6 +30,11 @@ class JSONTestCase(TestCase):
         }
         d.update(kwargs)
         return d
+
+    def now(self, **kwargs):
+        d = self.datetime_as_dict(**kwargs)
+        dt = datetime(d.pop('year'), d.pop('month'), d.pop('day'), **d)
+        return dt
 
     def schedule(self, **kwargs):
         d = {
@@ -89,15 +93,27 @@ class JSONTestCase(TestCase):
 
 class RedBeatJSONEncoderTestCase(JSONTestCase):
 
-    def test_datetime(self):
-        dt = datetime.now()
+    def test_datetime_no_tz(self):
+        dt = self.now()
         result = self.dumps(dt)
 
-        expected = self.datetime()
-        for key in (k for k in expected if hasattr(dt, k)):
-            expected[key] = getattr(dt, key)
+        expected = self.datetime_as_dict(__type__='datetime', timezone='UTC')
+        self.assertEqual(json.loads(result), expected)
 
-        self.assertEqual(result, json.dumps(expected))
+    def test_datetime_with_tz(self):
+        dt = self.now(tzinfo=timezone.get_timezone('Asia/Shanghai'))
+        result = self.dumps(dt)
+
+        expected = self.datetime_as_dict(timezone='Asia/Shanghai', __type__='datetime')
+        self.assertEqual(json.loads(result), expected)
+
+    def test_datetime_with_fixedoffset(self):
+        dt = self.now(tzinfo=FixedOffset(4 * 60))
+        result = self.dumps(dt)
+
+        expected = self.datetime_as_dict(timezone=4 * 60 * 60.0)
+        expected['__type__'] = 'datetime'
+        self.assertEqual(json.loads(result), expected)
 
     def test_schedule(self):
         s = schedule(run_every=60.0)
@@ -185,36 +201,43 @@ class RedBeatJSONEncoderTestCase(JSONTestCase):
 
 class RedBeatJSONDecoderTestCase(JSONTestCase):
 
-    def test_datetime(self):
-        d = self.datetime()
-
+    def test_datetime_no_timezone(self):
+        d = self.datetime_as_dict(__type__='datetime')
         result = self.loads(json.dumps(d))
-
         d.pop('__type__')
         self.assertEqual(result, datetime(tzinfo=timezone.utc, **d))
+
+    def test_datetime_with_timezone(self):
+        d = self.datetime_as_dict(__type__='datetime', timezone='Asia/Shanghai')
+        result = self.loads(json.dumps(d))
+        d.pop('__type__')
+        d.pop('timezone')
+        self.assertEqual(result, datetime(tzinfo=timezone.get_timezone('Asia/Shanghai'), **d))
+
+    def test_datetime_with_fixed_offset(self):
+        d = self.datetime_as_dict(__type__='datetime', timezone=5 * 60 * 60)
+        result = self.loads(json.dumps(d))
+        d.pop('__type__')
+        d.pop('timezone')
+        self.assertEqual(result, datetime(tzinfo=FixedOffset(5 * 60), **d))
+
 
     def test_schedule(self):
         d = self.schedule()
 
         result = self.loads(json.dumps(d))
-
-        d.pop('__type__')
         self.assertEqual(result, schedule(run_every=60))
 
     def test_crontab(self):
         d = self.crontab()
 
         result = self.loads(json.dumps(d))
-
-        d.pop('__type__')
         self.assertEqual(result, crontab())
 
     def test_rrule(self):
         d = self.rrule()
 
         result = self.loads(json.dumps(d))
-
-        d.pop('__type__')
         self.assertEqual(
             result,
             rrule('MINUTELY', dtstart=datetime(2015, 12, 30, 12, 59, 22, tzinfo=timezone.utc), count=1),
@@ -224,6 +247,4 @@ class RedBeatJSONDecoderTestCase(JSONTestCase):
         d = self.weekday()
 
         result = self.loads(json.dumps(d))
-
-        d.pop('__type__')
         self.assertEqual(result, dateutil_rrule.weekday(5))

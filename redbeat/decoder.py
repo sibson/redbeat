@@ -9,15 +9,14 @@ except ImportError:
     import json
 
 from celery.schedules import schedule, crontab
-from celery.utils.time import timezone
+from celery.utils.time import timezone, FixedOffset
 from dateutil.rrule import weekday
-from pytz import FixedOffset
 
 from .schedules import rrule
 
 
 def to_timestamp(dt):
-    """ convert datetime to seconds since the epoch """
+    """ convert local tz aware datetime to seconds since the epoch """
     return calendar.timegm(dt.utctimetuple())
 
 
@@ -47,7 +46,12 @@ class RedBeatJSONDecoder(json.JSONDecoder):
         objtype = d.pop('__type__')
 
         if objtype == 'datetime':
-            return datetime(tzinfo=timezone.utc, **d)
+            zone = d.pop('timezone', 'UTC')
+            try:
+                tzinfo = FixedOffset(zone / 60)
+            except TypeError:
+                tzinfo = timezone.get_timezone(zone)
+            return datetime(tzinfo=tzinfo, **d)
 
         if objtype == 'interval':
             return schedule(run_every=d['every'], relative=d['relative'])
@@ -76,6 +80,13 @@ class RedBeatJSONDecoder(json.JSONDecoder):
 class RedBeatJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
+            if obj.tzinfo is None:
+                timezone = 'UTC'
+            elif obj.tzinfo.zone is None:
+                timezone = obj.tzinfo.utcoffset(None).total_seconds()
+            else:
+                timezone = obj.tzinfo.zone
+
             return {
                 '__type__': 'datetime',
                 'year': obj.year,
@@ -85,7 +96,9 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'minute': obj.minute,
                 'second': obj.second,
                 'microsecond': obj.microsecond,
+                'timezone': timezone
             }
+
         if isinstance(obj, crontab):
             return {
                 '__type__': 'crontab',
@@ -95,6 +108,7 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'day_of_month': obj._orig_day_of_month,
                 'month_of_year': obj._orig_month_of_year,
             }
+
         if isinstance(obj, rrule):
             res = {
                 '__type__': 'rrule',
@@ -124,12 +138,15 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 res['until_tz'] = get_utcoffset_minutes(obj.until)
 
             return res
+
         if isinstance(obj, weekday):
             return {'__type__': 'weekday', 'wkday': obj.weekday}
+
         if isinstance(obj, schedule):
             return {
                 '__type__': 'interval',
                 'every': obj.run_every.total_seconds(),
                 'relative': bool(obj.relative),
             }
+
         return super(RedBeatJSONEncoder, self).default(obj)

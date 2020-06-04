@@ -38,6 +38,7 @@ import pytz
 from .decoder import (
     RedBeatJSONEncoder, RedBeatJSONDecoder,
     from_timestamp, to_timestamp
+
     )
 
 # Copied from:
@@ -186,8 +187,6 @@ class RedBeatConfig(object):
         if tz == pytz.utc:
             return
 
-        warnings.warn('RedBeat only supports UTC, timezone set to %s' % (tz))
-
         self.validate_timezone()
 
     def validate_timezone(self):
@@ -297,6 +296,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def score(self):
+        """ return UTC based UNIX timestamp """
         if self.due_at is None:
             # Scores < zero are ignored on each tick.
             return -1
