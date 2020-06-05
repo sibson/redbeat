@@ -179,27 +179,9 @@ class RedBeatConfig(object):
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
         self.redis_use_ssl = self.either_or('redbeat_redis_use_ssl', app.conf['BROKER_USE_SSL'])
 
-        self.validate_timezone()
-
-    def validate_timezone(self):
-        tz = self.app.timezone
-
-        if tz == pytz.utc:
-            return
-
-        self.validate_timezone()
-
-    def validate_timezone(self):
-        tz = self.app.timezone
-
-        if tz == pytz.utc:
-            return
-
-        warnings.warn('Celery configured with %s, RedBeat only supports UTC' % (tz))
-
     @property
     def schedule(self):
-       return self.app.conf.beat_schedule
+        return self.app.conf.beat_schedule
 
     @schedule.setter
     def schedule(self, value):
