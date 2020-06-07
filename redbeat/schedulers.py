@@ -38,6 +38,7 @@ import pytz
 from .decoder import (
     RedBeatJSONEncoder, RedBeatJSONDecoder,
     from_timestamp, to_timestamp
+
     )
 
 # Copied from:
@@ -178,29 +179,9 @@ class RedBeatConfig(object):
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
         self.redis_use_ssl = self.either_or('redbeat_redis_use_ssl', app.conf['BROKER_USE_SSL'])
 
-        self.validate_timezone()
-
-    def validate_timezone(self):
-        tz = self.app.timezone
-
-        if tz == pytz.utc:
-            return
-
-        warnings.warn('RedBeat only supports UTC, timezone set to %s' % (tz))
-
-        self.validate_timezone()
-
-    def validate_timezone(self):
-        tz = self.app.timezone
-
-        if tz == pytz.utc:
-            return
-
-        warnings.warn('Celery configured with %s, RedBeat only supports UTC' % (tz))
-
     @property
     def schedule(self):
-       return self.app.conf.beat_schedule
+        return self.app.conf.beat_schedule
 
     @schedule.setter
     def schedule(self, value):
@@ -297,6 +278,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def score(self):
+        """ return UTC based UNIX timestamp """
         if self.due_at is None:
             # Scores < zero are ignored on each tick.
             return -1

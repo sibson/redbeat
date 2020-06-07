@@ -16,7 +16,7 @@ jobs:
         dependency-file: requirements.dev.txt
       - run:
           command: tox
-          name: Test
+          name: Run Tox Tests
 
 workflows:
   main:
