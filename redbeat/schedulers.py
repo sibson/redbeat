@@ -6,12 +6,15 @@
 from __future__ import absolute_import
 
 import json
+import pickle
+import base64
+import calendar
 import logging
 import warnings
 import ssl
 from datetime import datetime, MINYEAR
 
-from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL
+from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL, BeatLazyFunc
 from celery.utils.log import get_logger
 from celery.signals import beat_init
 from celery.utils.time import humanize_seconds
@@ -451,6 +454,35 @@ class RedBeatScheduler(Scheduler):
 
         if is_due:
             logger.info('Scheduler: Sending due task %s (%s)', entry.name, entry.task)
+
+            if type(entry.args) != list:
+                entry.args = [entry.args]
+
+            args_tmp = list()
+            for v in (entry.args or []):
+                try:
+                    v = pickle.loads(base64.b64decode(bytes(v, encoding='utf-8')))
+                except Exception:
+                    pass
+                if isinstance(v, BeatLazyFunc):
+                    args_tmp.append(v())
+                else:
+                    args_tmp.append(v)
+            entry.args = args_tmp
+
+
+            kwargs_tmp = dict()
+            for k, v in entry.kwargs.items():
+                try:
+                    v = pickle.loads(base64.b64decode(bytes(v, encoding='utf-8')))
+                except Exception:
+                    pass
+                if isinstance(v, BeatLazyFunc):
+                    kwargs_tmp[k] = v() 
+                else:
+                    kwargs_tmp[k] = v
+            entry.kwargs = kwargs_tmp
+
             try:
                 result = self.apply_async(entry, **kwargs)
             except Exception as exc:

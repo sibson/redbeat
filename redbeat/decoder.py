@@ -1,9 +1,17 @@
 # coding: utf-8
 
+import pickle
+import base64
 import calendar
 import json
 from datetime import datetime
 
+try:
+    import simplejson as json
+except ImportError:
+    import json
+
+from celery.beat import BeatLazyFunc
 from celery.schedules import schedule, crontab
 from celery.utils.time import timezone, FixedOffset
 from dateutil.rrule import weekday
@@ -142,5 +150,8 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'every': obj.run_every.total_seconds(),
                 'relative': bool(obj.relative),
             }
+        if isinstance(obj, BeatLazyFunc):                                   
+            return str(base64.b64encode(pickle.dumps(obj)), encoding='utf-8')
+            
 
         return super(RedBeatJSONEncoder, self).default(obj)
