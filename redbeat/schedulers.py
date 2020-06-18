@@ -426,7 +426,7 @@ class RedBeatScheduler(Scheduler):
                                start=0, num=1)
             due_tasks, maybe_due = pipe.execute()
 
-        logger.info('Loading %d tasks', len(due_tasks) + len(maybe_due))
+        logger.debug('Loading %d tasks', len(due_tasks) + len(maybe_due))
         d = {}
         for key in due_tasks + maybe_due:
             try:
