@@ -204,6 +204,9 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     def __init__(
         self, name=None, task=None, schedule=None, args=None, kwargs=None, enabled=True, **clsargs
     ):
+        if isinstance(schedule, dict):
+            # Decode dict to schedule entry
+            schedule = RedBeatJSONDecoder().dict_to_object(schedule)
         super(RedBeatSchedulerEntry, self).__init__(
             name=name, task=task, schedule=schedule, args=args, kwargs=kwargs, **clsargs
         )
