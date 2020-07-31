@@ -1,7 +1,7 @@
 import mock
 from redbeat.schedulers import RedBeatConfig
 
-from basecase import AppCase
+from tests.basecase import AppCase
 
 
 class test_RedBeatConfig(AppCase):

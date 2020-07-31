@@ -7,9 +7,9 @@ from celery.schedules import schedule, schedstate
 from celery.utils.time import maybe_timedelta
 
 from mock import patch, Mock
-from basecase import RedBeatCase, AppCase
 from redbeat import RedBeatScheduler
 from redbeat.schedulers import get_redis
+from tests.basecase import RedBeatCase, AppCase
 
 import ssl
 

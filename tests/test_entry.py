@@ -6,7 +6,7 @@ from celery.utils.time import maybe_make_aware
 from redbeat import RedBeatSchedulerEntry
 from redbeat.decoder import RedBeatJSONDecoder, to_timestamp, from_timestamp
 
-from basecase import RedBeatCase
+from tests.basecase import RedBeatCase
 
 CELERY_CONFIG_DEFAULT_KWARGS = {}
 
