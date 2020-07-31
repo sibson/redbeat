@@ -2,17 +2,16 @@ from datetime import datetime, timedelta
 import json
 
 from celery.utils.time import maybe_make_aware
-CELERY_CONFIG_DEFAULT_KWARGS = {}
+
+from redbeat import RedBeatSchedulerEntry
+from redbeat.decoder import RedBeatJSONDecoder, to_timestamp, from_timestamp
 
 from basecase import RedBeatCase
 
-from redbeat import RedBeatSchedulerEntry
-from redbeat.decoder import RedBeatJSONDecoder
-from redbeat.schedulers import to_timestamp, from_timestamp
+CELERY_CONFIG_DEFAULT_KWARGS = {}
 
 
 class test_RedBeatEntry(RedBeatCase):
-
     def test_basic_save(self):
         e = self.create_entry()
         e.save()
@@ -26,7 +25,7 @@ class test_RedBeatEntry(RedBeatCase):
             'options': {},
             'enabled': True,
         }
-        expected_key = (self.app.redbeat_conf.key_prefix + 'test')
+        expected_key = self.app.redbeat_conf.key_prefix + 'test'
 
         redis = self.app.redbeat_redis
         value = redis.hget(expected_key, 'definition')
@@ -127,7 +126,6 @@ class test_RedBeatEntry(RedBeatCase):
         expected = expected.replace(microsecond=0)  # discard microseconds, lost in timestamp
         # 3.x returns naive, but 4.x returns aware
         expected = maybe_make_aware(expected)
-
 
         self.assertEqual(score, to_timestamp(expected))
         self.assertEqual(expected, from_timestamp(score))

@@ -1,12 +1,10 @@
 import mock
-import pytest
 from redbeat.schedulers import RedBeatConfig
 
 from basecase import AppCase
 
 
 class test_RedBeatConfig(AppCase):
-
     def setup(self):
         self.conf = RedBeatConfig(self.app)
 
