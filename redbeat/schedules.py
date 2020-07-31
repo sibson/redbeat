@@ -49,7 +49,7 @@ class rrule(schedule):
         byhour=None,
         byminute=None,
         bysecond=None,
-        **kwargs,
+        **kwargs
     ):
         super(rrule, self).__init__(**kwargs)
 

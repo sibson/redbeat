@@ -3,10 +3,13 @@ jobs:
   # TODO: add caching
   python:
     docker:
-      - image: circleci/python:3.7
+      - image: themattrix/tox
 
     steps:
       - checkout
+      - run:
+          command: pip install tox
+          name: Install Tox
       - run:
           command: tox
           name: Run Tox Tests
