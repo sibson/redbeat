@@ -13,6 +13,9 @@ jobs:
       - run:
           command: tox
           name: Run Tox Tests
+      - store_test_results:
+          path: .tox/tox-*.xml
+
 
 workflows:
   version: 2
