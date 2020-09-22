@@ -1,12 +1,8 @@
 # coding: utf-8
 
 import calendar
+import json
 from datetime import datetime
-
-try:
-    import simplejson as json
-except ImportError:
-    import json
 
 from celery.schedules import schedule, crontab
 from celery.utils.time import timezone, FixedOffset

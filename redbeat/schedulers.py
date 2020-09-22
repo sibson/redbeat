@@ -5,15 +5,11 @@
 
 from __future__ import absolute_import
 
+import json
 import logging
 import warnings
 import ssl
 from datetime import datetime, MINYEAR
-
-try:
-    import simplejson as json
-except ImportError:
-    import json
 
 from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL
 from celery.utils.log import get_logger
@@ -21,7 +17,6 @@ from celery.signals import beat_init
 from celery.utils.time import humanize_seconds
 from kombu.utils.objects import cached_property
 from celery.app import app_or_default
-from celery.five import values
 from kombu.utils.url import maybe_sanitize_url
 from tenacity import (
     retry,
@@ -470,7 +465,7 @@ class RedBeatScheduler(Scheduler):
 
         remaining_times = []
         try:
-            for entry in values(self.schedule):
+            for entry in self.schedule.values():
                 next_time_to_run = self.maybe_due(entry, **self._maybe_due_kwargs)
                 if next_time_to_run:
                     remaining_times.append(next_time_to_run)
