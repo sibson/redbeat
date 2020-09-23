@@ -1,18 +1,23 @@
-version: 2
 jobs:
-  # TODO: add caching
-  python:
-    docker:
-      - image: circleci/python:3.7
-
+  build:
+    executor: python/default
     steps:
       - checkout
+      - python/install-packages:
+          pkg-manager: pip
+      - python/install-packages:
+          args: -r requirements-dev.txt
+          pkg-manager: pip
+          pypi-cache: false
       - run:
-          command: tox
-          name: Run Tox Tests
+          command: |
+            tox
+          name: Test
+orbs:
+  python: circleci/python@1.0.0
 
+version: 2.1
 workflows:
-  version: 2
-  UnitTests:
+  main:
     jobs:
-      - python
+      - build
