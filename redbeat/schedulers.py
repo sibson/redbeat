@@ -5,12 +5,10 @@
 
 from __future__ import absolute_import
 
-import calendar
 import logging
 import warnings
 import ssl
 from datetime import datetime, MINYEAR
-from distutils.version import StrictVersion
 
 try:
     import simplejson as json
@@ -20,26 +18,21 @@ except ImportError:
 from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL
 from celery.utils.log import get_logger
 from celery.signals import beat_init
-from celery.utils.time import humanize_seconds, timezone
+from celery.utils.time import humanize_seconds
 from kombu.utils.objects import cached_property
 from celery.app import app_or_default
 from celery.five import values
 from kombu.utils.url import maybe_sanitize_url
-from tenacity import (before_sleep_log,
-                      retry,
-                      retry_if_exception_type,
-                      stop_after_delay,
-                      wait_exponential)
-import pytz
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_delay,
+    wait_exponential,
+)
 import redis.exceptions
 from redis.client import StrictRedis
-import pytz
 
-from .decoder import (
-    RedBeatJSONEncoder, RedBeatJSONDecoder,
-    from_timestamp, to_timestamp
-
-    )
+from .decoder import RedBeatJSONEncoder, RedBeatJSONDecoder, to_timestamp
 
 # Copied from:
 # https://github.com/andymccurdy/redis-py/blob/master/redis/lock.py#L33
@@ -72,16 +65,19 @@ class RetryingConnection(object):
     """A proxy for the Redis connection that delegates all the calls to
     underlying Redis connection while retrying on connection or time-out error.
     """
+
     RETRY_MAX_WAIT = 30
 
     def __init__(self, retry_period, wrapped_connection):
         self.wrapped_connection = wrapped_connection
         self.retry_kwargs = dict(
-            retry=(retry_if_exception_type(redis.exceptions.ConnectionError)
-                   | retry_if_exception_type(redis.exceptions.TimeoutError)),
+            retry=(
+                retry_if_exception_type(redis.exceptions.ConnectionError)
+                | retry_if_exception_type(redis.exceptions.TimeoutError)
+            ),
             reraise=True,
             wait=wait_exponential(multiplier=1, max=self.RETRY_MAX_WAIT),
-            before_sleep=self._log_retry_attempt
+            before_sleep=self._log_retry_attempt,
         )
         if retry_period >= 0:
             self.retry_kwargs.update(dict(stop=stop_after_delay(retry_period)))
@@ -102,9 +98,9 @@ class RetryingConnection(object):
     @staticmethod
     def _log_retry_attempt(retry_state):
         """Log when next reconnection attempt is about to be made."""
-        logger.log(logging.WARNING,
-                   "Retrying connection in %s seconds...",
-                   retry_state.next_action.sleep)
+        logger.log(
+            logging.WARNING, "Retrying connection in %s seconds...", retry_state.next_action.sleep
+        )
 
 
 def ensure_conf(app):
@@ -129,24 +125,28 @@ def get_redis(app=None):
     conf = ensure_conf(app)
     if not hasattr(app, 'redbeat_redis') or app.redbeat_redis is None:
         redis_options = conf.app.conf.get(
-            'REDBEAT_REDIS_OPTIONS',
-            conf.app.conf.get('BROKER_TRANSPORT_OPTIONS', {}))
+            'REDBEAT_REDIS_OPTIONS', conf.app.conf.get('BROKER_TRANSPORT_OPTIONS', {})
+        )
         retry_period = redis_options.get('retry_period')
-        if conf.redis_url.startswith('redis-sentinel') and  'sentinels' in redis_options:
+        if conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
             from redis.sentinel import Sentinel
-            sentinel = Sentinel(redis_options['sentinels'],
-                                socket_timeout=redis_options.get('socket_timeout'),
-                                password=redis_options.get('password'),
-                                db=redis_options.get('db', 0),
-                                decode_responses=True)
+
+            sentinel = Sentinel(
+                redis_options['sentinels'],
+                socket_timeout=redis_options.get('socket_timeout'),
+                password=redis_options.get('password'),
+                db=redis_options.get('db', 0),
+                decode_responses=True,
+            )
             connection = sentinel.master_for(redis_options.get('service_name', 'master'))
         elif conf.redis_url.startswith('rediss'):
-            ssl_options = { 'ssl_cert_reqs': ssl.CERT_REQUIRED }
+            ssl_options = {'ssl_cert_reqs': ssl.CERT_REQUIRED}
             if isinstance(conf.redis_use_ssl, dict):
                 ssl_options.update(conf.redis_use_ssl)
             connection = StrictRedis.from_url(conf.redis_url, decode_responses=True, **ssl_options)
         elif conf.redis_url.startswith('redis-cluster'):
             from rediscluster import RedisCluster
+
             if not redis_options.get('startup_nodes'):
                 redis_options = {'startup_nodes': [{"host": "localhost", "port": "30001"}]}
             connection = RedisCluster(decode_responses=True, **redis_options)
@@ -167,6 +167,7 @@ Couldn't add entry %r to redis schedule: %r. Contents: %r
 """
 
 logger = get_logger(__name__)
+
 
 class RedBeatConfig(object):
     def __init__(self, app=None):
@@ -192,7 +193,7 @@ class RedBeatConfig(object):
             warnings.warn(
                 'Celery v4 installed, but detected Celery v3 '
                 'configuration %s (use %s instead).' % (name, name.lower()),
-                UserWarning
+                UserWarning,
             )
         return self.app.conf.first(name, name.upper()) or default
 
@@ -200,10 +201,12 @@ class RedBeatConfig(object):
 class RedBeatSchedulerEntry(ScheduleEntry):
     _meta = None
 
-    def __init__(self, name=None, task=None, schedule=None,
-                 args=None, kwargs=None, enabled=True, **clsargs):
-        super(RedBeatSchedulerEntry, self).__init__(name=name, task=task, schedule=schedule,
-                                                    args=args, kwargs=kwargs, **clsargs)
+    def __init__(
+        self, name=None, task=None, schedule=None, args=None, kwargs=None, enabled=True, **clsargs
+    ):
+        super(RedBeatSchedulerEntry, self).__init__(
+            name=name, task=task, schedule=schedule, args=args, kwargs=kwargs, **clsargs
+        )
         self.enabled = enabled
         ensure_conf(self.app)
 
@@ -333,6 +336,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             pipe.execute()
 
         return entry
+
     __next__ = next = _next_instance
 
     def reschedule(self, last_run_at=None):
@@ -349,7 +353,9 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         if not self.enabled:
             return False, 5.0  # 5 second delay for re-enable.
 
-        return self.schedule.is_due(self.last_run_at or datetime(MINYEAR, 1, 2, tzinfo=self.schedule.tz))
+        return self.schedule.is_due(
+            self.last_run_at or datetime(MINYEAR, 1, 2, tzinfo=self.schedule.tz)
+        )
 
 
 class RedBeatScheduler(Scheduler):
@@ -365,10 +371,12 @@ class RedBeatScheduler(Scheduler):
     def __init__(self, app, lock_key=None, lock_timeout=None, **kwargs):
         ensure_conf(app)  # set app.redbeat_conf
         self.lock_key = lock_key or app.redbeat_conf.lock_key
-        self.lock_timeout = (lock_timeout or
-                             app.redbeat_conf.lock_timeout or
-                             self.max_interval * 5 or
-                             self.lock_timeout)
+        self.lock_timeout = (
+            lock_timeout
+            or app.redbeat_conf.lock_timeout
+            or self.max_interval * 5
+            or self.lock_timeout
+        )
         super(RedBeatScheduler, self).__init__(app, **kwargs)
 
     def setup_schedule(self):
@@ -391,8 +399,7 @@ class RedBeatScheduler(Scheduler):
 
             # keep track of static schedule entries,
             # so we notice when any are removed at next startup
-            client.sadd(self.app.redbeat_conf.statics_key,
-                        *self.app.redbeat_conf.schedule.keys())
+            client.sadd(self.app.redbeat_conf.statics_key, *self.app.redbeat_conf.schedule.keys())
 
     def update_from_dict(self, dict_):
         for name, entry in dict_.items():
@@ -420,10 +427,13 @@ class RedBeatScheduler(Scheduler):
             pipe.zrangebyscore(self.app.redbeat_conf.schedule_key, 0, max_due_at)
 
             # peek into the next tick to accuratly calculate sleep between ticks
-            pipe.zrangebyscore(self.app.redbeat_conf.schedule_key,
-                               '({}'.format(max_due_at),
-                               max_due_at + self.max_interval,
-                               start=0, num=1)
+            pipe.zrangebyscore(
+                self.app.redbeat_conf.schedule_key,
+                '({}'.format(max_due_at),
+                max_due_at + self.max_interval,
+                start=0,
+                num=1,
+            )
             due_tasks, maybe_due = pipe.execute()
 
         logger.debug('Loading %d tasks', len(due_tasks) + len(maybe_due))
@@ -480,14 +490,18 @@ class RedBeatScheduler(Scheduler):
     def info(self):
         info = ['       . redis -> {}'.format(maybe_sanitize_url(self.app.redbeat_conf.redis_url))]
         if self.lock_key:
-            info.append('       . lock -> `{}` {} ({}s)'.format(
-                self.lock_key, humanize_seconds(self.lock_timeout), self.lock_timeout))
+            info.append(
+                '       . lock -> `{}` {} ({}s)'.format(
+                    self.lock_key, humanize_seconds(self.lock_timeout), self.lock_timeout
+                )
+            )
         return '\n'.join(info)
 
     @cached_property
     def _maybe_due_kwargs(self):
         """ handle rename of publisher to producer """
         return {'producer': self.producer}
+
 
 @beat_init.connect
 def acquire_distributed_beat_lock(sender=None, **kwargs):
@@ -499,9 +513,7 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     redis_client = get_redis(scheduler.app)
 
     lock = redis_client.lock(
-        scheduler.lock_key,
-        timeout=scheduler.lock_timeout,
-        sleep=scheduler.max_interval,
+        scheduler.lock_key, timeout=scheduler.lock_timeout, sleep=scheduler.max_interval,
     )
     # overwrite redis-py's extend script
     # which will add additional timeout instead of extend to a new timeout

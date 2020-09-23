@@ -1,4 +1,3 @@
-
 from unittest import TestCase
 
 from celery.contrib.testing.app import TestApp
@@ -17,12 +16,10 @@ class AppCase(TestCase):
 
 
 class RedBeatCase(AppCase):
-
     def setup(self):
-        self.app.conf.add_defaults({
-            'REDBEAT_KEY_PREFIX': 'rb-tests:',
-            'redbeat_key_prefix': 'rb-tests:',
-        })
+        self.app.conf.add_defaults(
+            {'REDBEAT_KEY_PREFIX': 'rb-tests:', 'redbeat_key_prefix': 'rb-tests:'}
+        )
         self.app.redbeat_redis = FakeStrictRedis(decode_responses=True)
         self.app.redbeat_redis.flushdb()
 

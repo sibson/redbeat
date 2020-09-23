@@ -12,9 +12,7 @@ setup(
     author="Marc Sibson",
     author_email="sibson+redbeat@gmail.com",
     keywords="python celery beat redis".split(),
-    packages=[
-        "redbeat"
-    ],
+    packages=["redbeat"],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'License :: OSI Approved :: Apache Software License',
@@ -29,13 +27,6 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
         'Operating System :: OS Independent',
     ],
-    install_requires=[
-        'redis>=3.2',
-        'celery>=4.2',
-        'python-dateutil',
-        'tenacity'
-    ],
-    tests_require=[
-        'pytest',
-    ],
+    install_requires=['redis>=3.2', 'celery>=4.2', 'python-dateutil', 'tenacity'],
+    tests_require=['pytest'],
 )
