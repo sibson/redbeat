@@ -1,7 +1,6 @@
 black
 celery>=4.2
 fakeredis>=1.0.3
-mock
 nose
 pytest
 pytest-catchlog

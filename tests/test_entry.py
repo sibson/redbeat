@@ -1,11 +1,10 @@
-from datetime import datetime, timedelta
 import json
+from datetime import datetime, timedelta
 
 from celery.utils.time import maybe_make_aware
 
 from redbeat import RedBeatSchedulerEntry
-from redbeat.decoder import RedBeatJSONDecoder, to_timestamp, from_timestamp
-
+from redbeat.decoder import RedBeatJSONDecoder, from_timestamp, to_timestamp
 from tests.basecase import RedBeatCase
 
 CELERY_CONFIG_DEFAULT_KWARGS = {}

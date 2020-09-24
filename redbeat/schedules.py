@@ -1,15 +1,7 @@
-import celery
-from dateutil.rrule import (
-    rrule as dateutil_rrule,
-    YEARLY,
-    MONTHLY,
-    WEEKLY,
-    DAILY,
-    HOURLY,
-    MINUTELY,
-    SECONDLY,
-)
 from celery.schedules import BaseSchedule as schedule
+from celery.schedules import schedstate
+from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, SECONDLY, WEEKLY, YEARLY
+from dateutil.rrule import rrule as dateutil_rrule
 
 
 class rrule(schedule):
@@ -49,9 +41,9 @@ class rrule(schedule):
         byhour=None,
         byminute=None,
         bysecond=None,
-        **kwargs
+        **kwargs,
     ):
-        super(rrule, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         if type(freq) == str:
             freq_str = freq.upper()
@@ -117,8 +109,8 @@ class rrule(schedule):
                     rem = max(rem_delta.total_seconds(), 0)
                 else:
                     rem = None
-            return celery.schedules.schedstate(due, rem)
-        return celery.schedules.schedstate(False, None)
+            return schedstate(due, rem)
+        return schedstate(False, None)
 
     def __repr__(self):
         return self.RRULE_REPR.format(self)
