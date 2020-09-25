@@ -5,6 +5,10 @@ RedBeat
    :target: https://pypi.python.org/pypi/celery-redbeat
    :alt: PyPI
 
+.. image:: https://github.com/sibson/redbeat/workflows/RedBeat%20CI/badge.svg
+   :target: https://github.com/sibson/redbeat/actions
+   :alt: Actions Status
+
 .. image:: https://img.shields.io/circleci/project/github/sibson/redbeat.svg
    :target: https://circleci.com/gh/sibson/redbeat/
    :alt: Circle CI
