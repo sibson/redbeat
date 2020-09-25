@@ -13,6 +13,10 @@ RedBeat
    :target: https://redbeat.readthedocs.io/en/latest/
    :alt: ReadTheDocs
 
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+   :target: https://github.com/psf/black
+   :alt: Code style: black
+
 `RedBeat <https://github.com/sibson/redbeat>`_ is a
 `Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_
 that stores the scheduled tasks and runtime metadata in `Redis <http://redis.io/>`_.
