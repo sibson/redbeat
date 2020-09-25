@@ -508,7 +508,9 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     redis_client = get_redis(scheduler.app)
 
     lock = redis_client.lock(
-        scheduler.lock_key, timeout=scheduler.lock_timeout, sleep=scheduler.max_interval,
+        scheduler.lock_key,
+        timeout=scheduler.lock_timeout,
+        sleep=scheduler.max_interval,
     )
     # overwrite redis-py's extend script
     # which will add additional timeout instead of extend to a new timeout
