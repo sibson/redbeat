@@ -365,6 +365,8 @@ class RedBeatScheduler(Scheduler):
 
     def __init__(self, app, lock_key=None, lock_timeout=None, **kwargs):
         ensure_conf(app)  # set app.redbeat_conf
+        super(RedBeatScheduler, self).__init__(app, **kwargs)
+
         self.lock_key = lock_key or app.redbeat_conf.lock_key
         self.lock_timeout = (
             lock_timeout
@@ -372,7 +374,6 @@ class RedBeatScheduler(Scheduler):
             or self.max_interval * 5
             or self.lock_timeout
         )
-        super(RedBeatScheduler, self).__init__(app, **kwargs)
 
     def setup_schedule(self):
         # cleanup old static schedule entries
