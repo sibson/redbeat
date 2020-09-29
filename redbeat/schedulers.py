@@ -119,9 +119,13 @@ def get_redis(app=None):
     app = app_or_default(app)
     conf = ensure_conf(app)
     if not hasattr(app, 'redbeat_redis') or app.redbeat_redis is None:
-        redis_options = conf.app.conf.get(
-            'REDBEAT_REDIS_OPTIONS', conf.app.conf.get('BROKER_TRANSPORT_OPTIONS', {})
+        redis_options = conf.app.conf.first(
+            "redbeat_redis_options", "REDBEAT_REDIS_OPTIONS"
         )
+        if redis_options is None:
+            redis_options = conf.app.conf.first(
+                "BROKER_TRANSPORT_OPTIONS", "broker_transport_options"
+            ) or {}
         retry_period = redis_options.get('retry_period')
         if conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
             from redis.sentinel import Sentinel

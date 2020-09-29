@@ -1,5 +1,9 @@
+from unittest import TestCase
+
 import mock
-from redbeat.schedulers import RedBeatConfig
+from celery.contrib.testing.app import TestApp
+
+from redbeat.schedulers import RedBeatConfig, get_redis, RetryingConnection
 
 from tests.basecase import AppCase
 
@@ -39,3 +43,20 @@ class test_RedBeatConfig(AppCase):
         broker_url = self.conf.either_or('BROKER_URL')
         self.assertTrue(warn_mock.called)
         self.assertEqual(broker_url, self.app.conf.broker_url)
+
+
+class TestRedBeatConfigRedisOptions(TestCase):
+    default_dict = {
+        'redbeat_redis_url': 'redis://redishost:26379/0',
+    }
+
+    def test_cases(self):
+        for config in [
+            {'broker_transport_options': {'retry_period': 5}},
+            {'BROKER_TRANSPORT_OPTIONS': {'retry_period': 5}},
+            {'redbeat_redis_options': {'retry_period': 5}},
+            {'REDBEAT_REDIS_OPTIONS': {'retry_period': 5}},
+        ]:
+            config.update(self.default_dict)
+            redis_client = get_redis(app=TestApp(config=config))
+            assert isinstance(redis_client, RetryingConnection), config

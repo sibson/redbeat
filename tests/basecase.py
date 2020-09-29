@@ -12,7 +12,9 @@ class AppCase(TestCase):
             self.app = TestApp(config=self.config_dict)
         except Exception:
             self.app = TestApp()
-        self.setup()
+
+        if hasattr(self, 'setup'):
+            self.setup()
 
 
 class RedBeatCase(AppCase):
