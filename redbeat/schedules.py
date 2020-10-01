@@ -7,7 +7,7 @@ from dateutil.rrule import (
     DAILY,
     HOURLY,
     MINUTELY,
-    SECONDLY
+    SECONDLY,
 )
 from celery.schedules import BaseSchedule as schedule
 
@@ -28,15 +28,29 @@ class rrule(schedule):
         'DAILY': DAILY,
         'HOURLY': HOURLY,
         'MINUTELY': MINUTELY,
-        'SECONDLY': SECONDLY
+        'SECONDLY': SECONDLY,
     }
 
-    def __init__(self, freq, dtstart=None,
-                 interval=1, wkst=None, count=None, until=None, bysetpos=None,
-                 bymonth=None, bymonthday=None, byyearday=None, byeaster=None,
-                 byweekno=None, byweekday=None,
-                 byhour=None, byminute=None, bysecond=None,
-                 **kwargs):
+    def __init__(
+        self,
+        freq,
+        dtstart=None,
+        interval=1,
+        wkst=None,
+        count=None,
+        until=None,
+        bysetpos=None,
+        bymonth=None,
+        bymonthday=None,
+        byyearday=None,
+        byeaster=None,
+        byweekno=None,
+        byweekday=None,
+        byhour=None,
+        byminute=None,
+        bysecond=None,
+        **kwargs
+    ):
         super(rrule, self).__init__(**kwargs)
 
         if type(freq) == str:
@@ -44,8 +58,7 @@ class rrule(schedule):
             assert freq_str in rrule.FREQ_MAP
             freq = rrule.FREQ_MAP[freq_str]
 
-        dtstart = self.maybe_make_aware(dtstart) if dtstart else \
-            self.maybe_make_aware(self.now())
+        dtstart = self.maybe_make_aware(dtstart) if dtstart else self.maybe_make_aware(self.now())
         until = self.maybe_make_aware(until) if until else None
 
         self.freq = freq
@@ -64,9 +77,24 @@ class rrule(schedule):
         self.byhour = byhour
         self.byminute = byminute
         self.bysecond = bysecond
-        self.rrule = dateutil_rrule(freq, dtstart, interval, wkst, count, until,
-                                    bysetpos, bymonth, bymonthday, byyearday, byeaster,
-                                    byweekno, byweekday, byhour, byminute, bysecond)
+        self.rrule = dateutil_rrule(
+            freq,
+            dtstart,
+            interval,
+            wkst,
+            count,
+            until,
+            bysetpos,
+            bymonth,
+            bymonthday,
+            byyearday,
+            byeaster,
+            byweekno,
+            byweekday,
+            byhour,
+            byminute,
+            bysecond,
+        )
 
     def remaining_estimate(self, last_run_at):
         last_run_at = self.maybe_make_aware(last_run_at)
