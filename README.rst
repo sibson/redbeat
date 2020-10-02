@@ -5,6 +5,10 @@ RedBeat
    :target: https://pypi.python.org/pypi/celery-redbeat
    :alt: PyPI
 
+.. image:: https://github.com/sibson/redbeat/workflows/RedBeat%20CI/badge.svg
+   :target: https://github.com/sibson/redbeat/actions
+   :alt: Actions Status
+
 .. image:: https://img.shields.io/circleci/project/github/sibson/redbeat.svg
    :target: https://circleci.com/gh/sibson/redbeat/
    :alt: Circle CI
@@ -12,6 +16,10 @@ RedBeat
 .. image:: https://readthedocs.org/projects/redbeat/badge/?version=latest&style=flat
    :target: https://redbeat.readthedocs.io/en/latest/
    :alt: ReadTheDocs
+
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+   :target: https://github.com/psf/black
+   :alt: Code style: black
 
 `RedBeat <https://github.com/sibson/redbeat>`_ is a
 `Celery Beat Scheduler <http://celery.readthedocs.org/en/latest/userguide/periodic-tasks.html>`_
