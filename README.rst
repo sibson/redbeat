@@ -9,10 +9,6 @@ RedBeat
    :target: https://github.com/sibson/redbeat/actions
    :alt: Actions Status
 
-.. image:: https://img.shields.io/circleci/project/github/sibson/redbeat.svg
-   :target: https://circleci.com/gh/sibson/redbeat/
-   :alt: Circle CI
-
 .. image:: https://readthedocs.org/projects/redbeat/badge/?version=latest&style=flat
    :target: https://redbeat.readthedocs.io/en/latest/
    :alt: ReadTheDocs
