@@ -119,9 +119,7 @@ def get_redis(app=None):
     app = app_or_default(app)
     conf = ensure_conf(app)
     if not hasattr(app, 'redbeat_redis') or app.redbeat_redis is None:
-        redis_options = conf.app.conf.get(
-            'REDBEAT_REDIS_OPTIONS', conf.app.conf.get('BROKER_TRANSPORT_OPTIONS', {})
-        )
+        redis_options = conf.redbeat_redis_options
         retry_period = redis_options.get('retry_period')
         if conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
             from redis.sentinel import Sentinel
@@ -174,6 +172,7 @@ class RedBeatConfig(object):
         self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
         self.redis_use_ssl = self.either_or('redbeat_redis_use_ssl', app.conf['BROKER_USE_SSL'])
+        self.redbeat_redis_options = self.either_or('redbeat_redis_options', app.conf['BROKER_TRANSPORT_OPTIONS'])
 
     @property
     def schedule(self):
