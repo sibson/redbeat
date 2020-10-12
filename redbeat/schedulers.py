@@ -172,7 +172,9 @@ class RedBeatConfig(object):
         self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
         self.redis_use_ssl = self.either_or('redbeat_redis_use_ssl', app.conf['BROKER_USE_SSL'])
-        self.redbeat_redis_options = self.either_or('redbeat_redis_options', app.conf['BROKER_TRANSPORT_OPTIONS'])
+        self.redbeat_redis_options = self.either_or(
+            'redbeat_redis_options', app.conf['BROKER_TRANSPORT_OPTIONS']
+        )
 
     @property
     def schedule(self):

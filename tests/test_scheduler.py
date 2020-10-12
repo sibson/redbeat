@@ -213,7 +213,11 @@ class SentinelRedBeatCase(AppCase):
         assert 'Sentinel' in str(redis_client.connection_pool)
 
     def test_sentinel_scheduler_options(self):
-        for options in ["BROKER_TRANSPORT_OPTIONS", "redbeat_redis_options", "REDBEAT_REDIS_OPTIONS"]:
+        for options in [
+            "BROKER_TRANSPORT_OPTIONS",
+            "redbeat_redis_options",
+            "REDBEAT_REDIS_OPTIONS",
+        ]:
             config = deepcopy(self.config_dict)
             config[options] = self.BROKER_TRANSPORT_OPTIONS
             self.app.conf.clear()
