@@ -5,7 +5,11 @@
 
 from __future__ import absolute_import
 
-import json
+try:
+    import simplejson as json
+except ImportError:
+    import json
+
 import pickle
 import base64
 import calendar
@@ -13,7 +17,6 @@ import logging
 import warnings
 import ssl
 from datetime import datetime, MINYEAR
-
 from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL, BeatLazyFunc
 from celery.utils.log import get_logger
 from celery.signals import beat_init
