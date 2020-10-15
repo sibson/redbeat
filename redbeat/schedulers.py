@@ -130,6 +130,7 @@ def get_redis(app=None):
                 password=redis_options.get('password'),
                 db=redis_options.get('db', 0),
                 decode_responses=True,
+                sentinel_kwargs=redis_options.get('sentinel_kwargs', None)
             )
             connection = sentinel.master_for(redis_options.get('service_name', 'master'))
         elif conf.redis_url.startswith('rediss'):
