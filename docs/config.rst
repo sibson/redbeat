@@ -56,6 +56,7 @@ configuration syntax is inspired from `celery-redis-sentinel
         'db': 0,
         'service_name': 'master',
         'socket_timeout': 0.1,
+        'sentinel_kwargs': {'password'： 'sentinel_password'}
     }
 
     CELERY_RESULT_BACKEND = 'redis-sentinel://redis-sentinel:26379/1'
@@ -73,6 +74,9 @@ Some notes about the configuration:
 
 * ``db`` is optional and defaults to ``0``.
 
+* ``sentinel_kwargs`` is optional and is passed to ``redis.Sentinel()``.For example, if sentinel has set a password,
+  ``sentinel_kwargs`` can set to ``{'password'： 'sentinel_password'}``
+
 If other backend is configured for Celery queue use
 ``REDBEAT_REDIS_URL`` instead of ``BROKER_URL`` and
 ``REDBEAT_REDIS_OPTIONS`` instead of ``BROKER_TRANSPORT_OPTIONS``. to
@@ -87,6 +91,7 @@ avoid conflicting options. Here follows the example:::
         'password': '123',
         'service_name': 'master',
         'socket_timeout': 0.1,
+        'sentinel_kwargs': {'password'： 'xxxx'}
         'retry_period': 60,
     }
 
