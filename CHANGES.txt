@@ -1,9 +1,11 @@
-2.0.0 (unreleased)
+2.0.0 (2020-10-25)
 ---------------------
-  - BREAKING CHANGES
+  - BREAKING CHANGES, test with your stack before deploying
     - Drop support for celery<4.2
     - Drop support for pyredis<3
   - Support timezones other than UTC thanks @luoxiaohei, @sempr and @noamkush
+  - Many config handling consistentcy updates
+  - Use black linter and drop circle CI in favor of GitHub Actions
 
 1.0.0 (2020-05-16)
 --------------------
