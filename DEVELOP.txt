@@ -1,4 +1,7 @@
-
+Testing
+---------
+ - use pyenv on OSX to manage multiple python versions for use with tox
+ - run ```tox```
 
 
 Release
