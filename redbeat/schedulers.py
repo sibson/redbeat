@@ -6,7 +6,6 @@
 from __future__ import absolute_import
 
 import json
-import logging
 import warnings
 import ssl
 from datetime import datetime, MINYEAR
@@ -28,6 +27,9 @@ import redis.exceptions
 from redis.client import StrictRedis
 
 from .decoder import RedBeatJSONEncoder, RedBeatJSONDecoder, to_timestamp
+
+
+logger = get_logger('celery.beat')
 
 # Copied from:
 # https://github.com/andymccurdy/redis-py/blob/master/redis/lock.py#L33
@@ -93,8 +95,8 @@ class RetryingConnection(object):
     @staticmethod
     def _log_retry_attempt(retry_state):
         """Log when next reconnection attempt is about to be made."""
-        logger.log(
-            logging.WARNING, "Retrying connection in %s seconds...", retry_state.next_action.sleep
+        logger.warning(
+            'beat: Retrying Redis connection in %s seconds...', retry_state.next_action.sleep
         )
 
 
@@ -159,8 +161,6 @@ ADD_ENTRY_ERROR = """\
 
 Couldn't add entry %r to redis schedule: %r. Contents: %r
 """
-
-logger = get_logger(__name__)
 
 
 class RedBeatConfig(object):
@@ -383,7 +383,7 @@ class RedBeatScheduler(Scheduler):
         removed = previous.difference(self.app.redbeat_conf.schedule.keys())
 
         for name in removed:
-            logger.debug("Removing old static schedule entry '%s'.", name)
+            logger.debug("beat: Removing old static schedule entry '%s'.", name)
             with client.pipeline() as pipe:
                 RedBeatSchedulerEntry(name, app=self.app).delete()
                 pipe.srem(self.app.redbeat_conf.statics_key, name)
@@ -407,7 +407,7 @@ class RedBeatScheduler(Scheduler):
                 continue
 
             entry.save()  # store into redis
-            logger.debug("Stored entry: %s", entry)
+            logger.debug("beat: Stored entry: %s", entry)
 
     def reserve(self, entry):
         new_entry = next(entry)
@@ -415,7 +415,7 @@ class RedBeatScheduler(Scheduler):
 
     @property
     def schedule(self):
-        logger.debug('Selecting tasks')
+        logger.debug('beat: Selecting tasks')
 
         max_due_at = to_timestamp(self.app.now())
         client = get_redis(self.app)
@@ -433,13 +433,13 @@ class RedBeatScheduler(Scheduler):
             )
             due_tasks, maybe_due = pipe.execute()
 
-        logger.debug('Loading %d tasks', len(due_tasks) + len(maybe_due))
+        logger.debug('beat: Loading %d tasks', len(due_tasks) + len(maybe_due))
         d = {}
         for key in due_tasks + maybe_due:
             try:
                 entry = self.Entry.from_key(key, app=self.app)
             except KeyError:
-                logger.warning('failed to load %s, removing', key)
+                logger.warning('beat: Failed to load %s, removing', key)
                 client.zrem(self.app.redbeat_conf.schedule_key, key)
                 continue
 
@@ -455,9 +455,9 @@ class RedBeatScheduler(Scheduler):
             try:
                 result = self.apply_async(entry, **kwargs)
             except Exception as exc:
-                logger.exception('Message Error: %s', exc)
+                logger.exception('Scheduler: Message Error: %s', exc)
             else:
-                logger.debug('%s sent. id->%s', entry.task, result.id)
+                logger.debug('Scheduler: %s sent. id->%s', entry.task, result.id)
         return next_time_to_run
 
     def tick(self, min=min, **kwargs):
@@ -478,7 +478,7 @@ class RedBeatScheduler(Scheduler):
 
     def close(self):
         if self.lock:
-            logger.debug('beat: Releasing Lock')
+            logger.info('beat: Releasing lock')
             self.lock.release()
             self.lock = None
         super(RedBeatScheduler, self).close()
@@ -518,5 +518,6 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     # which will add additional timeout instead of extend to a new timeout
     lock.lua_extend = redis_client.register_script(LUA_EXTEND_TO_SCRIPT)
     lock.acquire()
+    logger.info('beat: Acquired lock')
 
     scheduler.lock = lock
