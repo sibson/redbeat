@@ -33,6 +33,25 @@ class test_RedBeatEntry(RedBeatCase):
         self.assertEqual(redis.zrank(self.app.redbeat_conf.schedule_key, e.key), 0)
         self.assertEqual(redis.zscore(self.app.redbeat_conf.schedule_key, e.key), e.score)
 
+    def test_create_from_dict_schedule(self):
+        entry_data = {
+            'name': 'test2',
+            'task': 'tasks.test',
+            's': {
+                '__type__': 'crontab',
+                'minute': '*/5',
+                'hour': '*',
+                'day_of_month': '*',
+            },
+            'args': None,
+            'kwargs': CELERY_CONFIG_DEFAULT_KWARGS,
+            'options': {},
+            'enabled': True,
+        }
+        # verify entry can be created successfully without AttributeError
+        e = self.create_entry(**entry_data)
+        e.save()
+
     def test_from_key_nonexistent_key(self):
         with self.assertRaises(KeyError):
             RedBeatSchedulerEntry.from_key('doesntexist', self.app)
