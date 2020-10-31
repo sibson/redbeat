@@ -3,6 +3,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 import unittest
 
+from celery.beat import DEFAULT_MAX_INTERVAL
 from celery.schedules import schedule, schedstate
 from celery.utils.time import maybe_timedelta
 
@@ -334,3 +335,33 @@ class SSLConnectionToRedisNoCerts(AppCase):
         assert 'ssl_keyfile' not in redis_client.connection_pool.connection_kwargs
         assert 'ssl_certfile' not in redis_client.connection_pool.connection_kwargs
         assert 'ssl_ca_certs' not in redis_client.connection_pool.connection_kwargs
+
+
+class RedBeatLockTimeoutDefaultValues(RedBeatCase):
+    def test_no_values(self):
+        scheduler = RedBeatScheduler(app=self.app)
+        assert DEFAULT_MAX_INTERVAL * 5 == scheduler.lock_timeout
+        assert DEFAULT_MAX_INTERVAL == scheduler.max_interval
+
+
+class RedBeatLockTimeoutCustomMaxInterval(RedBeatCase):
+    config_dict = {
+        'beat_max_loop_interval': 5,
+    }
+
+    def test_no_lock_timeout(self):
+        scheduler = RedBeatScheduler(app=self.app)
+        assert self.config_dict['beat_max_loop_interval'] * 5 == scheduler.lock_timeout
+        assert self.config_dict['beat_max_loop_interval'] == scheduler.max_interval
+
+
+class RedBeatLockTimeoutCustomAll(RedBeatCase):
+    config_dict = {
+        'beat_max_loop_interval': 7,
+        'redbeat_lock_timeout': 13,
+    }
+
+    def test_custom_lock_timeout(self):
+        scheduler = RedBeatScheduler(app=self.app)
+        assert self.config_dict['beat_max_loop_interval'] == scheduler.max_interval
+        assert self.config_dict['redbeat_lock_timeout'] == scheduler.lock_timeout
