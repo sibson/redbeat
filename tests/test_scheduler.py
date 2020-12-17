@@ -8,9 +8,9 @@ import pytz
 from celery.beat import DEFAULT_MAX_INTERVAL
 from celery.schedules import schedstate, schedule
 from celery.utils.time import maybe_timedelta
+
 from redbeat import RedBeatScheduler
 from redbeat.schedulers import get_redis
-
 from tests.basecase import AppCase, RedBeatCase
 
 
