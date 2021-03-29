@@ -1,9 +1,9 @@
-from datetime import datetime
 import json
+from datetime import datetime
 from unittest import TestCase
 
-from celery.schedules import schedule, crontab
-from celery.utils.time import timezone, FixedOffset
+from celery.schedules import crontab, schedule
+from celery.utils.time import FixedOffset, timezone
 from dateutil import rrule as dateutil_rrule
 
 from redbeat.decoder import RedBeatJSONDecoder, RedBeatJSONEncoder

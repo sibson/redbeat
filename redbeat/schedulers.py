@@ -3,31 +3,24 @@
 # of the License at http://www.apache.org/licenses/LICENSE-2.0
 # Copyright 2015 Marc Sibson
 
-from __future__ import absolute_import
 
 import json
-import warnings
 import ssl
-from datetime import datetime, MINYEAR
+import warnings
+from datetime import MINYEAR, datetime
 
-from celery.beat import Scheduler, ScheduleEntry, DEFAULT_MAX_INTERVAL
-from celery.utils.log import get_logger
+import redis.exceptions
+from celery.app import app_or_default
+from celery.beat import DEFAULT_MAX_INTERVAL, ScheduleEntry, Scheduler
 from celery.signals import beat_init
+from celery.utils.log import get_logger
 from celery.utils.time import humanize_seconds
 from kombu.utils.objects import cached_property
-from celery.app import app_or_default
 from kombu.utils.url import maybe_sanitize_url
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_delay,
-    wait_exponential,
-)
-import redis.exceptions
 from redis.client import StrictRedis
+from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
 
-from .decoder import RedBeatJSONEncoder, RedBeatJSONDecoder, to_timestamp
-
+from .decoder import RedBeatJSONDecoder, RedBeatJSONEncoder, to_timestamp
 
 logger = get_logger('celery.beat')
 
@@ -58,7 +51,7 @@ LUA_EXTEND_TO_SCRIPT = """
 """
 
 
-class RetryingConnection(object):
+class RetryingConnection:
     """A proxy for the Redis connection that delegates all the calls to
     underlying Redis connection while retrying on connection or time-out error.
     """
@@ -163,7 +156,7 @@ Couldn't add entry %r to redis schedule: %r. Contents: %r
 """
 
 
-class RedBeatConfig(object):
+class RedBeatConfig:
     def __init__(self, app=None):
         self.app = app_or_default(app)
         self.key_prefix = self.either_or('redbeat_key_prefix', 'redbeat:')
@@ -201,7 +194,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     def __init__(
         self, name=None, task=None, schedule=None, args=None, kwargs=None, enabled=True, **clsargs
     ):
-        super(RedBeatSchedulerEntry, self).__init__(
+        super().__init__(
             name=name, task=task, schedule=schedule, args=args, kwargs=kwargs, **clsargs
         )
         self.enabled = enabled
@@ -316,7 +309,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             pipe.execute()
 
     def _next_instance(self, last_run_at=None, only_update_last_run_at=False):
-        entry = super(RedBeatSchedulerEntry, self)._next_instance(last_run_at=last_run_at)
+        entry = super()._next_instance(last_run_at=last_run_at)
 
         if only_update_last_run_at:
             # rollback the update to total_run_count
@@ -380,7 +373,7 @@ class RedBeatScheduler(Scheduler):
     def setup_schedule(self):
         # cleanup old static schedule entries
         client = get_redis(self.app)
-        previous = set(key for key in client.smembers(self.app.redbeat_conf.statics_key))
+        previous = {key for key in client.smembers(self.app.redbeat_conf.statics_key)}
         removed = previous.difference(self.app.redbeat_conf.schedule.keys())
 
         for name in removed:
@@ -482,7 +475,7 @@ class RedBeatScheduler(Scheduler):
             logger.info('beat: Releasing lock')
             self.lock.release()
             self.lock = None
-        super(RedBeatScheduler, self).close()
+        super().close()
 
     @property
     def info(self):

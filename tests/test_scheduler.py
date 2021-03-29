@@ -1,18 +1,17 @@
-import pytz
+import ssl
+import unittest
 from copy import deepcopy
 from datetime import datetime, timedelta
-import unittest
+from unittest.mock import Mock, patch
 
+import pytz
 from celery.beat import DEFAULT_MAX_INTERVAL
-from celery.schedules import schedule, schedstate
+from celery.schedules import schedstate, schedule
 from celery.utils.time import maybe_timedelta
 
-from mock import patch, Mock
 from redbeat import RedBeatScheduler
 from redbeat.schedulers import get_redis
-from tests.basecase import RedBeatCase, AppCase
-
-import ssl
+from tests.basecase import AppCase, RedBeatCase
 
 
 class mocked_schedule(schedule):
@@ -44,7 +43,7 @@ due_next = mocked_schedule(1)
 
 class RedBeatSchedulerTestBase(RedBeatCase):
     def setUp(self):
-        super(RedBeatSchedulerTestBase, self).setUp()
+        super().setUp()
         self.s = RedBeatScheduler(app=self.app)
         self.due_later = mocked_schedule(self.s.max_interval * 10)
         self.send_task = patch.object(self.s, 'send_task')

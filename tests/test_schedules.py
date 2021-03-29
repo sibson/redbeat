@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from unittest import TestCase
-from mock import patch
+from unittest.mock import patch
+
 from celery.utils.time import timezone
 
 from redbeat.schedules import rrule

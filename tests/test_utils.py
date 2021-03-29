@@ -1,6 +1,6 @@
 from celery.utils.time import maybe_make_aware
 
-from redbeat.decoder import to_timestamp, from_timestamp
+from redbeat.decoder import from_timestamp, to_timestamp
 from tests.basecase import RedBeatCase
 
 

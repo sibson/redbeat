@@ -1,6 +1,6 @@
-import mock
-from redbeat.schedulers import RedBeatConfig
+from unittest import mock
 
+from redbeat.schedulers import RedBeatConfig
 from tests.basecase import AppCase
 
 
