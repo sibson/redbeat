@@ -127,7 +127,7 @@ def get_redis(app=None):
                 decode_responses=True,
                 sentinel_kwargs=redis_options.get('sentinel_kwargs'),
             )
-            connection = sentinel.master_for(redis_options.get('service_name', 'master'))
+            connection = sentinel.master_for(redis_options.get('service_name', 'master'), db=redis_options.get('db', 0))
         elif conf.redis_url.startswith('rediss'):
             ssl_options = {'ssl_cert_reqs': ssl.CERT_REQUIRED}
             if isinstance(conf.redis_use_ssl, dict):
