@@ -34,10 +34,6 @@ class test_RedBeatConfig(AppCase):
         self.conf = RedBeatConfig(self.app)
         self.assertEqual(self.conf.lock_key, None)
 
-    def test_lock_key_default(self):
-        self.conf = RedBeatConfig(self.app)
-        self.assertEqual(self.conf.lock_key, 'redbeat::lock')
-
     def test_lock_key_override(self):
         self.app.conf.redbeat_lock_key = ":custom"
         self.conf = RedBeatConfig(self.app)
