@@ -10,12 +10,12 @@ from .schedules import rrule
 
 
 def to_timestamp(dt):
-    """ convert local tz aware datetime to seconds since the epoch """
+    """convert local tz aware datetime to seconds since the epoch"""
     return calendar.timegm(dt.utctimetuple())
 
 
 def get_utcoffset_minutes(dt):
-    """ calculates timezone utc offset, returns minutes relative to utc """
+    """calculates timezone utc offset, returns minutes relative to utc"""
     utcoffset = dt.utcoffset()
 
     # Python 3: utcoffset / timedelta(minutes=1)
@@ -23,7 +23,7 @@ def get_utcoffset_minutes(dt):
 
 
 def from_timestamp(seconds, tz_minutes=0):
-    """ convert seconds since the epoch to an UTC aware datetime """
+    """convert seconds since the epoch to an UTC aware datetime"""
     tz = FixedOffset(tz_minutes) if tz_minutes else timezone.utc
     return datetime.fromtimestamp(seconds, tz=tz)
 
