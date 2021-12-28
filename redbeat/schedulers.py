@@ -271,7 +271,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def score(self):
-        """ return UTC based UNIX timestamp """
+        """return UTC based UNIX timestamp"""
         if self.due_at is None:
             # Scores < zero are ignored on each tick.
             return -1
@@ -490,7 +490,7 @@ class RedBeatScheduler(Scheduler):
 
     @cached_property
     def _maybe_due_kwargs(self):
-        """ handle rename of publisher to producer """
+        """handle rename of publisher to producer"""
         return {'producer': self.producer}
 
 

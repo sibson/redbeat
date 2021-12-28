@@ -1,6 +1,10 @@
 RedBeat
 =======
 
+.. image:: https://img.shields.io/pypi/pyversions/celery-redbeat.svg
+   :target: https://pypi.python.org/pypi/celery-redbeat
+   :alt: Python
+
 .. image:: https://img.shields.io/pypi/v/celery-redbeat.svg
    :target: https://pypi.python.org/pypi/celery-redbeat
    :alt: PyPI
