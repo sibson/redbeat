@@ -354,6 +354,7 @@ class RedBeatScheduler(Scheduler):
     Entry = RedBeatSchedulerEntry
 
     lock = None
+    lock_acquiring_error = None
 
     #: The default lock timeout in seconds.
     lock_timeout = DEFAULT_MAX_INTERVAL * 5
@@ -455,6 +456,9 @@ class RedBeatScheduler(Scheduler):
         return next_time_to_run
 
     def tick(self, min=min, **kwargs):
+        if self.lock_acquiring_error:
+            logger.debug('beat: Failed to acquire redis lock on init...')
+            raise self.lock_acquiring_error
         if self.lock:
             logger.debug('beat: Extending lock...')
             self.lock.extend(int(self.lock_timeout))
@@ -500,18 +504,25 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     if not scheduler.lock_key:
         return
 
-    logger.debug('beat: Acquiring lock...')
-    redis_client = get_redis(scheduler.app)
+    try:
+        logger.debug('beat: Acquiring lock...')
+        redis_client = get_redis(scheduler.app)
 
-    lock = redis_client.lock(
-        scheduler.lock_key,
-        timeout=scheduler.lock_timeout,
-        sleep=scheduler.max_interval,
-    )
-    # overwrite redis-py's extend script
-    # which will add additional timeout instead of extend to a new timeout
-    lock.lua_extend = redis_client.register_script(LUA_EXTEND_TO_SCRIPT)
-    lock.acquire()
-    logger.info('beat: Acquired lock')
+        lock = redis_client.lock(
+            scheduler.lock_key,
+            timeout=scheduler.lock_timeout,
+            sleep=scheduler.max_interval,
+        )
+        # overwrite redis-py's extend script
+        # which will add additional timeout instead of extend to a new timeout
+        lock.lua_extend = redis_client.register_script(LUA_EXTEND_TO_SCRIPT)
+        lock.acquire()
+        logger.info('beat: Acquired lock')
 
-    scheduler.lock = lock
+        scheduler.lock = lock
+    except Exception as exc:
+        # The `beat_init` signal handler will wrap and ignore any exceptions raised
+        # from this handler. Store any exception that occurred as we failed to acquire
+        # the lock and need to crash later in scheduler.tick where we can throw.
+        scheduler.lock_acquiring_error = exc
+        raise exc

@@ -4,8 +4,9 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
+import pytest
 import pytz
-from celery.beat import DEFAULT_MAX_INTERVAL
+from celery.beat import DEFAULT_MAX_INTERVAL, Service
 from celery.schedules import schedstate, schedule
 from celery.utils.time import maybe_timedelta
 
@@ -364,3 +365,20 @@ class RedBeatLockTimeoutCustomAll(RedBeatCase):
         scheduler = RedBeatScheduler(app=self.app)
         assert self.config_dict['beat_max_loop_interval'] == scheduler.max_interval
         assert self.config_dict['redbeat_lock_timeout'] == scheduler.lock_timeout
+
+
+class ReadBeatRedisConnectionFailures(RedBeatCase):
+    def test_when_scheduler_fails_to_acquire_lock_on_init_no_due_tasks_sent(self):
+        with patch.object(self.app.redbeat_redis, 'lock') as lock_mock:
+            lock_mock.return_value.acquire.side_effect = Exception(
+                "Redis lock acquire failure"
+            )
+            self.create_entry(name='next', s=due_now).save()
+            service = Service(self.app, scheduler_cls=RedBeatScheduler)
+            with patch.object(service.scheduler, 'maybe_due') as maybe_due_wrapper:
+                maybe_due_wrapper.side_effect = AssertionError(
+                    "We should never be checking an entry is due as we failed to "
+                    "acquire the redis lock."
+                )
+                with pytest.raises(Exception, match="Redis lock acquire failure"):
+                    service.start()
