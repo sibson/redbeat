@@ -500,18 +500,36 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     if not scheduler.lock_key:
         return
 
+    class AquireLockFailure():
+        def __init__(self):
+            self.exc = None
+
+        def extend(self, seconds):
+            logger.error('Unhandled Exception when aquiring RedBeat lock')
+            if self.exc:
+                raise self.exc
+
+            raise RuntimeError('Unknown error aquiring lock')
+
+
     logger.debug('beat: Acquiring lock...')
-    redis_client = get_redis(scheduler.app)
 
-    lock = redis_client.lock(
-        scheduler.lock_key,
-        timeout=scheduler.lock_timeout,
-        sleep=scheduler.max_interval,
-    )
-    # overwrite redis-py's extend script
-    # which will add additional timeout instead of extend to a new timeout
-    lock.lua_extend = redis_client.register_script(LUA_EXTEND_TO_SCRIPT)
-    lock.acquire()
-    logger.info('beat: Acquired lock')
+    scheduler.lock = AquireLockFailure()
 
-    scheduler.lock = lock
+    try:
+        redis_client = get_redis(scheduler.app)
+
+        lock = redis_client.lock(
+            scheduler.lock_key,
+            timeout=scheduler.lock_timeout,
+            sleep=scheduler.max_interval,
+        )
+        # overwrite redis-py's extend script
+        # which will add additional timeout instead of extend to a new timeout
+        lock.lua_extend = redis_client.register_script(LUA_EXTEND_TO_SCRIPT)
+        lock.acquire()
+        logger.info('beat: Acquired lock')
+
+        scheduler.lock = lock
+    except Exception as exc:
+        scheduler.lock.exc = exc
