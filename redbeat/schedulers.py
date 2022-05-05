@@ -3,10 +3,10 @@
 # of the License at http://www.apache.org/licenses/LICENSE-2.0
 # Copyright 2015 Marc Sibson
 
-import os
 import json
-import ssl
+import os
 import socket
+import ssl
 import uuid
 import warnings
 from datetime import MINYEAR, datetime
@@ -176,9 +176,7 @@ class RedBeatConfig:
     @staticmethod
     def generate_lock_token():
         return '{uuid}-{hostname}-{pid}'.format(
-            uuid=uuid.uuid1().hex,
-            hostname=socket.gethostname(),
-            pid=os.getpid()
+            uuid=uuid.uuid1().hex, hostname=socket.gethostname(), pid=os.getpid()
         )
 
     @property
