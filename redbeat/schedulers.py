@@ -473,7 +473,8 @@ class RedBeatScheduler(Scheduler):
     def close(self):
         if self.lock:
             logger.info('beat: Releasing lock')
-            self.lock.release()
+            if self.lock.owned() and self.lock.locked():
+                self.lock.release()
             self.lock = None
         super().close()
 
