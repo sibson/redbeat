@@ -101,12 +101,11 @@ def ensure_conf(app):
     """
     name = 'redbeat_conf'
     app = app_or_default(app)
-    try:
-        config = getattr(app, name)
-    except AttributeError:
-        config = RedBeatConfig(app)
-        setattr(app, name, config)
+    if hasattr(app, name):
+        return getattr(app, name)
 
+    config = RedBeatConfig(app)
+    setattr(app, name, config)
     return config
 
 
