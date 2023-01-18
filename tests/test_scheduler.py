@@ -172,6 +172,23 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
         self.assertNotIn('test', self.s.schedule)
         self.assertNotIn('test', redis.smembers(self.app.redbeat_conf.statics_key))
 
+    def test_existing_static_entries_not_updated(self):
+        redis = self.app.redbeat_redis
+
+        e = self.create_entry(
+            name='test',
+            task='test',
+            s=due_now,
+            last_run_at=datetime.utcnow() - timedelta(seconds=1),
+        ).save()
+        entries_before = redis.zrange(self.app.redbeat_conf.schedule_key, 0, -1, withscores=True)
+
+        self.app.redbeat_conf.schedule = {'test': {'task': 'test', 'schedule': due_now}}
+        self.s.setup_schedule()
+        entries_after = redis.zrange(self.app.redbeat_conf.schedule_key, 0, -1, withscores=True)
+
+        self.assertCountEqual(entries_before, entries_after)
+
     def test_lock_timeout(self):
         self.assertEqual(self.s.lock_timeout, self.s.max_interval * 5)
 

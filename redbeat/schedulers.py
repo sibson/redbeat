@@ -393,6 +393,7 @@ class RedBeatScheduler(Scheduler):
             client.sadd(self.app.redbeat_conf.statics_key, *self.app.redbeat_conf.schedule.keys())
 
     def update_from_dict(self, dict_):
+        schedule = self.schedule
         for name, entry in dict_.items():
             try:
                 entry = self._maybe_entry(name, entry)
@@ -400,8 +401,10 @@ class RedBeatScheduler(Scheduler):
                 logger.error(ADD_ENTRY_ERROR, name, exc, entry)
                 continue
 
-            entry.save()  # store into redis
-            logger.debug("beat: Stored entry: %s", entry)
+            # don't reschedule the entry if it's already there
+            if entry.name not in schedule or schedule[entry.name] != entry:
+                entry.save()  # store into redis
+                logger.debug("beat: Stored entry: %s", entry)
 
     def reserve(self, entry):
         new_entry = next(entry)
