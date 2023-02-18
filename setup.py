@@ -24,9 +24,10 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: Implementation :: CPython',
         'Operating System :: OS Independent',
     ],
-    install_requires=['redis>=3.2', 'celery>=4.2', 'python-dateutil', 'tenacity'],
+    install_requires=['redis>=3.2', 'celery>=5.0', 'python-dateutil', 'tenacity'],
     tests_require=['pytest'],
 )
