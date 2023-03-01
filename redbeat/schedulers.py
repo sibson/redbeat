@@ -425,7 +425,14 @@ class RedBeatScheduler(Scheduler):
             )
             due_tasks, maybe_due = pipe.execute()
 
-        logger.debug('beat: Loading %d tasks', len(due_tasks) + len(maybe_due))
+        num_tasks = len(due_tasks) + len(maybe_due)
+        if num_tasks == 0:
+            logger.debug('beat: Lost schedule, re-doing schedule')
+            self.setup_schedule()
+            return self.schedule
+
+        logger.debug('beat: Loading %d tasks', num_tasks)
+
         d = {}
         for key in due_tasks + maybe_due:
             try:
@@ -507,7 +514,7 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     lock = redis_client.lock(
         scheduler.lock_key,
         timeout=scheduler.lock_timeout,
-        sleep=scheduler.max_interval,
+        sleep=1,
     )
     # overwrite redis-py's extend script
     # which will add additional timeout instead of extend to a new timeout
