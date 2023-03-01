@@ -1,4 +1,4 @@
-from celery.schedules import BaseSchedule as schedule
+from celery.schedules import schedule
 from celery.schedules import schedstate
 from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, SECONDLY, WEEKLY, YEARLY
 from dateutil.rrule import rrule as dateutil_rrule
@@ -41,7 +41,7 @@ class rrule(schedule):
         byhour=None,
         byminute=None,
         bysecond=None,
-        **kwargs,
+        **kwargs
     ):
         super().__init__(**kwargs)
 

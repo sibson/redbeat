@@ -14,8 +14,6 @@ from celery.app import app_or_default
 from celery.beat import DEFAULT_MAX_INTERVAL, ScheduleEntry, Scheduler
 from celery.signals import beat_init
 from celery.utils.log import get_logger
-from celery.utils.time import humanize_seconds
-from kombu.utils.objects import cached_property
 from kombu.utils.url import maybe_sanitize_url
 from redis.client import StrictRedis
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
@@ -172,11 +170,11 @@ class RedBeatConfig:
 
     @property
     def schedule(self):
-        return self.app.conf.beat_schedule
+        return self.app.conf.CELERYBEAT_SCHEDULE
 
     @schedule.setter
     def schedule(self, value):
-        self.app.conf.beat_schedule = value
+        self.app.conf.CELERYBEAT_SCHEDULE = value
 
     def either_or(self, name, default=None):
         if name == name.upper():
@@ -194,7 +192,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     def __init__(
         self, name=None, task=None, schedule=None, args=None, kwargs=None, enabled=True, **clsargs
     ):
-        super().__init__(
+        super(RedBeatSchedulerEntry, self).__init__(
             name=name, task=task, schedule=schedule, args=args, kwargs=kwargs, **clsargs
         )
         self.enabled = enabled
@@ -309,7 +307,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             pipe.execute()
 
     def _next_instance(self, last_run_at=None, only_update_last_run_at=False):
-        entry = super()._next_instance(last_run_at=last_run_at)
+        entry = super(RedBeatSchedulerEntry, self)._next_instance(last_run_at=last_run_at)
 
         if only_update_last_run_at:
             # rollback the update to total_run_count
@@ -462,7 +460,7 @@ class RedBeatScheduler(Scheduler):
         remaining_times = []
         try:
             for entry in self.schedule.values():
-                next_time_to_run = self.maybe_due(entry, **self._maybe_due_kwargs)
+                next_time_to_run = self.maybe_due(entry, **self._maybe_due_kwargs())
                 if next_time_to_run:
                     remaining_times.append(next_time_to_run)
         except RuntimeError:
@@ -476,24 +474,21 @@ class RedBeatScheduler(Scheduler):
             if self.lock.owned() and self.lock.locked():
                 self.lock.release()
             self.lock = None
-        super().close()
+        super(RedBeatScheduler, self).close()
 
     @property
     def info(self):
         info = ['       . redis -> {}'.format(maybe_sanitize_url(self.app.redbeat_conf.redis_url))]
         if self.lock_key:
             info.append(
-                '       . lock -> `{}` {} ({}s)'.format(
-                    self.lock_key, humanize_seconds(self.lock_timeout), self.lock_timeout
+                '       . lock -> `{}` {} seconds'.format(
+                    self.lock_key, self.lock_timeout
                 )
             )
         return '\n'.join(info)
 
-    @cached_property
     def _maybe_due_kwargs(self):
-        """handle rename of publisher to producer"""
-        return {'producer': self.producer}
-
+        return {'publisher': self.publisher}
 
 @beat_init.connect
 def acquire_distributed_beat_lock(sender=None, **kwargs):
