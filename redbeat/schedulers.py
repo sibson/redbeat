@@ -454,8 +454,13 @@ class RedBeatScheduler(Scheduler):
 
     def tick(self, min=min, **kwargs):
         if self.lock:
-            logger.debug('beat: Extending lock...')
-            self.lock.extend(int(self.lock_timeout))
+            try:
+                logger.debug('beat: Extending lock...')
+                self.lock.extend(int(self.lock_timeout))
+            except redis.exceptions.LockNotOwnedError:
+                logger.debug('beat: Lost lock, re-acquiring...')
+                self.lock.acquire()
+                return self.tick(min=min, **kwargs)
 
         remaining_times = []
         try:
