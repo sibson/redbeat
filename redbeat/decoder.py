@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 
 from celery.schedules import crontab, schedule
-from celery.utils.time import FixedOffset, timezone
+from celery.utils.timeutils import FixedOffset, timezone
 from dateutil.rrule import weekday
 
 from .schedules import rrule
@@ -30,7 +30,7 @@ def from_timestamp(seconds, tz_minutes=0):
 
 class RedBeatJSONDecoder(json.JSONDecoder):
     def __init__(self, *args, **kargs):
-        super().__init__(object_hook=self.dict_to_object, *args, **kargs)
+        super(RedBeatJSONDecoder, self).__init__(object_hook=self.dict_to_object, *args, **kargs)
 
     def dict_to_object(self, d):
         if '__type__' not in d:
@@ -141,4 +141,4 @@ class RedBeatJSONEncoder(json.JSONEncoder):
                 'relative': bool(obj.relative),
             }
 
-        return super().default(obj)
+        return super(RedBeatJSONEncoder, self).default(obj)
