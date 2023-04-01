@@ -1,12 +1,4 @@
+-r requirements.txt
 black
-celery>=4.2
 fakeredis>=1.0.3
-nose
-pytest
-pytest-catchlog
-pytest-cov
-python-dateutil
-redis>=3.2
-tenacity
-tox
 twine
