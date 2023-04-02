@@ -177,7 +177,6 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
 
 
 class NotSentinelRedBeatCase(AppCase):
-
     config_dict = {
         'BROKER_URL': 'redis://',
     }
@@ -191,7 +190,6 @@ class NotSentinelRedBeatCase(AppCase):
 
 
 class SentinelRedBeatCase(AppCase):
-
     config_dict = {
         'REDBEAT_KEY_PREFIX': 'rb-tests:',
         'redbeat_key_prefix': 'rb-tests:',
@@ -227,7 +225,6 @@ class SentinelRedBeatCase(AppCase):
 
 
 class SeparateOptionsForSchedulerCase(AppCase):
-
     config_dict = {
         'REDBEAT_KEY_PREFIX': 'rb-tests:',
         'REDBEAT_REDIS_URL': 'redis-sentinel://redis-sentinel:26379/0',
@@ -249,7 +246,6 @@ class SeparateOptionsForSchedulerCase(AppCase):
 
 
 class SSLConnectionToRedis(AppCase):
-
     config_dict = {
         'REDBEAT_KEY_PREFIX': 'rb-tests:',
         'REDBEAT_REDIS_URL': 'rediss://redishost:26379/0',
@@ -280,7 +276,6 @@ class SSLConnectionToRedis(AppCase):
 
 
 class SSLConnectionToRedisDefaultBrokerSSL(AppCase):
-
     config_dict = {
         'REDBEAT_KEY_PREFIX': 'rb-tests:',
         'REDBEAT_REDIS_URL': 'rediss://redishost:26379/0',
@@ -311,7 +306,6 @@ class SSLConnectionToRedisDefaultBrokerSSL(AppCase):
 
 
 class SSLConnectionToRedisNoCerts(AppCase):
-
     config_dict = {
         'REDBEAT_KEY_PREFIX': 'rb-tests:',
         'REDBEAT_REDIS_URL': 'rediss://redishost:26379/0',

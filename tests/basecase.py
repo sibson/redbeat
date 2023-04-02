@@ -25,7 +25,6 @@ class RedBeatCase(AppCase):
         self.app.redbeat_redis.flushdb()
 
     def create_entry(self, name=None, task=None, s=None, run_every=60, **kwargs):
-
         if name is None:
             name = 'test'
 
