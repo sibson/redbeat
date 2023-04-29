@@ -32,7 +32,7 @@ jobs:
         python -m pip install --upgrade pip
 
     - name: Run unittests
-      run: py.test tests --cov=redbeat
+      run: python -m unittest discover tests
 
   flake8-lint:
     runs-on: ubuntu-latest
