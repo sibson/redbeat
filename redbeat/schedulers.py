@@ -498,10 +498,10 @@ class RedBeatScheduler(Scheduler):
 @beat_init.connect
 def acquire_distributed_beat_lock(sender=None, **kwargs):
     """
-        Attempt to acquire lock on startup
+    Attempt to acquire lock on startup
 
-        Celery will squash any exceptions raised here. If one is raised
-        scheduler.lock will be None while scheduler.lock_key is set
+    Celery will squash any exceptions raised here. If one is raised
+    scheduler.lock will be None while scheduler.lock_key is set
     """
     scheduler = sender.scheduler
     if not scheduler.lock_key:
