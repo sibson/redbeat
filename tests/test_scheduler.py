@@ -8,11 +8,10 @@ import pytz
 from celery.beat import DEFAULT_MAX_INTERVAL
 from celery.schedules import schedstate, schedule
 from celery.utils.time import maybe_timedelta
-from celery.app import app_or_default
+from redis.exceptions import ConnectionError
 
-from redis.exceptions import ConnectionError, LockError
 from redbeat import RedBeatScheduler
-from redbeat.schedulers import get_redis, acquire_distributed_beat_lock
+from redbeat.schedulers import acquire_distributed_beat_lock, get_redis
 from tests.basecase import AppCase, RedBeatCase
 
 
@@ -186,7 +185,6 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
         self.s.lock = None
         with self.assertRaises(AttributeError):
             self.s.tick()
-
 
 
 class NotSentinelRedBeatCase(AppCase):
@@ -371,7 +369,6 @@ class RedBeatLockTimeoutCustomAll(RedBeatCase):
         scheduler = RedBeatScheduler(app=self.app)
         assert self.config_dict['beat_max_loop_interval'] == scheduler.max_interval
         assert self.config_dict['redbeat_lock_timeout'] == scheduler.lock_timeout
-
 
 
 class RedBeatStartupAcquiresLock(RedBeatSchedulerTestBase):
