@@ -44,7 +44,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          cache: 'pip', 'flake8'
+          cache: 'pip'
       - name: Install dependencies
         run: |
           pip install flake8 flake8-black flake8-isort
