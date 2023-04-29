@@ -5,14 +5,14 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
 import pytz
+from celery.app import app_or_default
 from celery.beat import DEFAULT_MAX_INTERVAL
 from celery.schedules import schedstate, schedule
 from celery.utils.time import maybe_timedelta
-from celery.app import app_or_default
-
 from redis.exceptions import ConnectionError, LockError
+
 from redbeat import RedBeatScheduler
-from redbeat.schedulers import get_redis, acquire_distributed_beat_lock
+from redbeat.schedulers import acquire_distributed_beat_lock, get_redis
 from tests.basecase import AppCase, RedBeatCase
 
 
