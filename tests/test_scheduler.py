@@ -188,7 +188,6 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
             self.s.tick()
 
 
-
 class NotSentinelRedBeatCase(AppCase):
     config_dict = {
         'BROKER_URL': 'redis://',
@@ -371,7 +370,6 @@ class RedBeatLockTimeoutCustomAll(RedBeatCase):
         scheduler = RedBeatScheduler(app=self.app)
         assert self.config_dict['beat_max_loop_interval'] == scheduler.max_interval
         assert self.config_dict['redbeat_lock_timeout'] == scheduler.lock_timeout
-
 
 
 class RedBeatStartupAcquiresLock(RedBeatSchedulerTestBase):

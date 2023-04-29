@@ -3,11 +3,11 @@ RedBeat
 
 .. image:: https://img.shields.io/pypi/pyversions/celery-redbeat.svg
    :target: https://pypi.python.org/pypi/celery-redbeat
-   :alt: Python
+   :alt: Python Versions
 
 .. image:: https://img.shields.io/pypi/v/celery-redbeat.svg
    :target: https://pypi.python.org/pypi/celery-redbeat
-   :alt: PyPI
+   :alt: PyPI Package
 
 .. image:: https://github.com/sibson/redbeat/workflows/RedBeat%20CI/badge.svg
    :target: https://github.com/sibson/redbeat/actions
