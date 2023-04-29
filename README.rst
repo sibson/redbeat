@@ -72,8 +72,8 @@ RedBeat is available on `GitHub <https://github.com/sibson/redbeat>`_
 
 Once you have the source you can run the tests with the following commands::
 
-    pip install -r requirements.dev.txt
-    py.test tests
+    pip install -r requirements-dev.txt
+    python -m unittest discover tests
 
 You can also quickly fire up a sample Beat instance with::
 
