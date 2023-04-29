@@ -3,7 +3,6 @@ from unittest import TestCase
 from celery.contrib.testing.app import TestApp
 from celery.schedules import schedule
 from fakeredis import FakeServer, FakeStrictRedis
-from redis.exceptions import ConnectionError
 
 from redbeat.schedulers import RedBeatSchedulerEntry
 
