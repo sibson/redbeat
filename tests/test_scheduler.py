@@ -8,9 +8,10 @@ import pytz
 from celery.beat import DEFAULT_MAX_INTERVAL
 from celery.schedules import schedstate, schedule
 from celery.utils.time import maybe_timedelta
+from redis.exceptions import ConnectionError
 
 from redbeat import RedBeatScheduler
-from redbeat.schedulers import get_redis
+from redbeat.schedulers import acquire_distributed_beat_lock, get_redis
 from tests.basecase import AppCase, RedBeatCase
 
 
@@ -78,6 +79,10 @@ class test_RedBeatScheduler_schedule(RedBeatSchedulerTestBase):
 
 
 class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
+    def setUp(self):
+        super().setUp()
+        self.s.lock_key = None
+
     def test_empty(self):
         with patch.object(self.s, 'send_task') as send_task:
             sleep = self.s.tick()
@@ -174,6 +179,12 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
 
     def test_lock_timeout(self):
         self.assertEqual(self.s.lock_timeout, self.s.max_interval * 5)
+
+    def test_lock_acquisition_failed_during_startup(self):
+        self.s.lock_key = 'lock-key'
+        self.s.lock = None
+        with self.assertRaises(AttributeError):
+            self.s.tick()
 
 
 class NotSentinelRedBeatCase(AppCase):
@@ -358,3 +369,18 @@ class RedBeatLockTimeoutCustomAll(RedBeatCase):
         scheduler = RedBeatScheduler(app=self.app)
         assert self.config_dict['beat_max_loop_interval'] == scheduler.max_interval
         assert self.config_dict['redbeat_lock_timeout'] == scheduler.lock_timeout
+
+
+class RedBeatStartupAcquiresLock(RedBeatSchedulerTestBase):
+    def setUp(self):
+        super().setUp()
+        self.sender = Mock(scheduler=self.s)
+
+    def test_acquires_lock(self):
+        acquire_distributed_beat_lock(self.sender)
+        self.assertTrue(self.s.lock.owned())
+
+    def test_connection_error(self):
+        self.redis_server.connected = False
+        with self.assertRaises(ConnectionError):
+            acquire_distributed_beat_lock(self.sender)

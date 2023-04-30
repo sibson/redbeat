@@ -127,7 +127,7 @@ def get_redis(app=None):
                 decode_responses=True,
                 sentinel_kwargs=redis_options.get('sentinel_kwargs'),
             )
-            connection = sentinel.master_for(redis_options.get('service_name', 'master'))
+            connection = sentinel.master_for(redis_options.get('service_name', 'master'), db=redis_options.get('db', 0))
         elif conf.redis_url.startswith('rediss'):
             ssl_options = {'ssl_cert_reqs': ssl.CERT_REQUIRED}
             if isinstance(conf.redis_use_ssl, dict):
@@ -469,7 +469,7 @@ class RedBeatScheduler(Scheduler):
         return next_time_to_run
 
     def tick(self, min=min, **kwargs):
-        if self.lock:
+        if self.lock_key:
             logger.debug('beat: Extending lock...')
             self.lock.extend(int(self.lock_timeout))
 
@@ -487,7 +487,7 @@ class RedBeatScheduler(Scheduler):
     def close(self):
         if self.lock:
             logger.info('beat: Releasing lock')
-            if self.lock.owned() and self.lock.locked():
+            if self.lock.owned():
                 self.lock.release()
             self.lock = None
         super().close()
@@ -511,6 +511,12 @@ class RedBeatScheduler(Scheduler):
 
 @beat_init.connect
 def acquire_distributed_beat_lock(sender=None, **kwargs):
+    """
+    Attempt to acquire lock on startup
+
+    Celery will squash any exceptions raised here. If one is raised
+    scheduler.lock will be None while scheduler.lock_key is set
+    """
     scheduler = sender.scheduler
     if not scheduler.lock_key:
         return
@@ -528,5 +534,4 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     lock.lua_extend = redis_client.register_script(LUA_EXTEND_TO_SCRIPT)
     lock.acquire()
     logger.info('beat: Acquired lock')
-
     scheduler.lock = lock
