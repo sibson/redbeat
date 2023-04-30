@@ -192,10 +192,24 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     _meta = None
 
     def __init__(
-        self, name=None, task=None, schedule=None, args=None, kwargs=None, enabled=True, options=None, **clsargs
+        self,
+        name=None,
+        task=None,
+        schedule=None,
+        args=None,
+        kwargs=None,
+        enabled=True,
+        options=None,
+        **clsargs,
     ):
         super().__init__(
-            name=name, task=task, schedule=schedule, args=args, kwargs=kwargs, options=options, **clsargs
+            name=name,
+            task=task,
+            schedule=schedule,
+            args=args,
+            kwargs=kwargs,
+            options=options,
+            **clsargs,
         )
         self.enabled = enabled
         ensure_conf(self.app)
