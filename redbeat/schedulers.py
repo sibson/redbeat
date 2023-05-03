@@ -127,7 +127,9 @@ def get_redis(app=None):
                 decode_responses=True,
                 sentinel_kwargs=redis_options.get('sentinel_kwargs'),
             )
-            connection = sentinel.master_for(redis_options.get('service_name', 'master'), db=redis_options.get('db', 0))
+            connection = sentinel.master_for(
+                redis_options.get('service_name', 'master'), db=redis_options.get('db', 0)
+            )
         elif conf.redis_url.startswith('rediss'):
             ssl_options = {'ssl_cert_reqs': ssl.CERT_REQUIRED}
             if isinstance(conf.redis_use_ssl, dict):
@@ -192,10 +194,24 @@ class RedBeatSchedulerEntry(ScheduleEntry):
     _meta = None
 
     def __init__(
-        self, name=None, task=None, schedule=None, args=None, kwargs=None, enabled=True, **clsargs
+        self,
+        name=None,
+        task=None,
+        schedule=None,
+        args=None,
+        kwargs=None,
+        enabled=True,
+        options=None,
+        **clsargs,
     ):
         super().__init__(
-            name=name, task=task, schedule=schedule, args=args, kwargs=kwargs, **clsargs
+            name=name,
+            task=task,
+            schedule=schedule,
+            args=args,
+            kwargs=kwargs,
+            options=options,
+            **clsargs,
         )
         self.enabled = enabled
         ensure_conf(self.app)
