@@ -1,10 +1,14 @@
 import calendar
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from celery.schedules import crontab, schedule
-from celery.utils.time import FixedOffset, timezone
 from dateutil.rrule import weekday
+
+try:
+    import zoneinfo
+except ImportError:
+    from backports import zoneinfo
 
 from .schedules import rrule
 
@@ -24,7 +28,7 @@ def get_utcoffset_minutes(dt):
 
 def from_timestamp(seconds, tz_minutes=0):
     """convert seconds since the epoch to an UTC aware datetime"""
-    tz = FixedOffset(tz_minutes) if tz_minutes else timezone.utc
+    tz = timezone(timedelta(minutes=tz_minutes)) if tz_minutes else timezone.utc
     return datetime.fromtimestamp(seconds, tz=tz)
 
 
@@ -41,9 +45,9 @@ class RedBeatJSONDecoder(json.JSONDecoder):
         if objtype == 'datetime':
             zone = d.pop('timezone', 'UTC')
             try:
-                tzinfo = FixedOffset(zone / 60)
+                tzinfo = timezone(timedelta(minutes=(zone / 60)))
             except TypeError:
-                tzinfo = timezone.get_timezone(zone)
+                tzinfo = zoneinfo.ZoneInfo(zone)
             return datetime(tzinfo=tzinfo, **d)
 
         if objtype == 'interval':
@@ -74,10 +78,10 @@ class RedBeatJSONEncoder(json.JSONEncoder):
         if isinstance(obj, datetime):
             if obj.tzinfo is None:
                 timezone = 'UTC'
-            elif obj.tzinfo.zone is None:
-                timezone = obj.tzinfo.utcoffset(None).total_seconds()
+            elif hasattr(obj.tzinfo, 'key'):
+                timezone = obj.tzinfo.key
             else:
-                timezone = obj.tzinfo.zone
+                timezone = obj.tzinfo.utcoffset(None).total_seconds()
 
             return {
                 '__type__': 'datetime',
