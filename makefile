@@ -25,7 +25,7 @@ release-tag:
 
 upload: VERSION:=$(shell python setup.py --version)
 upload:
-	python setup.py sdist
+	python setup.py sdist bdist_wheel
 	twine upload $(wildcard dist/celery-*$(VERSION)*)
 
 docs:
