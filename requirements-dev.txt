@@ -5,3 +5,4 @@ python-dateutil
 redis>=3.2
 tenacity
 twine
+wheel
