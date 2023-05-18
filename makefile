@@ -31,6 +31,11 @@ upload:
 docs:
 		$(MAKE) -C docs/ html
 
+test: unittests
+
+unittests:
+	python -m unittest discover tests
+
 clean:
 	rm -f dist/*
 	rm -rf docs/_build docs/_static docs/_templates
