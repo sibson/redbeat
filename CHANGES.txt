@@ -1,4 +1,4 @@
-2.1.0 (unreleased)
+2.1.0 ()
 ---------------------
  - BREAKING, drop for support for EOL Python < 3.8
  - log message cleanup, thanks @joekohlsdorf
