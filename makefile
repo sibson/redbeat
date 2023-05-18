@@ -19,8 +19,9 @@ release-check:
 	make test
 
 release-tag: VERSION:=$(shell python setup.py --version)
+release-tag: TODAY:=$(shell date '+%Y-%m-%d')
 release-tag:
-	sed -i -e "s/unreleased/$(date '+%Y-%m-%d')/" CHANGES.txt
+	sed -i -e "s/unreleased/$(TODAY)/" CHANGES.txt
 	git ci -m"update release date for $(VERSION) in CHANGES.txt" CHANGES.txt
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags

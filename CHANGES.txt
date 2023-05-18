@@ -1,4 +1,4 @@
-2.1.0 ()
+2.1.0 (2023-05-17)
 ---------------------
  - BREAKING, drop for support for EOL Python < 3.8
  - log message cleanup, thanks @joekohlsdorf
