@@ -30,7 +30,7 @@ jobs:
         pip install -r requirements-dev.txt
 
     - name: Run unittests
-      run: python -m unittest discover tests
+      run: make unittests
 
   flake8-lint:
     runs-on: ubuntu-latest
