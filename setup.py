@@ -27,6 +27,12 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython',
         'Operating System :: OS Independent',
     ],
-    install_requires=['redis>=3.2', 'celery>=5.0', 'python-dateutil', 'tenacity'],
+    install_requires=[
+        'redis>=3.2',
+        'celery>=5.0',
+        'python-dateutil',
+        'tenacity',
+        'backports.zoneinfo>=0.2.1; python_version < "3.9.0"',
+    ],
     tests_require=['pytest'],
 )
