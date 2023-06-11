@@ -1,3 +1,7 @@
+2.1.1 (2023-06-11)
+---------------------
+ - fix compatability with Celery 5.3.0, thanks @jkseppan
+
 2.1.0 (2023-05-17)
 ---------------------
  - BREAKING, drop for support for EOL Python < 3.8
