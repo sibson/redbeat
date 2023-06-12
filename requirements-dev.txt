@@ -7,3 +7,4 @@ tenacity
 twine
 wheel
 backports.zoneinfo>=0.2.1; python_version < "3.9.0"
+pytz
