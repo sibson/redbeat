@@ -47,4 +47,4 @@ jobs:
         run: |
           pip install flake8 flake8-black flake8-isort
       - name: Run linter
-        run: flake8 --count --statistics .
+        run: make lint

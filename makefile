@@ -11,6 +11,9 @@ version-%:
 	sed -i -e s/$(OLDVERSION)/$(NEWVERSION)/ $(VERSION_FILE)
 	git ci setup.py -m"bump version to $*"
 
+lint:
+	flake8 --count --statistics redbeat tests
+
 
 release: release-check release-tag upload
 
