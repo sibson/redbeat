@@ -45,7 +45,7 @@ class rrule(schedule):
     ):
         super().__init__(**kwargs)
 
-        if type(freq) == str:
+        if type(freq) is str:
             freq_str = freq.upper()
             assert freq_str in rrule.FREQ_MAP
             freq = rrule.FREQ_MAP[freq_str]
