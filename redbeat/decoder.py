@@ -81,7 +81,7 @@ class RedBeatJSONEncoder(json.JSONEncoder):
             elif hasattr(obj.tzinfo, 'key'):
                 timezone = obj.tzinfo.key
             else:
-                timezone = obj.tzinfo.utcoffset(None).total_seconds()
+                timezone = obj.utcoffset().total_seconds()
 
             return {
                 '__type__': 'datetime',
