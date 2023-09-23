@@ -118,7 +118,10 @@ def get_redis(app=None):
         retry_period = redis_options.get('retry_period')
         if conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
             from redis.sentinel import Sentinel
-
+            ssl_options = {}
+            if isinstance(conf.redis_use_ssl, dict):
+                ssl_options['ssl'] = True
+                ssl_options.update(conf.redis_use_ssl)
             sentinel = Sentinel(
                 redis_options['sentinels'],
                 socket_timeout=redis_options.get('socket_timeout'),
@@ -126,6 +129,7 @@ def get_redis(app=None):
                 db=redis_options.get('db', 0),
                 decode_responses=True,
                 sentinel_kwargs=redis_options.get('sentinel_kwargs'),
+                **ssl_options
             )
             connection = sentinel.master_for(
                 redis_options.get('service_name', 'master'), db=redis_options.get('db', 0)
