@@ -116,7 +116,7 @@ def get_redis(app=None):
     if not hasattr(app, 'redbeat_redis') or app.redbeat_redis is None:
         redis_options = conf.redbeat_redis_options
         retry_period = redis_options.get('retry_period')
-        if 'cluster' in redis_options:
+        if redis_options.get('cluster', False):
             from redis.cluster import RedisCluster
 
             connection = RedisCluster.from_url(conf.redis_url, **redis_options)
