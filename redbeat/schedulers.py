@@ -116,7 +116,11 @@ def get_redis(app=None):
     if not hasattr(app, 'redbeat_redis') or app.redbeat_redis is None:
         redis_options = conf.redbeat_redis_options
         retry_period = redis_options.get('retry_period')
-        if conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
+        if 'cluster' in redis_options:
+            from redis.cluster import RedisCluster
+
+            connection = RedisCluster.from_url(conf.redis_url, **redis_options)
+        elif conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
             from redis.sentinel import Sentinel
 
             sentinel = Sentinel(
@@ -205,7 +209,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         **clsargs,
     ):
         super().__init__(
-            name=name,
+            name=str(name),
             task=task,
             schedule=schedule,
             args=args,
