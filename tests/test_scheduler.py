@@ -2,6 +2,7 @@ import ssl
 import unittest
 from copy import deepcopy
 from datetime import datetime, timedelta
+from unittest import mock
 from unittest.mock import Mock, patch
 
 import pytz
@@ -198,6 +199,24 @@ class NotSentinelRedBeatCase(AppCase):
     def test_sentinel_scheduler(self):
         redis_client = get_redis(app=self.app)
         assert 'Sentinel' not in str(redis_client.connection_pool)
+
+
+class ClusterRedBeatCase(AppCase):
+    config_dict = {
+        'BROKER_URL': 'redis://',
+        'REDBEAT_REDIS_OPTIONS': {
+            'cluster': True,
+        },
+    }
+
+    def setup(self):
+        self.app.conf.update(self.config_dict)
+
+    def test_sentinel_scheduler(self):
+        # Fake redis doesn't really support redis cluster, but let's just make sure it was used.
+        with mock.patch('redis.RedisCluster.from_url') as from_url:
+            get_redis(app=self.app)
+            self.assertTrue(from_url.called)
 
 
 class SentinelRedBeatCase(AppCase):
