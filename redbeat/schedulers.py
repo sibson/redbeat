@@ -136,7 +136,7 @@ def get_redis(app=None):
                 ssl_options.update(conf.redis_use_ssl)
             connection = StrictRedis.from_url(conf.redis_url, decode_responses=True, **ssl_options)
         elif conf.redis_url.startswith('redis-cluster'):
-            from rediscluster import RedisCluster
+            from redis.cluster import RedisCluster
 
             if not redis_options.get('startup_nodes'):
                 redis_options = {'startup_nodes': [{"host": "localhost", "port": "30001"}]}

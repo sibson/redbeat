@@ -2,7 +2,7 @@ black
 celery>=5.0
 fakeredis>=1.0.3
 python-dateutil
-redis>=3.2
+redis>=4.1
 tenacity
 twine
 wheel
