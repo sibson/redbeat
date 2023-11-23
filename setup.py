@@ -22,6 +22,11 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Operating System :: OS Independent',
     ],
-    install_requires=['redis>=3.2', 'celery @ git+https://github.com/HiveHQ/celery.git#egg=celery', 'python-dateutil==2.4.2', 'tenacity==7.0.0'],
+    install_requires=[
+        'redis>=3.2',
+        'celery @ git+https://github.com/HiveHQ/celery.git#egg=celery',
+        'python-dateutil>=2.4.2',
+        'tenacity==7.0.0',
+    ],
     tests_require=['pytest'],
 )
