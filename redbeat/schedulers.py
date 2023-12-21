@@ -116,9 +116,16 @@ def get_redis(app=None):
     if not hasattr(app, 'redbeat_redis') or app.redbeat_redis is None:
         redis_options = conf.redbeat_redis_options
         retry_period = redis_options.get('retry_period')
-        if conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
-            from redis.sentinel import Sentinel
+        if redis_options.get('cluster', False):
+            from redis.cluster import RedisCluster
 
+            connection = RedisCluster.from_url(conf.redis_url, **redis_options)
+        elif conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
+            from redis.sentinel import Sentinel
+            connection_kwargs = {}
+            if isinstance(conf.redis_use_ssl, dict):
+                connection_kwargs['ssl'] = True
+                connection_kwargs.update(conf.redis_use_ssl)
             sentinel = Sentinel(
                 redis_options['sentinels'],
                 socket_timeout=redis_options.get('socket_timeout'),
@@ -126,6 +133,7 @@ def get_redis(app=None):
                 db=redis_options.get('db', 0),
                 decode_responses=True,
                 sentinel_kwargs=redis_options.get('sentinel_kwargs'),
+                **connection_kwargs
             )
             connection = sentinel.master_for(
                 redis_options.get('service_name', 'master'), db=redis_options.get('db', 0)
@@ -205,7 +213,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         **clsargs,
     ):
         super().__init__(
-            name=name,
+            name=str(name),
             task=task,
             schedule=schedule,
             args=args,
