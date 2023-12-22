@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from setuptools import setup
 
 long_description = open('README.rst').read()
@@ -6,7 +7,7 @@ setup(
     name="celery-redbeat",
     description="A Celery Beat Scheduler using Redis for persistent storage",
     long_description=long_description,
-    version="2.1.1",
+    version="2.2.0",
     url="https://github.com/sibson/redbeat",
     license="Apache License, Version 2.0",
     author="Marc Sibson",
