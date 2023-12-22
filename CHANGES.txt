@@ -1,4 +1,4 @@
-2.2.0 (unrelased)
+2.2.0 (2023-12-22)
 --------------------
   - add ssl support for redis with sentinel, thanks @cyberjunk
   - add RedisCluster Support, thanks @kkinder
