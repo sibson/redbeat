@@ -1,3 +1,9 @@
+2.2.0 (unrelased)
+--------------------
+  - add ssl support for redis with sentinel, thanks @cyberjunk
+  - add RedisCluster Support, thanks @kkinder
+  - bugfixes
+
 2.1.1 (2023-06-11)
 ---------------------
  - fix compatability with Celery 5.3.0, thanks @jkseppan
