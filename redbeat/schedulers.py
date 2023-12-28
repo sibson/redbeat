@@ -173,13 +173,15 @@ class RedBeatConfig:
         self.key_prefix = self.either_or('redbeat_key_prefix', 'redbeat:')
         self.schedule_key = self.key_prefix + ':schedule'
         self.statics_key = self.key_prefix + ':statics'
-        self.lock_key = self.either_or('redbeat_lock_key', self.key_prefix + ':lock')
-        self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
         self.redis_use_ssl = self.either_or('redbeat_redis_use_ssl', app.conf['BROKER_USE_SSL'])
         self.redbeat_redis_options = self.either_or(
             'redbeat_redis_options', app.conf['BROKER_TRANSPORT_OPTIONS']
         )
+        self.lock_key = self.either_or('redbeat_lock_key', self.key_prefix + ':lock')
+        if self.lock_key and not self.lock_key.startswith(self.key_prefix):
+            self.lock_key = self.key_prefix + self.lock_key
+        self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
 
     @property
     def schedule(self):
@@ -196,8 +198,14 @@ class RedBeatConfig:
                 'configuration %s (use %s instead).' % (name, name.lower()),
                 UserWarning,
             )
-        return self.app.conf.first(name, name.upper()) or default
+        if self.is_key_in_conf(name):
+            return self.app.conf.first(name, name.upper())
+        else:
+            return self.app.conf.first(name, name.upper()) or default
 
+    def is_key_in_conf(self, name):
+        if name.upper() in map(lambda k: k.upper(), self.app.conf.keys()):
+            return True
 
 class RedBeatSchedulerEntry(ScheduleEntry):
     _meta = None

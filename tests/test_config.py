@@ -29,6 +29,16 @@ class test_RedBeatConfig(AppCase):
         self.conf = RedBeatConfig(self.app)
         self.assertEqual(self.conf.key_prefix, 'test-prefix:')
 
+    def test_lock_key_might_be_set_to_none(self):
+        self.app.conf.redbeat_lock_key = None
+        self.conf = RedBeatConfig(self.app)
+        self.assertEqual(self.conf.lock_key, None)
+
+    def test_lock_key_override(self):
+        self.app.conf.redbeat_lock_key = ":custom"
+        self.conf = RedBeatConfig(self.app)
+        self.assertEqual(self.conf.lock_key, 'redbeat::custom')
+
     def test_schedule(self):
         schedule = {'foo': 'bar'}
         self.conf.schedule = schedule
