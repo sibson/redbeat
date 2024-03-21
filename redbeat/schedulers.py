@@ -476,7 +476,10 @@ class RedBeatScheduler(Scheduler):
             except Exception as exc:
                 logger.exception('Scheduler: Message Error: %s', exc)
             else:
-                logger.debug('Scheduler: %s sent. id->%s', entry.task, result.id)
+                if result and hasattr(result, 'id'):
+                    logger.debug('Scheduler: %s sent. id->%s', entry.task, result.id)
+                else:
+                    logger.debug('Scheduler: %s sent.', entry.task)
         return next_time_to_run
 
     def tick(self, min=min, **kwargs):
