@@ -57,6 +57,12 @@ Then specify the scheduler when running Celery Beat:
 
     celery beat -S redbeat.RedBeatScheduler
 
+If using the embedded beat in a worker process (like in development), specify the scheduler like so:
+
+.. code-block:: console
+
+    celery worker --beat --scheduler redbeat.RedBeatScheduler ...
+
 RedBeat uses a distributed lock to prevent multiple instances running.
 To disable this feature, set:
 
