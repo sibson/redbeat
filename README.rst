@@ -55,7 +55,7 @@ Then specify the scheduler when running Celery Beat:
 
 .. code-block:: console
 
-    celery beat -S redbeat.RedBeatScheduler
+    celery beat -A <celery_app_file_path>.<celery_app_instance_name> -S redbeat.RedBeatScheduler
 
 If using the embedded beat in a worker process (like in development), specify the scheduler like so:
 
