@@ -3,7 +3,7 @@ import unittest
 from copy import deepcopy
 from datetime import datetime, timedelta
 from unittest import mock
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 import pytz
 from celery.beat import DEFAULT_MAX_INTERVAL
@@ -12,7 +12,7 @@ from celery.utils.time import maybe_timedelta
 from redis.exceptions import ConnectionError
 
 from redbeat import RedBeatScheduler
-from redbeat.schedulers import acquire_distributed_beat_lock, get_redis
+from redbeat.schedulers import acquire_distributed_beat_lock, get_redis, RedBeatSchedulerEntry
 from tests.basecase import AppCase, RedBeatCase
 
 
@@ -186,6 +186,31 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
         self.s.lock = None
         with self.assertRaises(AttributeError):
             self.s.tick()
+
+
+class TestRedBeatSchedulerUpdateFromDict(RedBeatSchedulerTestBase):
+    @patch.object(RedBeatSchedulerEntry, "from_key")
+    def test_update_from_dict_fetch_redis_entry(self, mock_from_key: MagicMock) -> None:
+        mock_entry_from_redis_key = mock_from_key.return_value
+
+        self.s.update_from_dict(
+            dict_={'task_name': {'task': 'tasks.task_name', 'schedule': timedelta(seconds=30)}}
+        )
+
+        mock_from_key.assert_called_once_with("rb-tests:task_name", app=self.app)
+
+        mock_entry_from_redis_key.save.assert_called_once()
+
+    @patch.object(RedBeatSchedulerEntry, "from_key")
+    @patch.object(RedBeatSchedulerEntry, "save")
+    def test_update_from_dict(self, mock_entry_save: MagicMock, mock_from_key: MagicMock) -> None:
+        mock_from_key.side_effect = [KeyError()]
+
+        self.s.update_from_dict(
+            dict_={'task_name': {'task': 'tasks.task_name', 'schedule': timedelta(seconds=30)}}
+        )
+
+        mock_entry_save.assert_called_once()
 
 
 class NotSentinelRedBeatCase(AppCase):

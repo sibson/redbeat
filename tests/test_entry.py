@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta
+from unittest.mock import patch, PropertyMock, MagicMock
 
 from celery.utils.time import maybe_make_aware
 
@@ -128,3 +129,21 @@ class test_RedBeatEntry(RedBeatCase):
 
         self.assertEqual(score, to_timestamp(expected))
         self.assertEqual(expected, from_timestamp(score))
+
+    def test_generate_key(self) -> None:
+        entry = self.create_entry()
+
+        key = entry.generate_key(app=self.app, name="mock_task_name")
+
+        self.assertEqual(key, "redbeat:mock_task_name")
+
+    @patch.object(RedBeatSchedulerEntry, "generate_key")
+    def test_key(self, mock_generate_key: MagicMock) -> None:
+        entry = self.create_entry()
+
+        key = entry.key
+
+        mock_generate_key.assert_called_once_with(app=self.app, name="test")
+
+        self.assertEqual(key, mock_generate_key.return_value)
+

@@ -8,6 +8,7 @@ import json
 import ssl
 import warnings
 from datetime import MINYEAR, datetime
+from typing import Any
 
 import redis.exceptions
 from celery.app import app_or_default
@@ -252,6 +253,10 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
         return json.loads(meta, cls=RedBeatJSONDecoder)
 
+    @staticmethod
+    def generate_key(app: Any, name: str) -> str:
+        return app.redbeat_conf.key_prefix + name
+
     @classmethod
     def from_key(cls, key, app=None):
         ensure_conf(app)
@@ -292,7 +297,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def key(self):
-        return self.app.redbeat_conf.key_prefix + self.name
+        return self.generate_key(app=self.app, name=self.name)
 
     @property
     def score(self):
@@ -419,11 +424,16 @@ class RedBeatScheduler(Scheduler):
 
     def update_from_dict(self, dict_):
         for name, entry in dict_.items():
+            redis_key = self.Entry.generate_key(self.app, name)
+
             try:
-                entry = self._maybe_entry(name, entry)
-            except Exception as exc:
-                logger.error(ADD_ENTRY_ERROR, name, exc, entry)
-                continue
+                entry = self.Entry.from_key(redis_key, app=self.app)
+            except KeyError:
+                try:
+                    entry = self._maybe_entry(name, entry)
+                except Exception as exc:
+                    logger.error(ADD_ENTRY_ERROR, name, exc, entry)
+                    continue
 
             entry.save()  # store into redis
             logger.debug("beat: Stored entry: %s", entry)
