@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timedelta
-from unittest.mock import patch, PropertyMock, MagicMock
+from unittest.mock import MagicMock, patch
 
 from celery.utils.time import maybe_make_aware
 

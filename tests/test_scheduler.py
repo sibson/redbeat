@@ -3,7 +3,7 @@ import unittest
 from copy import deepcopy
 from datetime import datetime, timedelta
 from unittest import mock
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytz
 from celery.beat import DEFAULT_MAX_INTERVAL
@@ -12,7 +12,7 @@ from celery.utils.time import maybe_timedelta
 from redis.exceptions import ConnectionError
 
 from redbeat import RedBeatScheduler
-from redbeat.schedulers import acquire_distributed_beat_lock, get_redis, RedBeatSchedulerEntry
+from redbeat.schedulers import RedBeatSchedulerEntry, acquire_distributed_beat_lock, get_redis
 from tests.basecase import AppCase, RedBeatCase
 
 
