@@ -146,4 +146,3 @@ class test_RedBeatEntry(RedBeatCase):
         mock_generate_key.assert_called_once_with(app=self.app, name="test")
 
         self.assertEqual(key, mock_generate_key.return_value)
-
