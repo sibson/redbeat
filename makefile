@@ -1,27 +1,28 @@
 .PHONY: upload release release-test release-tag upload
 
-VERSION_FILE?=setup.py
-
 version:
-	python setup.py --version
+ifdef VERSION
+	sed -i  -e 's|version = .*|version = $(VERSION)|' setup.cfg
+	#git ci setup.py -m"bump version to $*"
+else
+	echo "usage: make version VERSION='M.m.p'"
+endif
 
-version-%: OLDVERSION:=$(shell python setup.py --version)
-version-%: NEWVERSION=$(subst -,.,$*)
-version-%: 
-	sed -i '' -e s/$(OLDVERSION)/$(NEWVERSION)/ $(VERSION_FILE)
-	git ci setup.py -m"bump version to $*"
+lint: venv
+	$(VENV)/flake8 --count --statistics redbeat tests
 
-lint:
-	flake8 --count --statistics redbeat tests
+build:
+	$(VENV)/python -m build
 
-
-release: release-check release-tag upload
-
+release: release-check build release-tag upload
 release-check:
+	# ensure latest code
 	git pull
-	make test
+	# ensure no local changes
+	test -z "`git status --porcelain`"
+	$(MAKE) test
 
-release-tag: VERSION:=$(shell python setup.py --version)
+release-tag: VERSION:=$(shell grep 'version = ' setup.cfg | cut -d '=' -f 2 | sed 's/ //')
 release-tag: TODAY:=$(shell date '+%Y-%m-%d')
 release-tag:
 	sed -i -e "s/unreleased/$(TODAY)/" CHANGES.txt
@@ -29,19 +30,21 @@ release-tag:
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags
 
-upload: VERSION:=$(shell python setup.py --version)
-upload:
-	python setup.py sdist bdist_wheel
-	twine upload $(wildcard dist/celery-*$(VERSION)*) $(wildcard dist/celery_*$(VERSION)*)
+upload: venv
+	$(VENV)/twine check --strict dist/*
+	$(VENV)/twine upload dist/*
 
 docs:
-		$(MAKE) -C docs/ html
+	$(MAKE) -C docs/ html
 
 test: unittests
-
-unittests:
-	python -m unittest discover tests
+unittests: venv
+	$(VENV)/python -m unittest discover tests
 
 clean:
 	rm -f dist/*
 	rm -rf docs/_build docs/_static docs/_templates
+
+veryclean: clean clean-venv
+
+include Makefile.venv

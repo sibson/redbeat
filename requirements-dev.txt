@@ -1,10 +1,20 @@
-black
+# Packages dependencies
 celery>=5.0
 fakeredis>=1.0.3
 python-dateutil
 redis>=3.2
 tenacity
-twine
-wheel
 backports.zoneinfo>=0.2.1; python_version < "3.9.0"
 pytz
+
+# Linting
+black
+flake8
+flake8-black
+flake8-isort
+
+
+# Releasing
+build
+twine
+wheel
