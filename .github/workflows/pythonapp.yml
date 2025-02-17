@@ -38,13 +38,16 @@ jobs:
     steps:
       - name: Check out source repository
         uses: actions/checkout@v3
+
       - name: Set up Python environment
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
           cache: 'pip'
+
       - name: Install dependencies
         run: |
           pip install flake8 flake8-black flake8-isort
+
       - name: Run linter
-        run: make lint
+        run: flake8 --count --statistics redbeat tests
