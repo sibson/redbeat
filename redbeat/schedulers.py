@@ -162,7 +162,9 @@ def get_redis(app=None):
         if connection:
             _set_redbeat_connect(app, REDBEAT_REDIS_KEY, connection, retry_period)
 
-    if hasattr(app, REDBEAT_SENTINEL_KEY) and isinstance(getattr(app, REDBEAT_SENTINEL_KEY), Sentinel):
+    if hasattr(app, REDBEAT_SENTINEL_KEY) and isinstance(
+        getattr(app, REDBEAT_SENTINEL_KEY), Sentinel
+    ):
         sentinel = getattr(app, REDBEAT_SENTINEL_KEY)
         connection = sentinel.master_for(
             redis_options.get('service_name', 'master'), db=redis_options.get('db', 0)
@@ -224,6 +226,7 @@ class RedBeatConfig:
     def is_key_in_conf(self, name):
         if name.upper() in map(lambda k: k.upper(), self.app.conf.keys()):
             return True
+
 
 class RedBeatSchedulerEntry(ScheduleEntry):
     _meta = None
