@@ -1,3 +1,10 @@
+2.3.0 (unreleased)
+---------------------
+  - bugfix, allow disabling of lock with redbeat_lock_key = None, thanks @jscaria, @molog, @bertosantamaria
+  - bugfix, track changes to primary in Sentinel, thanks @Niccolum
+  - bugfix, static entries honour last_run_at, thanks @kchamz
+  - doc updates, thanks @miketheman, @cikay
+
 2.2.0 (2023-12-22)
 --------------------
   - add ssl support for redis with sentinel, thanks @cyberjunk
