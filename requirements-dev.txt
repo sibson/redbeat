@@ -1,6 +1,5 @@
 # Packages dependencies
 celery>=5.0
-fakeredis>=1.0.3
 python-dateutil
 redis>=3.2
 tenacity
@@ -12,6 +11,9 @@ black
 flake8
 flake8-black
 flake8-isort
+
+# Testing
+fakeredis>=1.0.3
 
 
 # Releasing

@@ -1,5 +1,9 @@
 .PHONY: upload release release-test release-tag upload
 
+REQUIREMENTS_TXT=requirements-dev.txt
+
+test: unittests
+
 version:
 ifdef VERSION
 	sed -i  -e 's|version = .*|version = $(VERSION)|' setup.cfg
@@ -9,7 +13,7 @@ else
 endif
 
 lint: venv
-	$(VENV)/flake8 --count --statistics redbeat tests
+	$(VENV)/flake8 redbeat tests
 
 build:
 	$(VENV)/python -m build
@@ -37,7 +41,6 @@ upload: venv
 docs:
 	$(MAKE) -C docs/ html
 
-test: unittests
 unittests: venv
 	$(VENV)/python -m unittest discover tests
 
