@@ -1,4 +1,4 @@
-2.3.0 (unreleased)
+2.3.0 (2025-02-23)
 ---------------------
   - bugfix, allow disabling of lock with redbeat_lock_key = None, thanks @jscaria, @molog, @bertosantamaria
   - bugfix, track changes to primary in Sentinel, thanks @Niccolum
