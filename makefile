@@ -1,4 +1,4 @@
-.PHONY: upload release release-test release-tag upload
+.PHONY: upload release release-test release-tag build
 
 REQUIREMENTS_TXT=requirements-dev.txt
 
@@ -18,7 +18,7 @@ lint: venv
 build:
 	$(VENV)/python -m build
 
-release: release-check build release-tag upload
+release: release-check unittests release-tag
 release-check:
 	# ensure latest code
 	git pull
@@ -26,17 +26,16 @@ release-check:
 	test -z "`git status --porcelain`"
 	$(MAKE) test
 
-release-tag: VERSION:=$(shell grep 'version = ' setup.cfg | cut -d '=' -f 2 | sed 's/ //')
 release-tag: TODAY:=$(shell date '+%Y-%m-%d')
 release-tag:
+ifndef VERSION
+	echo "usage: make release VERSION='M.m.p'"
+else
 	sed -i -e "s/unreleased/$(TODAY)/" CHANGES.txt
 	git ci -m"update release date for $(VERSION) in CHANGES.txt" CHANGES.txt
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags
-
-upload: venv
-	$(VENV)/twine check --strict dist/*
-	$(VENV)/twine upload dist/*
+endif
 
 docs:
 	$(MAKE) -C docs/ html

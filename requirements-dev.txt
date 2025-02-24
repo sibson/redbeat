@@ -14,9 +14,3 @@ flake8-isort
 
 # Testing
 fakeredis>=1.0.3
-
-
-# Releasing
-build
-twine
-wheel
