@@ -23,8 +23,8 @@ release-tag:
 ifndef VERSION
 	echo "usage: make release VERSION='M.m.p'"
 else
-	sed -i  -e 's|version = .*|version = $(VERSION)|' setup.cfg
-	sed -i -e "s/unreleased/$(TODAY)/" CHANGES.txt
+	sed -e 's|version = .*|version = $(VERSION)|' setup.cfg
+	sed -e "s/unreleased/$(TODAY)/" CHANGES.txt
 	git ci -m"prepare for release of $(VERSION)" CHANGES.txt setup.cfg
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags
