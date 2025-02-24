@@ -35,6 +35,7 @@ else
 	git ci -m"update release date for $(VERSION) in CHANGES.txt" CHANGES.txt
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags
+	echo "$(VERSION)dev (unreleased)\n---------------------\n$(cat CHANGES.txt)\n  -\n\n" > CHANGES.txt
 endif
 
 docs:
