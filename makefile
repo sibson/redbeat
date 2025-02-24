@@ -4,14 +4,6 @@ REQUIREMENTS_TXT=requirements-dev.txt
 
 test: unittests
 
-version:
-ifdef VERSION
-	sed -i  -e 's|version = .*|version = $(VERSION)|' setup.cfg
-	#git ci setup.py -m"bump version to $*"
-else
-	echo "usage: make version VERSION='M.m.p'"
-endif
-
 lint: venv
 	$(VENV)/flake8 redbeat tests
 
@@ -31,8 +23,9 @@ release-tag:
 ifndef VERSION
 	echo "usage: make release VERSION='M.m.p'"
 else
+	sed -i  -e 's|version = .*|version = $(VERSION)|' setup.cfg
 	sed -i -e "s/unreleased/$(TODAY)/" CHANGES.txt
-	git ci -m"update release date for $(VERSION) in CHANGES.txt" CHANGES.txt
+	git ci -m"prepare for release of $(VERSION)" CHANGES.txt setup.cfg
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags
 	echo "$(VERSION)dev (unreleased)\n---------------------\n$(cat CHANGES.txt)\n  -\n\n" > CHANGES.txt
