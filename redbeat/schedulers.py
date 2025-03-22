@@ -20,6 +20,7 @@ from kombu.utils.objects import cached_property
 from kombu.utils.url import maybe_sanitize_url
 from redis.client import StrictRedis
 from redis.sentinel import MasterNotFoundError, Sentinel
+from redis.cluster import RedisCluster
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
 
 from .decoder import RedBeatJSONDecoder, RedBeatJSONEncoder, to_timestamp
@@ -129,7 +130,7 @@ def get_redis(app=None):
     ):
         sentinel = getattr(app, REDBEAT_SENTINEL_KEY)
         connection = sentinel.master_for(
-            redis_options.get('service_name', 'master'), db=redis_options.get('db', 0)
+            redis_options.get('service_name', 'master')
         )
         _set_redbeat_connect(app, connection, retry_period)
         return connection
@@ -139,9 +140,11 @@ def get_redis(app=None):
         return getattr(app, REDBEAT_REDIS_KEY)
 
     # Set up the connection if not already set
-    if redis_options.get('cluster', False):
-        from redis.cluster import RedisCluster
-        connection = RedisCluster.from_url(conf.redis_url, **redis_options)
+    if conf.redis_url.startswith('redis-cluster') or redis_options.get('cluster', False):
+        if 'startup_nodes' in redis_options:
+            connection = RedisCluster(startup_nodes=redis_options['startup_nodes'], decode_responses=True, **redis_options)
+        else:
+            connection = RedisCluster.from_url(conf.redis_url, decode_responses=True, **redis_options)
     elif any(conf.redis_url.startswith(prefix) for prefix in {'redis-sentinel', 'redis+sentinel', 'sentinel'}) and 'sentinels' in redis_options:
         connection_kwargs = {}
         if isinstance(conf.redis_use_ssl, dict):
@@ -158,20 +161,15 @@ def get_redis(app=None):
         )
         _set_redbeat_sentinel(app, sentinel)
         connection = sentinel.master_for(
-            redis_options.get('service_name', 'master'), db=redis_options.get('db', 0)
+            redis_options.get('service_name', 'master')
         )
     elif conf.redis_url.startswith('rediss'):
         ssl_options = {'ssl_cert_reqs': ssl.CERT_REQUIRED}
         if isinstance(conf.redis_use_ssl, dict):
             ssl_options.update(conf.redis_use_ssl)
         connection = StrictRedis.from_url(conf.redis_url, decode_responses=True, **ssl_options)
-    elif conf.redis_url.startswith('redis-cluster'):
-        from rediscluster import RedisCluster
-        if not redis_options.get('startup_nodes'):
-            redis_options = {'startup_nodes': [{"host": "localhost", "port": "30001"}]}
-        connection = RedisCluster(decode_responses=True, **redis_options)
     else:
-        connection = StrictRedis.from_url(conf.redis_url, decode_responses=True)
+        connection = StrictRedis.from_url(conf.redis_url, decode_responses=True, **redis_options)
 
     # Set the connection
     if connection:
