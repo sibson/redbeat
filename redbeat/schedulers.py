@@ -3,7 +3,7 @@
 # of the License at http://www.apache.org/licenses/LICENSE-2.0
 # Copyright 2015 Marc Sibson
 
-
+from __future__ import annotations
 import json
 import ssl
 import warnings
@@ -20,6 +20,7 @@ from kombu.utils.objects import cached_property
 from kombu.utils.url import maybe_sanitize_url
 from redis.client import StrictRedis
 from redis.sentinel import MasterNotFoundError, Sentinel
+from redis.lock import Lock
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
 
 from .decoder import RedBeatJSONDecoder, RedBeatJSONEncoder, to_timestamp
@@ -409,7 +410,7 @@ class RedBeatScheduler(Scheduler):
     # from the backend redis database
     Entry = RedBeatSchedulerEntry
 
-    lock = None
+    lock = None | Lock
 
     #: The default lock timeout in seconds.
     lock_timeout = DEFAULT_MAX_INTERVAL * 5
@@ -518,10 +519,37 @@ class RedBeatScheduler(Scheduler):
                     logger.debug('Scheduler: %s sent.', entry.task)
         return next_time_to_run
 
+    def acquire_lock(self):
+        logger.debug('beat: Acquiring lock...')
+        redis_client = get_redis(self.app)
+
+        lock = redis_client.lock(
+            self.lock_key,
+            timeout=self.lock_timeout,
+            sleep=self.max_interval,
+        )
+        # overwrite redis-py's extend script
+        # which will add additional timeout instead of extend to a new timeout
+        lock.lua_extend = redis_client.register_script(LUA_EXTEND_TO_SCRIPT)
+        try:
+            lock.acquire()
+            logger.info('beat: Acquired lock')
+            self.lock = lock
+        except redis.exceptions.ConnectionError:
+            logger.warning('beat: Failed to acquire lock due to Redis connection error')
+            self.lock = None
+
     def tick(self, min=min, **kwargs):
-        if self.lock_key:
-            logger.debug('beat: Extending lock...')
-            self.lock.extend(int(self.lock_timeout))
+        if self.lock:
+            try:
+                logger.debug('beat: Extending lock...')
+                self.lock.extend(int(self.lock_timeout))
+            except redis.exceptions.ConnectionError:
+                logger.warning('beat: Lost connection to Redis, attempting to re-acquire lock...')
+                self.lock = None
+
+        if not self.lock:
+            self.acquire_lock()
 
         remaining_times = []
         try:
@@ -571,17 +599,4 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     if not scheduler.lock_key:
         return
 
-    logger.debug('beat: Acquiring lock...')
-    redis_client = get_redis(scheduler.app)
-
-    lock = redis_client.lock(
-        scheduler.lock_key,
-        timeout=scheduler.lock_timeout,
-        sleep=scheduler.max_interval,
-    )
-    # overwrite redis-py's extend script
-    # which will add additional timeout instead of extend to a new timeout
-    lock.lua_extend = redis_client.register_script(LUA_EXTEND_TO_SCRIPT)
-    lock.acquire()
-    logger.info('beat: Acquired lock')
-    scheduler.lock = lock
+    scheduler.acquire_lock()
