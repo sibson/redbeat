@@ -1,36 +1,46 @@
-.PHONY: upload release release-test release-tag upload
+.PHONY: upload release release-test release-tag build
 
-VERSION_FILE?=setup.py
+REQUIREMENTS_TXT=requirements-dev.txt
 
-version:
-	python setup.py --version
+test: unittests
 
-version-%: OLDVERSION:=$(shell python setup.py --version)
-version-%: NEWVERSION=$(subst -,.,$*)
-version-%: 
-	sed -i -e s/$(OLDVERSION)/$(NEWVERSION)/ $(VERSION_FILE)
-	git ci setup.py -m"bump version to $*"
+lint: venv
+	$(VENV)/flake8 redbeat tests
 
+build:
+	$(VENV)/python -m build
 
-release: release-check release-tag upload
-
+release: release-check unittests release-tag
 release-check:
+	# ensure latest code
 	git pull
-	tox
+	# ensure no local changes
+	test -z "`git status --porcelain`"
+	$(MAKE) test
 
-release-tag: VERSION:=$(shell python setup.py --version)
+release-tag: TODAY:=$(shell date '+%Y-%m-%d')
 release-tag:
+ifndef VERSION
+	echo "usage: make release VERSION='M.m.p'"
+else
+	sed -i '' -e 's|version = .*|version = $(VERSION)|' setup.cfg
+	sed -i '' -e "s/unreleased/$(TODAY)/" CHANGES.txt
+	git ci -m"prepare for release of $(VERSION)" CHANGES.txt setup.cfg
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags
-
-upload: VERSION:=$(shell python setup.py --version)
-upload:
-	python setup.py sdist
-	twine upload $(wildcard dist/celery-*$(VERSION)*)
+	echo "$(VERSION)dev (unreleased)\n---------------------\n$(cat CHANGES.txt)\n  -\n\n" > CHANGES.txt
+endif
 
 docs:
-		$(MAKE) -C docs/ html
+	$(MAKE) -C docs/ html
+
+unittests: venv
+	$(VENV)/python -m unittest discover tests
 
 clean:
 	rm -f dist/*
 	rm -rf docs/_build docs/_static docs/_templates
+
+veryclean: clean clean-venv
+
+include Makefile.venv

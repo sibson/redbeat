@@ -10,6 +10,7 @@ import ssl
 import uuid
 import warnings
 from datetime import MINYEAR, datetime
+from typing import Any
 
 import redis.exceptions
 from celery.app import app_or_default
@@ -20,6 +21,7 @@ from celery.utils.time import humanize_seconds
 from kombu.utils.objects import cached_property
 from kombu.utils.url import maybe_sanitize_url
 from redis.client import StrictRedis
+from redis.sentinel import MasterNotFoundError, Sentinel
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
 
 from .decoder import RedBeatJSONDecoder, RedBeatJSONEncoder, to_timestamp
@@ -52,6 +54,9 @@ LUA_EXTEND_TO_SCRIPT = """
     return 1
 """
 
+REDBEAT_REDIS_KEY = "redbeat_redis"
+REDBEAT_SENTINEL_KEY = "redbeat_sentinel"
+
 
 class RetryingConnection:
     """A proxy for the Redis connection that delegates all the calls to
@@ -66,6 +71,7 @@ class RetryingConnection:
             retry=(
                 retry_if_exception_type(redis.exceptions.ConnectionError)
                 | retry_if_exception_type(redis.exceptions.TimeoutError)
+                | retry_if_exception_type(MasterNotFoundError)
             ),
             reraise=True,
             wait=wait_exponential(multiplier=1, max=self.RETRY_MAX_WAIT),
@@ -115,12 +121,19 @@ def ensure_conf(app):
 def get_redis(app=None):
     app = app_or_default(app)
     conf = ensure_conf(app)
-    if not hasattr(app, 'redbeat_redis') or app.redbeat_redis is None:
-        redis_options = conf.redbeat_redis_options
-        retry_period = redis_options.get('retry_period')
-        if conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
-            from redis.sentinel import Sentinel
+    redis_options = conf.redbeat_redis_options
+    retry_period = redis_options.get('retry_period')
 
+    if not hasattr(app, REDBEAT_REDIS_KEY) or getattr(app, REDBEAT_REDIS_KEY) is None:
+        if redis_options.get('cluster', False):
+            from redis.cluster import RedisCluster
+
+            connection = RedisCluster.from_url(conf.redis_url, **redis_options)
+        elif conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
+            connection_kwargs = {}
+            if isinstance(conf.redis_use_ssl, dict):
+                connection_kwargs['ssl'] = True
+                connection_kwargs.update(conf.redis_use_ssl)
             sentinel = Sentinel(
                 redis_options['sentinels'],
                 socket_timeout=redis_options.get('socket_timeout'),
@@ -128,8 +141,10 @@ def get_redis(app=None):
                 db=redis_options.get('db', 0),
                 decode_responses=True,
                 sentinel_kwargs=redis_options.get('sentinel_kwargs'),
+                **connection_kwargs,
             )
-            connection = sentinel.master_for(redis_options.get('service_name', 'master'))
+            _set_redbeat_connect(app, REDBEAT_SENTINEL_KEY, sentinel, retry_period)
+            connection = None
         elif conf.redis_url.startswith('rediss'):
             ssl_options = {'ssl_cert_reqs': ssl.CERT_REQUIRED}
             if isinstance(conf.redis_use_ssl, dict):
@@ -144,12 +159,26 @@ def get_redis(app=None):
         else:
             connection = StrictRedis.from_url(conf.redis_url, decode_responses=True)
 
-        if retry_period is None:
-            app.redbeat_redis = connection
-        else:
-            app.redbeat_redis = RetryingConnection(retry_period, connection)
+        if connection:
+            _set_redbeat_connect(app, REDBEAT_REDIS_KEY, connection, retry_period)
 
-    return app.redbeat_redis
+    if hasattr(app, REDBEAT_SENTINEL_KEY) and isinstance(
+        getattr(app, REDBEAT_SENTINEL_KEY), Sentinel
+    ):
+        sentinel = getattr(app, REDBEAT_SENTINEL_KEY)
+        connection = sentinel.master_for(
+            redis_options.get('service_name', 'master'), db=redis_options.get('db', 0)
+        )
+        _set_redbeat_connect(app, REDBEAT_REDIS_KEY, connection, retry_period)
+
+    return getattr(app, REDBEAT_REDIS_KEY)
+
+
+def _set_redbeat_connect(app, connect_name, connection, retry_period):
+    if retry_period is None:
+        setattr(app, connect_name, connection)
+    else:
+        setattr(app, connect_name, RetryingConnection(retry_period, connection))
 
 
 ADD_ENTRY_ERROR = """\
@@ -164,14 +193,17 @@ class RedBeatConfig:
         self.key_prefix = self.either_or('redbeat_key_prefix', 'redbeat:')
         self.schedule_key = self.key_prefix + ':schedule'
         self.statics_key = self.key_prefix + ':statics'
-        self.lock_key = self.either_or('redbeat_lock_key', self.key_prefix + ':lock')
-        self.lock_token = self.generate_lock_token()
-        self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
+
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
         self.redis_use_ssl = self.either_or('redbeat_redis_use_ssl', app.conf['BROKER_USE_SSL'])
         self.redbeat_redis_options = self.either_or(
             'redbeat_redis_options', app.conf['BROKER_TRANSPORT_OPTIONS']
         )
+        self.lock_key = self.either_or('redbeat_lock_key', self.key_prefix + ':lock')
+        if self.lock_key and not self.lock_key.startswith(self.key_prefix):
+            self.lock_key = self.key_prefix + self.lock_key
+        self.lock_token = self.generate_lock_token()
+        self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
 
     @staticmethod
     def generate_lock_token():
@@ -194,17 +226,38 @@ class RedBeatConfig:
                 'configuration %s (use %s instead).' % (name, name.lower()),
                 UserWarning,
             )
-        return self.app.conf.first(name, name.upper()) or default
+        if self.is_key_in_conf(name):
+            return self.app.conf.first(name, name.upper())
+        else:
+            return self.app.conf.first(name, name.upper()) or default
+
+    def is_key_in_conf(self, name):
+        if name.upper() in map(lambda k: k.upper(), self.app.conf.keys()):
+            return True
 
 
 class RedBeatSchedulerEntry(ScheduleEntry):
     _meta = None
 
     def __init__(
-        self, name=None, task=None, schedule=None, args=None, kwargs=None, enabled=True, **clsargs
+        self,
+        name=None,
+        task=None,
+        schedule=None,
+        args=None,
+        kwargs=None,
+        enabled=True,
+        options=None,
+        **clsargs,
     ):
         super().__init__(
-            name=name, task=task, schedule=schedule, args=args, kwargs=kwargs, **clsargs
+            name=str(name),
+            task=task,
+            schedule=schedule,
+            args=args,
+            kwargs=kwargs,
+            options=options,
+            **clsargs,
         )
         self.enabled = enabled
         ensure_conf(self.app)
@@ -235,6 +288,10 @@ class RedBeatSchedulerEntry(ScheduleEntry):
             return {'last_run_at': None}
 
         return json.loads(meta, cls=RedBeatJSONDecoder)
+
+    @staticmethod
+    def generate_key(app: Any, name: str) -> str:
+        return app.redbeat_conf.key_prefix + name
 
     @classmethod
     def from_key(cls, key, app=None):
@@ -276,7 +333,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @property
     def key(self):
-        return self.app.redbeat_conf.key_prefix + self.name
+        return self.generate_key(app=self.app, name=self.name)
 
     @property
     def score(self):
@@ -404,11 +461,16 @@ class RedBeatScheduler(Scheduler):
 
     def update_from_dict(self, dict_):
         for name, entry in dict_.items():
+            redis_key = self.Entry.generate_key(self.app, name)
+
             try:
-                entry = self._maybe_entry(name, entry)
-            except Exception as exc:
-                logger.error(ADD_ENTRY_ERROR, name, exc, entry)
-                continue
+                entry = self.Entry.from_key(redis_key, app=self.app)
+            except KeyError:
+                try:
+                    entry = self._maybe_entry(name, entry)
+                except Exception as exc:
+                    logger.error(ADD_ENTRY_ERROR, name, exc, entry)
+                    continue
 
             entry.save()  # store into redis
             logger.debug("beat: Stored entry: %s", entry)
@@ -461,11 +523,14 @@ class RedBeatScheduler(Scheduler):
             except Exception as exc:
                 logger.exception('Scheduler: Message Error: %s', exc)
             else:
-                logger.debug('Scheduler: %s sent. id->%s', entry.task, result.id)
+                if result and hasattr(result, 'id'):
+                    logger.debug('Scheduler: %s sent. id->%s', entry.task, result.id)
+                else:
+                    logger.debug('Scheduler: %s sent.', entry.task)
         return next_time_to_run
 
     def tick(self, min=min, **kwargs):
-        if self.lock:
+        if self.lock_key:
             logger.debug('beat: Extending lock...')
             self.lock.extend(int(self.lock_timeout))
 
@@ -483,7 +548,8 @@ class RedBeatScheduler(Scheduler):
     def close(self):
         if self.lock:
             logger.info('beat: Releasing lock')
-            self.lock.release()
+            if self.lock.owned():
+                self.lock.release()
             self.lock = None
         super().close()
 
@@ -506,6 +572,12 @@ class RedBeatScheduler(Scheduler):
 
 @beat_init.connect
 def acquire_distributed_beat_lock(sender=None, **kwargs):
+    """
+    Attempt to acquire lock on startup
+
+    Celery will squash any exceptions raised here. If one is raised
+    scheduler.lock will be None while scheduler.lock_key is set
+    """
     scheduler = sender.scheduler
     if not scheduler.lock_key:
         return
@@ -523,5 +595,4 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     lock.lua_extend = redis_client.register_script(LUA_EXTEND_TO_SCRIPT)
     lock.acquire(token=scheduler.lock_token)
     logger.info('beat: Acquired lock')
-
     scheduler.lock = lock

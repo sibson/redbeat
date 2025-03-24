@@ -1,8 +1,34 @@
+2.3.0 (2025-02-23)
+---------------------
+  - bugfix, allow disabling of lock with redbeat_lock_key = None, thanks @jscaria, @molog, @bertosantamaria
+  - bugfix, track changes to primary in Sentinel, thanks @Niccolum
+  - bugfix, static entries honour last_run_at, thanks @kchamz
+  - doc updates, thanks @miketheman, @cikay
+
+2.2.0 (2023-12-22)
+--------------------
+  - add ssl support for redis with sentinel, thanks @cyberjunk
+  - add RedisCluster Support, thanks @kkinder
+  - bugfixes
+
+2.1.1 (2023-06-11)
+---------------------
+ - fix compatability with Celery 5.3.0, thanks @jkseppan
+
+2.1.0 (2023-05-17)
+---------------------
+ - BREAKING, drop for support for EOL Python < 3.8
+ - log message cleanup, thanks @joekohlsdorf
+ - ensure lock is owned before releasing, fixing #223, thanks @michaelbukachi
+ - fix #238, #208, failure to aquire lock on startup leads to multiple task executions, thanks @Junzki, @nicklyra, @nigel-gott
+ - Add options support for RedBeatSchedulerEntry, thanks @anton-petrov
+
 2.0.0 (2020-10-25)
 ---------------------
   - BREAKING CHANGES, test with your stack before deploying
     - Drop support for celery<4.2
     - Drop support for pyredis<3
+    - Drop Python 2.7 and 3.5 support, update to 3.6+ syntax, thanks @kleschenko
   - Support timezones other than UTC thanks @luoxiaohei, @sempr and @noamkush
   - Many config handling consistentcy updates
   - Use black linter and drop circle CI in favor of GitHub Actions

@@ -1,8 +1,10 @@
 Testing
 ---------
- - use pyenv on OSX to manage multiple python versions for use with tox
- - run ```tox```
-
+ - use pyenv on OSX to manage multiple python versions
+ 
+``` pip install -r requirements-dev.txt
+    python -m unittest discover tests
+```
 
 Release
 ---------

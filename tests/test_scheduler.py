@@ -2,15 +2,17 @@ import ssl
 import unittest
 from copy import deepcopy
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch
+from unittest import mock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytz
 from celery.beat import DEFAULT_MAX_INTERVAL
 from celery.schedules import schedstate, schedule
 from celery.utils.time import maybe_timedelta
+from redis.exceptions import ConnectionError
 
 from redbeat import RedBeatScheduler
-from redbeat.schedulers import get_redis
+from redbeat.schedulers import RedBeatSchedulerEntry, acquire_distributed_beat_lock, get_redis
 from tests.basecase import AppCase, RedBeatCase
 
 
@@ -78,6 +80,10 @@ class test_RedBeatScheduler_schedule(RedBeatSchedulerTestBase):
 
 
 class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
+    def setUp(self):
+        super().setUp()
+        self.s.lock_key = None
+
     def test_empty(self):
         with patch.object(self.s, 'send_task') as send_task:
             sleep = self.s.tick()
@@ -175,9 +181,39 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
     def test_lock_timeout(self):
         self.assertEqual(self.s.lock_timeout, self.s.max_interval * 5)
 
+    def test_lock_acquisition_failed_during_startup(self):
+        self.s.lock_key = 'lock-key'
+        self.s.lock = None
+        with self.assertRaises(AttributeError):
+            self.s.tick()
+
+
+class TestRedBeatSchedulerUpdateFromDict(RedBeatSchedulerTestBase):
+    @patch.object(RedBeatSchedulerEntry, "from_key")
+    def test_update_from_dict_fetch_redis_entry(self, mock_from_key: MagicMock) -> None:
+        mock_entry_from_redis_key = mock_from_key.return_value
+
+        self.s.update_from_dict(
+            dict_={'task_name': {'task': 'tasks.task_name', 'schedule': timedelta(seconds=30)}}
+        )
+
+        mock_from_key.assert_called_once_with("rb-tests:task_name", app=self.app)
+
+        mock_entry_from_redis_key.save.assert_called_once()
+
+    @patch.object(RedBeatSchedulerEntry, "from_key")
+    @patch.object(RedBeatSchedulerEntry, "save")
+    def test_update_from_dict(self, mock_entry_save: MagicMock, mock_from_key: MagicMock) -> None:
+        mock_from_key.side_effect = [KeyError()]
+
+        self.s.update_from_dict(
+            dict_={'task_name': {'task': 'tasks.task_name', 'schedule': timedelta(seconds=30)}}
+        )
+
+        mock_entry_save.assert_called_once()
+
 
 class NotSentinelRedBeatCase(AppCase):
-
     config_dict = {
         'BROKER_URL': 'redis://',
     }
@@ -190,8 +226,25 @@ class NotSentinelRedBeatCase(AppCase):
         assert 'Sentinel' not in str(redis_client.connection_pool)
 
 
-class SentinelRedBeatCase(AppCase):
+class ClusterRedBeatCase(AppCase):
+    config_dict = {
+        'BROKER_URL': 'redis://',
+        'REDBEAT_REDIS_OPTIONS': {
+            'cluster': True,
+        },
+    }
 
+    def setup(self):
+        self.app.conf.update(self.config_dict)
+
+    def test_sentinel_scheduler(self):
+        # Fake redis doesn't really support redis cluster, but let's just make sure it was used.
+        with mock.patch('redis.RedisCluster.from_url') as from_url:
+            get_redis(app=self.app)
+            self.assertTrue(from_url.called)
+
+
+class SentinelRedBeatCase(AppCase):
     config_dict = {
         'REDBEAT_KEY_PREFIX': 'rb-tests:',
         'redbeat_key_prefix': 'rb-tests:',
@@ -227,7 +280,6 @@ class SentinelRedBeatCase(AppCase):
 
 
 class SeparateOptionsForSchedulerCase(AppCase):
-
     config_dict = {
         'REDBEAT_KEY_PREFIX': 'rb-tests:',
         'REDBEAT_REDIS_URL': 'redis-sentinel://redis-sentinel:26379/0',
@@ -249,7 +301,6 @@ class SeparateOptionsForSchedulerCase(AppCase):
 
 
 class SSLConnectionToRedis(AppCase):
-
     config_dict = {
         'REDBEAT_KEY_PREFIX': 'rb-tests:',
         'REDBEAT_REDIS_URL': 'rediss://redishost:26379/0',
@@ -280,7 +331,6 @@ class SSLConnectionToRedis(AppCase):
 
 
 class SSLConnectionToRedisDefaultBrokerSSL(AppCase):
-
     config_dict = {
         'REDBEAT_KEY_PREFIX': 'rb-tests:',
         'REDBEAT_REDIS_URL': 'rediss://redishost:26379/0',
@@ -311,7 +361,6 @@ class SSLConnectionToRedisDefaultBrokerSSL(AppCase):
 
 
 class SSLConnectionToRedisNoCerts(AppCase):
-
     config_dict = {
         'REDBEAT_KEY_PREFIX': 'rb-tests:',
         'REDBEAT_REDIS_URL': 'rediss://redishost:26379/0',
@@ -364,3 +413,18 @@ class RedBeatLockTimeoutCustomAll(RedBeatCase):
         scheduler = RedBeatScheduler(app=self.app)
         assert self.config_dict['beat_max_loop_interval'] == scheduler.max_interval
         assert self.config_dict['redbeat_lock_timeout'] == scheduler.lock_timeout
+
+
+class RedBeatStartupAcquiresLock(RedBeatSchedulerTestBase):
+    def setUp(self):
+        super().setUp()
+        self.sender = Mock(scheduler=self.s)
+
+    def test_acquires_lock(self):
+        acquire_distributed_beat_lock(self.sender)
+        self.assertTrue(self.s.lock.owned())
+
+    def test_connection_error(self):
+        self.redis_server.connected = False
+        with self.assertRaises(ConnectionError):
+            acquire_distributed_beat_lock(self.sender)
