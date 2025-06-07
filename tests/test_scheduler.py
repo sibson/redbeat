@@ -190,8 +190,12 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
 
 class TestRedBeatSchedulerUpdateFromDict(RedBeatSchedulerTestBase):
     @patch.object(RedBeatSchedulerEntry, "from_key")
-    def test_update_from_dict_fetch_redis_entry(self, mock_from_key: MagicMock) -> None:
+    @patch.object(RedBeatSchedulerEntry, "save")
+    def test_update_from_dict_fetch_redis_entry(
+        self, mock_entry_save: MagicMock, mock_from_key: MagicMock
+    ) -> None:
         mock_entry_from_redis_key = mock_from_key.return_value
+        mock_entry_from_redis_key.last_run_at = datetime.now()
 
         self.s.update_from_dict(
             dict_={'task_name': {'task': 'tasks.task_name', 'schedule': timedelta(seconds=30)}}
@@ -199,7 +203,7 @@ class TestRedBeatSchedulerUpdateFromDict(RedBeatSchedulerTestBase):
 
         mock_from_key.assert_called_once_with("rb-tests:task_name", app=self.app)
 
-        mock_entry_from_redis_key.save.assert_called_once()
+        mock_entry_save.assert_called_once()
 
     @patch.object(RedBeatSchedulerEntry, "from_key")
     @patch.object(RedBeatSchedulerEntry, "save")
