@@ -20,6 +20,7 @@ from kombu.utils.objects import cached_property
 from kombu.utils.url import maybe_sanitize_url
 from redis.client import StrictRedis
 from redis.sentinel import MasterNotFoundError, Sentinel
+from redis.cluster import RedisCluster
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
 
 from .decoder import RedBeatJSONDecoder, RedBeatJSONEncoder, to_timestamp
@@ -121,62 +122,70 @@ def get_redis(app=None):
     conf = ensure_conf(app)
     redis_options = conf.redbeat_redis_options
     retry_period = redis_options.get('retry_period')
+    connection = None
 
-    if not hasattr(app, REDBEAT_REDIS_KEY) or getattr(app, REDBEAT_REDIS_KEY) is None:
-        if redis_options.get('cluster', False):
-            from redis.cluster import RedisCluster
-
-            connection = RedisCluster.from_url(conf.redis_url, **redis_options)
-        elif conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
-            connection_kwargs = {}
-            if isinstance(conf.redis_use_ssl, dict):
-                connection_kwargs['ssl'] = True
-                connection_kwargs.update(conf.redis_use_ssl)
-            sentinel = Sentinel(
-                redis_options['sentinels'],
-                socket_timeout=redis_options.get('socket_timeout'),
-                password=redis_options.get('password'),
-                db=redis_options.get('db', 0),
-                decode_responses=True,
-                sentinel_kwargs=redis_options.get('sentinel_kwargs'),
-                **connection_kwargs,
-            )
-            _set_redbeat_connect(app, REDBEAT_SENTINEL_KEY, sentinel, retry_period)
-            connection = None
-        elif conf.redis_url.startswith('rediss'):
-            ssl_options = {'ssl_cert_reqs': ssl.CERT_REQUIRED}
-            if isinstance(conf.redis_use_ssl, dict):
-                ssl_options.update(conf.redis_use_ssl)
-            connection = StrictRedis.from_url(conf.redis_url, decode_responses=True, **ssl_options)
-        elif conf.redis_url.startswith('redis-cluster'):
-            from rediscluster import RedisCluster
-
-            if not redis_options.get('startup_nodes'):
-                redis_options = {'startup_nodes': [{"host": "localhost", "port": "30001"}]}
-            connection = RedisCluster(decode_responses=True, **redis_options)
-        else:
-            connection = StrictRedis.from_url(conf.redis_url, decode_responses=True)
-
-        if connection:
-            _set_redbeat_connect(app, REDBEAT_REDIS_KEY, connection, retry_period)
-
+    # If using Sentinel, ensure the connection is refreshed
     if hasattr(app, REDBEAT_SENTINEL_KEY) and isinstance(
         getattr(app, REDBEAT_SENTINEL_KEY), Sentinel
     ):
         sentinel = getattr(app, REDBEAT_SENTINEL_KEY)
         connection = sentinel.master_for(
-            redis_options.get('service_name', 'master'), db=redis_options.get('db', 0)
+            redis_options.get('service_name', 'master')
         )
-        _set_redbeat_connect(app, REDBEAT_REDIS_KEY, connection, retry_period)
+        _set_redbeat_connect(app, connection, retry_period)
+        return connection
 
-    return getattr(app, REDBEAT_REDIS_KEY)
+    # Check if the connection is already set up
+    if hasattr(app, REDBEAT_REDIS_KEY) and getattr(app, REDBEAT_REDIS_KEY) is not None:
+        return getattr(app, REDBEAT_REDIS_KEY)
 
-
-def _set_redbeat_connect(app, connect_name, connection, retry_period):
-    if retry_period is None:
-        setattr(app, connect_name, connection)
+    # Set up the connection if not already set
+    if conf.redis_url.startswith('redis-cluster') or redis_options.get('cluster', False):
+        if 'startup_nodes' in redis_options:
+            connection = RedisCluster(startup_nodes=redis_options['startup_nodes'], decode_responses=True, **redis_options)
+        else:
+            connection = RedisCluster.from_url(conf.redis_url, decode_responses=True, **redis_options)
+    elif any(conf.redis_url.startswith(prefix) for prefix in {'redis-sentinel', 'redis+sentinel', 'sentinel'}) and 'sentinels' in redis_options:
+        connection_kwargs = {}
+        if isinstance(conf.redis_use_ssl, dict):
+            connection_kwargs['ssl'] = True
+            connection_kwargs.update(conf.redis_use_ssl)
+        sentinel = Sentinel(
+            redis_options['sentinels'],
+            socket_timeout=redis_options.get('socket_timeout'),
+            password=redis_options.get('password'),
+            db=redis_options.get('db', 0),
+            decode_responses=True,
+            sentinel_kwargs=redis_options.get('sentinel_kwargs'),
+            **connection_kwargs,
+        )
+        _set_redbeat_sentinel(app, sentinel)
+        connection = sentinel.master_for(
+            redis_options.get('service_name', 'master')
+        )
+    elif conf.redis_url.startswith('rediss'):
+        ssl_options = {'ssl_cert_reqs': ssl.CERT_REQUIRED}
+        if isinstance(conf.redis_use_ssl, dict):
+            ssl_options.update(conf.redis_use_ssl)
+        connection = StrictRedis.from_url(conf.redis_url, decode_responses=True, **ssl_options)
     else:
-        setattr(app, connect_name, RetryingConnection(retry_period, connection))
+        connection = StrictRedis.from_url(conf.redis_url, decode_responses=True, **redis_options)
+
+    # Set the connection
+    if connection:
+        _set_redbeat_connect(app, connection, retry_period)
+        return connection
+
+    raise AttributeError("No valid Redis connection found.")
+
+def _set_redbeat_sentinel(app, sentinel):
+    setattr(app, REDBEAT_SENTINEL_KEY, sentinel)
+
+def _set_redbeat_connect(app, connection, retry_period):
+    if retry_period is None:
+        setattr(app, REDBEAT_REDIS_KEY, connection)
+    else:
+        setattr(app, REDBEAT_REDIS_KEY, RetryingConnection(retry_period, connection))
 
 
 ADD_ENTRY_ERROR = """\
