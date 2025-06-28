@@ -453,14 +453,17 @@ class RedBeatScheduler(Scheduler):
             redis_key = self.Entry.generate_key(self.app, name)
 
             try:
-                entry = self.Entry.from_key(redis_key, app=self.app)
+                redis_entry = self.Entry.from_key(redis_key, app=self.app)
+                entry = self._maybe_entry(name, entry)
+                entry.last_run_at = (
+                    redis_entry.last_run_at
+                )  # update definition while preserving last_run_at
             except KeyError:
                 try:
                     entry = self._maybe_entry(name, entry)
                 except Exception as exc:
                     logger.error(ADD_ENTRY_ERROR, name, exc, entry)
                     continue
-
             entry.save()  # store into redis
             logger.debug("beat: Stored entry: %s", entry)
 
