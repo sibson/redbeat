@@ -108,6 +108,8 @@ jobs:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
 
     steps:
+    - name: Check out source code
+      uses: actions/checkout@v4
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:
