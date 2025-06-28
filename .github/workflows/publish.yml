@@ -123,7 +123,7 @@ jobs:
       run: |
         CURVER=$(grep '^version = ' setup.cfg | sed 's/version = //')
         GITHASH=$(git rev-parse --short HEAD)
-        sed -i.bak "s/^version = .*/version = ${CURVER}.dev0+${GITHASH}/" setup.cfg
+        sed -i.bak "s/^version = .*/version = ${CURVER}+${GITHASH}/" setup.cfg
         cat setup.cfg | grep version
 
     - name: Build a binary wheel and a source tarball
