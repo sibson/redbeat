@@ -113,6 +113,12 @@ jobs:
       with:
         name: python-package-distributions
         path: dist/
+    - name: Set dev version with git hash for TestPyPI
+      run: |
+        CURVER=$(grep '^version = ' setup.cfg | sed 's/version = //')
+        GITHASH=$(git rev-parse --short HEAD)
+        sed -i.bak "s/^version = .*/version = ${CURVER}.dev0+${GITHASH}/" setup.cfg
+        cat setup.cfg | grep version
     - name: Publish distribution 📦 to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
