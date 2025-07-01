@@ -119,17 +119,6 @@ jobs:
     - name: Install build tool
       run: python3 -m pip install build --user
 
-    - name: Set dev version with git hash for TestPyPI
-      run: |
-        CURVER=$(grep '^version = ' setup.cfg | sed 's/version = //')
-        GITHASH=$(git rev-parse --short HEAD)
-        if [[ "$CURVER" == *dev* ]]; then
-          sed -i.bak "s/^version = .*/version = ${CURVER}.${GITHASH}/" setup.cfg
-        else
-          sed -i.bak "s/^version = .*/version = ${CURVER}.dev0.${GITHASH}/" setup.cfg
-        fi
-        cat setup.cfg | grep version
-
     - name: Build a binary wheel and a source tarball
       run: python3 -m build
 
