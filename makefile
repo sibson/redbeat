@@ -1,4 +1,4 @@
-.PHONY: upload release release-test release-tag build
+.PHONY: upload release release-test release-tag build version
 
 REQUIREMENTS_TXT=requirements-dev.txt
 
@@ -44,3 +44,6 @@ clean:
 veryclean: clean clean-venv
 
 include Makefile.venv
+
+version:
+	@grep -m1 '^version' setup.cfg | sed 's/.*= *//'
