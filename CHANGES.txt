@@ -2,6 +2,7 @@
 ---------------------
   - add Python 3.12 support, thanks @AnkiHubSoftware
   - bugfix, update RedBeatSchedulerEntry definitions for improved type safety and correctness, thanks @sotosapp
+  - bugfix, Redbeat no longer updating tasks definitions on Redis #289, thanks @semoac
   - ci, fix testpypi publish by checking out source before version update
   - test, pin fakeredis<2.27.0 for Python 3.8 support
 
