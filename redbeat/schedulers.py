@@ -521,10 +521,39 @@ class RedBeatScheduler(Scheduler):
                     logger.debug('Scheduler: %s sent.', entry.task)
         return next_time_to_run
 
-    def tick(self, min=min, **kwargs):
+    def acquire_lock(self):
+        logger.debug('beat: Acquiring lock...')
+        redis_client = get_redis(self.app)
+
         if self.lock_key:
-            logger.debug('beat: Extending lock...')
-            self.lock.extend(int(self.lock_timeout))
+            lock = redis_client.lock(
+                self.lock_key,
+                timeout=self.lock_timeout,
+                sleep=self.max_interval,
+            )
+
+            # overwrite redis-py's extend script
+            # which will add additional timeout instead of extend to a new timeout
+            lock.lua_extend = redis_client.register_script(LUA_EXTEND_TO_SCRIPT)
+            try:
+                lock.acquire()
+                logger.info('beat: Acquired lock')
+                self.lock = lock
+            except redis.exceptions.ConnectionError:
+                logger.warning('beat: Failed to acquire lock due to Redis connection error')
+                self.lock = None
+
+    def tick(self, min=min, **kwargs):
+        if self.lock:
+            try:
+                logger.debug('beat: Extending lock...')
+                self.lock.extend(int(self.lock_timeout))
+            except redis.exceptions.ConnectionError:
+                logger.warning('beat: Lost connection to Redis, attempting to re-acquire lock...')
+                self.lock = None
+
+        if not self.lock:
+            self.acquire_lock()
 
         remaining_times = []
         try:
