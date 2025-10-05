@@ -13,7 +13,6 @@ flake8-black
 flake8-isort
 
 # Testing
-# Pin fakeredis to <2.27.0 because newer versions do not support Python 3.8
-fakeredis>=1.0.3,<2.27.0
+fakeredis>=2.27.0
 
 pbr
