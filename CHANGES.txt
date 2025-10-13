@@ -1,4 +1,8 @@
-2.3.3 (unreleased)
+2.3.3dev (unreleased)
+---------------------
+  - Drop support for Python 3.8 and add CI coverage through Python 3.13.
+
+2.3.3 (2025-07-02)
 ---------------------
   - add Python 3.12 support, thanks @AnkiHubSoftware
   - bugfix, update RedBeatSchedulerEntry definitions for improved type safety and correctness, thanks @sotosapp
