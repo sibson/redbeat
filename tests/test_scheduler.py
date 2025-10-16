@@ -9,6 +9,7 @@ import pytz
 from celery.beat import DEFAULT_MAX_INTERVAL
 from celery.schedules import schedstate, schedule
 from celery.utils.time import maybe_timedelta
+from redis import CredentialProvider
 from redis.exceptions import ConnectionError
 
 from redbeat import RedBeatScheduler
@@ -387,6 +388,42 @@ class SSLConnectionToRedisNoCerts(AppCase):
         assert 'ssl_keyfile' not in redis_client.connection_pool.connection_kwargs
         assert 'ssl_certfile' not in redis_client.connection_pool.connection_kwargs
         assert 'ssl_ca_certs' not in redis_client.connection_pool.connection_kwargs
+
+
+class RedisWithCredentialProvider(AppCase):
+    class UserCredProvider(CredentialProvider):
+        def __init__(self, username, password):
+            self.username = username
+            self.password = password
+
+        def get_credential(self):
+            return self.username, self.password
+
+    config_dict = {
+        'REDBEAT_KEY_PREFIX': 'rb-tests:',
+        'REDBEAT_REDIS_URL': 'rediss://redishost:26379/0',
+        'REDBEAT_REDIS_OPTIONS': {
+            'credential_provider': UserCredProvider("test_user", "test_pass")
+        },
+        'REDBEAT_REDIS_USE_SSL': True,
+    }
+
+    def setup(self):  # celery3
+        self.app.conf.add_defaults(deepcopy(self.config_dict))
+
+    def test_redis_with_credential_provider_scheduler(self):
+        redis_client = get_redis(app=self.app)
+
+        # existing ssl checks
+        assert 'SSLConnection' in str(redis_client.connection_pool)
+        assert redis_client.connection_pool.connection_kwargs['ssl_cert_reqs'] == ssl.CERT_REQUIRED
+
+        # check for credential provider
+        assert 'username' not in redis_client.connection_pool.connection_kwargs
+        assert 'password' not in redis_client.connection_pool.connection_kwargs
+        assert 'credential_provider' in redis_client.connection_pool.connection_kwargs
+        cred_provider = redis_client.connection_pool.connection_kwargs['credential_provider']
+        assert isinstance(cred_provider, CredentialProvider)
 
 
 class RedBeatLockTimeoutDefaultValues(RedBeatCase):

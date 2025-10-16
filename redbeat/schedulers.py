@@ -147,15 +147,19 @@ def get_redis(app=None):
             ssl_options = {'ssl_cert_reqs': ssl.CERT_REQUIRED}
             if isinstance(conf.redis_use_ssl, dict):
                 ssl_options.update(conf.redis_use_ssl)
-            connection = StrictRedis.from_url(conf.redis_url, decode_responses=True, **ssl_options)
+            extras = {"decode_responses": True, **ssl_options, **redis_options}
+            connection = StrictRedis.from_url(conf.redis_url, **extras)
         elif conf.redis_url.startswith('redis-cluster'):
             from rediscluster import RedisCluster
 
             if not redis_options.get('startup_nodes'):
-                redis_options = {'startup_nodes': [{"host": "localhost", "port": "30001"}]}
-            connection = RedisCluster(decode_responses=True, **redis_options)
+                startup_nodes_options = {'startup_nodes': [{"host": "localhost", "port": "30001"}]}
+                redis_options.update(startup_nodes_options)
+            redis_options.update({"decode_responses": True})
+            connection = RedisCluster(**redis_options)
         else:
-            connection = StrictRedis.from_url(conf.redis_url, decode_responses=True)
+            redis_options.update({"decode_responses": True})
+            connection = StrictRedis.from_url(conf.redis_url, **redis_options)
 
         if connection:
             _set_redbeat_connect(app, REDBEAT_REDIS_KEY, connection, retry_period)

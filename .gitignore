@@ -55,6 +55,10 @@ tox-*.xml
 # Django stuff:
 *.log
 
+# ide/editor
+.idea/
+.vscode/
+
 # Sphinx documentation
 docs/_build/
 
