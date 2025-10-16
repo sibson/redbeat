@@ -3,9 +3,11 @@
 # of the License at http://www.apache.org/licenses/LICENSE-2.0
 # Copyright 2015 Marc Sibson
 
-
 import json
+import os
+import socket
 import ssl
+import uuid
 import warnings
 from datetime import MINYEAR, datetime
 from typing import Any
@@ -195,6 +197,7 @@ class RedBeatConfig:
         self.key_prefix = self.either_or('redbeat_key_prefix', 'redbeat:')
         self.schedule_key = self.key_prefix + ':schedule'
         self.statics_key = self.key_prefix + ':statics'
+
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
         self.redis_use_ssl = self.either_or('redbeat_redis_use_ssl', app.conf['BROKER_USE_SSL'])
         self.redbeat_redis_options = self.either_or(
@@ -203,7 +206,14 @@ class RedBeatConfig:
         self.lock_key = self.either_or('redbeat_lock_key', self.key_prefix + ':lock')
         if self.lock_key and not self.lock_key.startswith(self.key_prefix):
             self.lock_key = self.key_prefix + self.lock_key
+        self.lock_token = self.generate_lock_token()
         self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
+
+    @staticmethod
+    def generate_lock_token():
+        return '{uuid}-{hostname}-{pid}'.format(
+            uuid=uuid.uuid1().hex, hostname=socket.gethostname(), pid=os.getpid()
+        )
 
     @property
     def schedule(self):
@@ -423,6 +433,7 @@ class RedBeatScheduler(Scheduler):
         super(RedBeatScheduler, self).__init__(app, **kwargs)
 
         self.lock_key = lock_key or app.redbeat_conf.lock_key
+        self.lock_token = app.redbeat_conf.lock_token
         self.lock_timeout = (
             lock_timeout
             or app.redbeat_conf.lock_timeout
@@ -589,6 +600,6 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     # overwrite redis-py's extend script
     # which will add additional timeout instead of extend to a new timeout
     lock.lua_extend = redis_client.register_script(LUA_EXTEND_TO_SCRIPT)
-    lock.acquire()
+    lock.acquire(token=scheduler.lock_token)
     logger.info('beat: Acquired lock')
     scheduler.lock = lock
