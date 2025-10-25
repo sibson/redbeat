@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from celery.contrib.testing.app import TestApp
 from celery.schedules import schedule
-from fakeredis import FakeServer, FakeStrictRedis
+from fakeredis import FakeRedis, FakeServer
 
 from redbeat.schedulers import RedBeatSchedulerEntry
 
@@ -22,7 +22,7 @@ class RedBeatCase(AppCase):
         self.app.conf.add_defaults(
             {'REDBEAT_KEY_PREFIX': 'rb-tests:', 'redbeat_key_prefix': 'rb-tests:'}
         )
-        self.app.redbeat_redis = FakeStrictRedis(decode_responses=True, server=self.redis_server)
+        self.app.redbeat_redis = FakeRedis(decode_responses=True, server=self.redis_server)
         self.app.redbeat_redis.flushdb()
 
     def create_entry(self, name=None, task=None, s=None, run_every=60, **kwargs):

@@ -18,7 +18,7 @@ from celery.utils.log import get_logger
 from celery.utils.time import humanize_seconds
 from kombu.utils.objects import cached_property
 from kombu.utils.url import maybe_sanitize_url
-from redis.client import StrictRedis
+from redis import Redis
 from redis.sentinel import MasterNotFoundError, Sentinel
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
 
@@ -148,9 +148,9 @@ def get_redis(app=None):
             if isinstance(conf.redis_use_ssl, dict):
                 ssl_options.update(conf.redis_use_ssl)
             extras = {"decode_responses": True, **ssl_options, **redis_options}
-            connection = StrictRedis.from_url(conf.redis_url, **extras)
+            connection = Redis.from_url(conf.redis_url, **extras)
         elif conf.redis_url.startswith('redis-cluster'):
-            from rediscluster import RedisCluster
+            from redis.cluster import RedisCluster
 
             if not redis_options.get('startup_nodes'):
                 startup_nodes_options = {'startup_nodes': [{"host": "localhost", "port": "30001"}]}
@@ -159,7 +159,7 @@ def get_redis(app=None):
             connection = RedisCluster(**redis_options)
         else:
             redis_options.update({"decode_responses": True})
-            connection = StrictRedis.from_url(conf.redis_url, **redis_options)
+            connection = Redis.from_url(conf.redis_url, **redis_options)
 
         if connection:
             _set_redbeat_connect(app, REDBEAT_REDIS_KEY, connection, retry_period)
