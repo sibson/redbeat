@@ -1,0 +1,3 @@
+[tools]
+# Pin the Python version for local environments managed by mise
+python = "3.13"
