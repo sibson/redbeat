@@ -249,6 +249,30 @@ class ClusterRedBeatCase(AppCase):
             self.assertTrue(from_url.called)
 
 
+class ClusterUrlRedBeatCase(AppCase):
+    config_dict = {
+        'REDBEAT_REDIS_URL': 'redis-cluster://redis-cluster:30001/0',
+        'REDBEAT_REDIS_OPTIONS': {
+            'startup_nodes': [
+                {"host": "192.168.1.1", "port": "30001"},
+                {"host": "192.168.1.2", "port": 30002},
+            ]
+        },
+    }
+
+    def setup(self):
+        self.app.conf.add_defaults(deepcopy(self.config_dict))
+
+    def test_cluster_scheduler_from_url(self):
+        with mock.patch('redis.cluster.RedisCluster') as redis_cluster:
+            get_redis(app=self.app)
+            redis_cluster.assert_called_once()
+            kwargs = redis_cluster.call_args.kwargs
+            self.assertTrue(kwargs['decode_responses'])
+            for node in kwargs['startup_nodes']:
+                self.assertIsInstance(node['port'], int)
+
+
 class SentinelRedBeatCase(AppCase):
     config_dict = {
         'REDBEAT_KEY_PREFIX': 'rb-tests:',

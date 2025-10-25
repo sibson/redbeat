@@ -150,11 +150,20 @@ def get_redis(app=None):
             extras = {"decode_responses": True, **ssl_options, **redis_options}
             connection = StrictRedis.from_url(conf.redis_url, **extras)
         elif conf.redis_url.startswith('redis-cluster'):
-            from rediscluster import RedisCluster
+            from redis.cluster import RedisCluster
 
             if not redis_options.get('startup_nodes'):
-                startup_nodes_options = {'startup_nodes': [{"host": "localhost", "port": "30001"}]}
+                startup_nodes_options = {
+                    'startup_nodes': [{"host": "localhost", "port": 30001}]
+                }
                 redis_options.update(startup_nodes_options)
+
+            startup_nodes = redis_options.get('startup_nodes')
+            if startup_nodes:
+                redis_options['startup_nodes'] = [
+                    {**node, "port": int(node["port"])} for node in startup_nodes
+                ]
+
             redis_options.update({"decode_responses": True})
             connection = RedisCluster(**redis_options)
         else:
