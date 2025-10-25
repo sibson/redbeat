@@ -153,9 +153,7 @@ def get_redis(app=None):
             from redis.cluster import RedisCluster
 
             if not redis_options.get('startup_nodes'):
-                startup_nodes_options = {
-                    'startup_nodes': [{"host": "localhost", "port": 30001}]
-                }
+                startup_nodes_options = {'startup_nodes': [{"host": "localhost", "port": 30001}]}
                 redis_options.update(startup_nodes_options)
 
             startup_nodes = redis_options.get('startup_nodes')
