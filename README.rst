@@ -76,10 +76,20 @@ Development
 --------------
 RedBeat is available on `GitHub <https://github.com/sibson/redbeat>`_
 
-Once you have the source you can run the tests with the following commands::
+Once you have the source you can run the tests with make (recommended)::
+
+    make setup
+    make test
+
+Or using pip directly::
 
     pip install -r requirements-dev.txt
     python -m unittest discover tests
+
+Optional: if you use mise to manage Python, it will read `.mise.toml` and install the pinned Python version. After that, still use make for tasks::
+
+    mise install
+    make setup && make test
 
 You can also quickly fire up a sample Beat instance with::
 

@@ -1,17 +1,21 @@
 Testing
 ---------
- - use pyenv on OSX to manage multiple python versions
- 
-``` pip install -r requirements-dev.txt
+ - Recommended: use make for setup and running tests
+
+    make setup
+    make test
+
+ - Or use pyenv/pip manually on macOS to manage Python versions
+
+    pip install -r requirements-dev.txt
     python -m unittest discover tests
-```
 
 Release
 ---------
  - bump version and release to pypi
 
-    make version-NEWVERSION
-    make release
+    make release-check
+    VERSION='M.m.p' make release
 
  - create release in GitHub
 
