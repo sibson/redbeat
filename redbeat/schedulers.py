@@ -153,8 +153,15 @@ def get_redis(app=None):
             from redis.cluster import RedisCluster
 
             if not redis_options.get('startup_nodes'):
-                startup_nodes_options = {'startup_nodes': [{"host": "localhost", "port": "30001"}]}
+                startup_nodes_options = {'startup_nodes': [{"host": "localhost", "port": 30001}]}
                 redis_options.update(startup_nodes_options)
+
+            startup_nodes = redis_options.get('startup_nodes')
+            if startup_nodes:
+                redis_options['startup_nodes'] = [
+                    {**node, "port": int(node["port"])} for node in startup_nodes
+                ]
+
             redis_options.update({"decode_responses": True})
             connection = RedisCluster(**redis_options)
         else:
