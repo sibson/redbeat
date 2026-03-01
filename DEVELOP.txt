@@ -1,14 +1,33 @@
+Environment
+-----------
+ - mise is used to pin the Python version (see .mise.toml)
+ - Install mise: https://mise.jdx.dev/getting-started.html
+ - Then activate the environment:
+
+    mise install
+    mise activate
+
 Testing
 ---------
- - Recommended: use make for setup and running tests
+ - Use make for setup and running tests:
 
     make setup
     make test
 
- - Or use pyenv/pip manually on macOS to manage Python versions
+ - Or use pip manually:
 
     pip install -r requirements-dev.txt
+    pip install -e .
     python -m unittest discover tests
+
+Linting
+---------
+    make lint
+
+CI
+---------
+ - ci.yml: runs tests across the Python version matrix on push/PR
+ - publish.yml: publishes to PyPI on tagged releases
 
 Release
 ---------
