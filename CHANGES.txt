@@ -1,3 +1,7 @@
+2.3.4dev (unreleased)
+---------------------
+  - bugfix, due_at property now correctly calculates next run time, fixes #307
+
 2.3.3dev (2026-03-01)
 ---------------------
   - Drop support for Python 3.8 and add CI coverage through Python 3.13.
@@ -92,3 +96,4 @@
  - be more consistent about using UTC everywhere
  - various bugfixes, thanks Christopher Arndt
  - improved configuration handling, thanks Jannis Leidel
+  -

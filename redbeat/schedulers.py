@@ -330,7 +330,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         if delta.total_seconds() < 0:
             return self._default_now()
 
-        return self.last_run_at + delta
+        return self._default_now() + delta
 
     @property
     def key(self):
