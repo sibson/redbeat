@@ -141,7 +141,7 @@ def get_redis(app=None):
                 sentinel_kwargs=redis_options.get('sentinel_kwargs'),
                 **connection_kwargs,
             )
-            _set_redbeat_connect(app, REDBEAT_SENTINEL_KEY, sentinel, retry_period)
+            setattr(app, REDBEAT_SENTINEL_KEY, sentinel)
             connection = None
         elif conf.redis_url.startswith('rediss'):
             ssl_options = {'ssl_cert_reqs': ssl.CERT_REQUIRED}
