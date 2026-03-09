@@ -307,6 +307,13 @@ class SentinelRedBeatCase(AppCase):
             redis_client = get_redis(app=self.app)
             assert 'Sentinel' in str(redis_client.connection_pool)
 
+    def test_sentinel_scheduler_with_retry_period(self):
+        options = deepcopy(self.BROKER_TRANSPORT_OPTIONS)
+        options['retry_period'] = 60
+        self.app.conf.update({'BROKER_TRANSPORT_OPTIONS': options})
+        redis_client = get_redis(app=self.app)
+        assert 'Sentinel' in str(redis_client.connection_pool)
+
 
 class SeparateOptionsForSchedulerCase(AppCase):
     config_dict = {
