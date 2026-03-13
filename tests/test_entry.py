@@ -103,8 +103,9 @@ class test_RedBeatEntry(RedBeatCase):
         entry.last_run_at = now
         due_at = entry.due_at
 
-        self.assertLess(now, due_at)
-        self.assertLess(due_at, now + entry.schedule.run_every)
+        # due_at should be approximately now + run_every (not last_run_at based)
+        expected = now + entry.schedule.run_every
+        self.assertAlmostEqual(due_at.timestamp(), expected.timestamp(), delta=1)
 
     def test_due_at_overdue(self):
         last_run_at = self.app.now() - timedelta(hours=10)
@@ -112,9 +113,11 @@ class test_RedBeatEntry(RedBeatCase):
 
         before = entry._default_now()
         due_at = entry.due_at
+        after = entry._default_now()
 
-        self.assertLess(last_run_at, due_at)
-        self.assertGreater(due_at, before)
+        # overdue tasks should be due now, not relative to last_run_at
+        self.assertGreaterEqual(due_at, before)
+        self.assertLessEqual(due_at, after)
 
     def test_score(self):
         run_every = 61 * 60
