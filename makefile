@@ -36,6 +36,8 @@ else
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags
 	printf "%s\n%s\n%s\n  -\n" "$(VERSION)dev (unreleased)" "---------------------" "$$(cat CHANGES.txt)" > CHANGES.txt
+	git commit -m"bump CHANGES.txt to $(VERSION)dev for post-release development" CHANGES.txt
+	git push
 endif
 
 docs:
