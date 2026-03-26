@@ -139,6 +139,7 @@ def get_redis(app=None):
                 db=redis_options.get('db', 0),
                 decode_responses=True,
                 sentinel_kwargs=redis_options.get('sentinel_kwargs'),
+                credential_provider=redis_options.get('credential_provider'),
                 **connection_kwargs,
             )
             setattr(app, REDBEAT_SENTINEL_KEY, sentinel)

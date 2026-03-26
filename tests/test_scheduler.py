@@ -457,6 +457,37 @@ class RedisWithCredentialProvider(AppCase):
         assert isinstance(cred_provider, CredentialProvider)
 
 
+class SentinelWithCredentialProvider(AppCase):
+    class UserCredProvider(CredentialProvider):
+        def __init__(self, username, password):
+            self.username = username
+            self.password = password
+
+        def get_credential(self):
+            return self.username, self.password
+
+    config_dict = {
+        'REDBEAT_KEY_PREFIX': 'rb-tests:',
+        'REDBEAT_REDIS_URL': 'redis-sentinel://redis-sentinel:26379/0',
+        'REDBEAT_REDIS_OPTIONS': {
+            'sentinels': [('192.168.1.1', 26379)],
+            'service_name': 'master',
+            'socket_timeout': 0.1,
+            'credential_provider': UserCredProvider("test_user", "test_pass"),
+        },
+    }
+
+    def setup(self):  # celery3
+        self.app.conf.add_defaults(deepcopy(self.config_dict))
+
+    def test_sentinel_with_credential_provider(self):
+        redis_client = get_redis(app=self.app)
+        assert 'Sentinel' in str(redis_client.connection_pool)
+        assert 'credential_provider' in redis_client.connection_pool.connection_kwargs
+        cred_provider = redis_client.connection_pool.connection_kwargs['credential_provider']
+        assert isinstance(cred_provider, CredentialProvider)
+
+
 class RedBeatLockTimeoutDefaultValues(RedBeatCase):
     def test_no_values(self):
         scheduler = RedBeatScheduler(app=self.app)
