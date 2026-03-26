@@ -132,6 +132,14 @@ def get_redis(app=None):
             if isinstance(conf.redis_use_ssl, dict):
                 connection_kwargs['ssl'] = True
                 connection_kwargs.update(conf.redis_use_ssl)
+
+            # username is not included in Sentinel initialization because older versions of
+            # py-redis do not support it. It is supported in redis>=3.4.0, but redbeat
+            # requires redis>=3.2.
+            username = redis_options.get('username')
+            if username:
+                connection_kwargs['username'] = username
+
             sentinel = Sentinel(
                 redis_options['sentinels'],
                 socket_timeout=redis_options.get('socket_timeout'),

@@ -314,6 +314,15 @@ class SentinelRedBeatCase(AppCase):
         redis_client = get_redis(app=self.app)
         assert 'Sentinel' in str(redis_client.connection_pool)
 
+    def test_sentinel_scheduler_with_username(self):
+        options = deepcopy(self.BROKER_TRANSPORT_OPTIONS)
+        options['username'] = 'acl-user'
+        self.app.conf.update({'BROKER_TRANSPORT_OPTIONS': options})
+        redis_client = get_redis(app=self.app)
+        client_connection_kwargs = redis_client.connection_pool.connection_kwargs
+        assert 'username' in client_connection_kwargs
+        assert client_connection_kwargs['username'] == 'acl-user'
+
 
 class SeparateOptionsForSchedulerCase(AppCase):
     config_dict = {
