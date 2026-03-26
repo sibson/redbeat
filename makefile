@@ -26,6 +26,7 @@ release-check:
 	$(MAKE) test
 
 release-tag: TODAY:=$(shell date '+%Y-%m-%d')
+release-tag: NEXT_VERSION=$(shell echo $(VERSION) | awk -F. '{print $$1"."$$2"."$$3+1}')
 release-tag:
 ifndef VERSION
 	@echo "usage: make release VERSION='M.m.p'" && false
@@ -35,8 +36,8 @@ else
 	git ci -m"prepare for release of $(VERSION)" CHANGES.txt setup.cfg || git commit -m"prepare for release of $(VERSION)" CHANGES.txt setup.cfg || true
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags
-	printf "%s\n%s\n%s\n  -\n" "$(VERSION)dev (unreleased)" "---------------------" "$$(cat CHANGES.txt)" > CHANGES.txt
-	git commit -m"bump CHANGES.txt to $(VERSION)dev for post-release development" CHANGES.txt
+	printf "%s\n%s\n%s\n  -\n" "$(NEXT_VERSION)dev (unreleased)" "---------------------" "$$(cat CHANGES.txt)" > CHANGES.txt
+	git commit -m"bump CHANGES.txt to $(NEXT_VERSION)dev for post-release development" CHANGES.txt
 	git push
 endif
 
