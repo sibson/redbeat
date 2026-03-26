@@ -320,8 +320,7 @@ class SentinelRedBeatCase(AppCase):
         self.app.conf.update({'BROKER_TRANSPORT_OPTIONS': options})
         redis_client = get_redis(app=self.app)
         client_connection_kwargs = redis_client.connection_pool.connection_kwargs
-        assert 'username' in client_connection_kwargs
-        assert client_connection_kwargs['username'] == 'acl-user'
+        assert client_connection_kwargs.get('username') == 'acl-user'
 
 
 class SeparateOptionsForSchedulerCase(AppCase):
