@@ -1,9 +1,10 @@
-2.3.3dev (2026-03-01)
+2.4.0 (2026-03-26)
 ---------------------
   - Drop support for Python 3.8 and add CI coverage through Python 3.13.
   - Add support for Redis credential providers, thanks @alaminopu
   - Use redis-py built-in RedisCluster instead of redis-py-cluster for cluster URLs
   - Replace deprecated StrictRedis usages with Redis
+  - bugfix, don't wrap Sentinel in RetryingConnection, fixes #309, thanks @victorlane
 
 2.3.3 (2025-07-02)
 ---------------------
