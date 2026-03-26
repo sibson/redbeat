@@ -17,6 +17,8 @@ build:
 
 release: release-check unittests release-tag
 release-check:
+	# ensure on main branch
+	test "`git rev-parse --abbrev-ref HEAD`" = "main"
 	# ensure latest code
 	git pull
 	# ensure no local changes
@@ -30,7 +32,7 @@ ifndef VERSION
 else
 	sed -i '' -e 's|version = .*|version = $(VERSION)|' setup.cfg
 	sed -i '' -e "s/unreleased/$(TODAY)/" CHANGES.txt
-	git ci -m"prepare for release of $(VERSION)" CHANGES.txt setup.cfg || git commit -m"prepare for release of $(VERSION)" CHANGES.txt setup.cfg
+	git ci -m"prepare for release of $(VERSION)" CHANGES.txt setup.cfg || git commit -m"prepare for release of $(VERSION)" CHANGES.txt setup.cfg || true
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags
 	printf "%s\n%s\n%s\n  -\n" "$(VERSION)dev (unreleased)" "---------------------" "$$(cat CHANGES.txt)" > CHANGES.txt
