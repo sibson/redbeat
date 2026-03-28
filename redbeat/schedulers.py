@@ -133,11 +133,11 @@ def get_redis(app=None):
                 connection_kwargs['ssl'] = True
                 connection_kwargs.update(conf.redis_use_ssl)
 
-            # username is not included in Sentinel initialization because older versions of
-            # py-redis do not support it. It is supported in redis>=3.4.0, but redbeat
-            # requires redis>=3.2.
+            # Pass username via connection_kwargs rather than as a direct named argument
+            # because redis<3.4.0 does not support username in the Sentinel constructor,
+            # and redbeat supports redis>=3.2.
             username = redis_options.get('username')
-            if username:
+            if username is not None:
                 connection_kwargs['username'] = username
 
             sentinel = Sentinel(
