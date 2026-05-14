@@ -143,6 +143,7 @@ def get_redis(app=None):
             sentinel = Sentinel(
                 redis_options['sentinels'],
                 socket_timeout=redis_options.get('socket_timeout'),
+                username=redis_options.get('username'),
                 password=redis_options.get('password'),
                 db=redis_options.get('db', 0),
                 decode_responses=True,
