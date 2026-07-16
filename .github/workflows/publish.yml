@@ -131,14 +131,22 @@ jobs:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
 
     steps:
-    # rebuild rather than reuse the build job's artifact: pbr derives the
-    # version from git describe, so it needs the full history to produce a
-    # unique .devN version for TestPyPI.
+    # Rebuild rather than reuse the build job's artifact: setup.cfg pins the
+    # last released version, so on untagged commits pbr's git-derived version
+    # (next patch) conflicts with the pin and the build fails. Override with an
+    # explicit PBR_VERSION of <next>.dev<commit-count> so every untagged push
+    # produces a unique, PEP 440-compliant dev release. Needs full history for
+    # the tag lookup and commit count.
     - name: Check out source code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
         persist-credentials: false
+    - name: Compute dev version
+      run: |
+        base=$(git describe --tags --abbrev=0 | sed 's/^v//')
+        next=$(echo "$base" | awk -F. '{print $1"."$2"."$3+1}')
+        echo "PBR_VERSION=${next}.dev$(git rev-list --count HEAD)" >> "$GITHUB_ENV"
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
