@@ -1,3 +1,5 @@
+2.4.2 (unreleased)
+---------------------
 2.4.1 (2026-07-16)
 ---------------------
   - ci, restore PyPI/TestPyPI publish jobs dropped in a CI refactor; 2.3.4 and
@@ -99,4 +101,5 @@
  - be more consistent about using UTC everywhere
  - various bugfixes, thanks Christopher Arndt
  - improved configuration handling, thanks Jannis Leidel
+  -
   -
