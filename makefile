@@ -1,4 +1,4 @@
-.PHONY: upload release release-test release-tag build version setup lint test unittests docs clean veryclean clean-venv release-check
+.PHONY: upload release release-test release-tag bump-version build version setup lint test unittests docs clean veryclean clean-venv release-check
 
 REQUIREMENTS_TXT=requirements-dev.txt
 
@@ -25,21 +25,34 @@ release-check:
 	test -z "`git status --porcelain`"
 	$(MAKE) test
 
-# VERSION defaults to the version already queued at the top of CHANGES.txt
-# (see the post-release bump below); pass VERSION='M.m.p' to override.
+# VERSION defaults to what pbr derives from git tags (next patch above the
+# last release, or the version targeted by a bump-version pre-release tag);
+# pass VERSION='M.m.p' to override. Git tags are the source of truth, not
+# CHANGES.txt -- use `make bump-version VERSION='M.m.p'` for a minor/major
+# release, since pbr can only auto-advance the patch number on its own.
 release-tag: TODAY:=$(shell date '+%Y-%m-%d')
-release-tag: VERSION:=$(or $(VERSION),$(shell awk 'NR==1 && /\(unreleased\)/ {print $$1}' CHANGES.txt))
+release-tag: VERSION:=$(or $(VERSION),$(shell python setup.py --version 2>/dev/null | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+'))
 release-tag: NEXT_VERSION=$(shell echo $(VERSION) | awk -F. '{print $$1"."$$2"."$$3+1}')
 release-tag:
-	@test -n "$(VERSION)" || (echo "usage: make release [VERSION='M.m.p'] -- couldn't detect next version from CHANGES.txt" && exit 1)
+	@test -n "$(VERSION)" || (echo "usage: make release [VERSION='M.m.p'] -- couldn't detect version from git tags" && exit 1)
 	@echo "releasing $(VERSION)"
-	sed -i '' -e "s/unreleased/$(TODAY)/" CHANGES.txt
+	sed -i '' -e "1s/.*/$(VERSION) ($(TODAY))/" CHANGES.txt
 	git ci -m"prepare for release of $(VERSION)" CHANGES.txt || git commit -m"prepare for release of $(VERSION)" CHANGES.txt || true
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags
 	printf "%s\n%s\n%s\n  -\n" "$(NEXT_VERSION) (unreleased)" "---------------------" "$$(cat CHANGES.txt)" > CHANGES.txt
 	git commit -m"bump CHANGES.txt to $(NEXT_VERSION) for post-release development" CHANGES.txt
 	git push
+
+# Force pbr to target a minor/major release instead of auto-advancing the
+# patch number: tags vM.m.p.0a1, a pbr pre-release marker. Every untagged
+# build from here computes as M.m.p.0a<N>.dev<commits> until the real
+# vM.m.p tag lands via `make release`. Deciding to bump minor/major is a
+# human call, so VERSION is required, not inferred.
+bump-version:
+	@test -n "$(VERSION)" || (echo "usage: make bump-version VERSION='M.m.p'" && exit 1)
+	git tag -a v$(VERSION).0a1 -m"target next release version $(VERSION)"
+	git push origin v$(VERSION).0a1
 
 docs:
 	$(MAKE) -C docs/ html
