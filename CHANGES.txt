@@ -1,4 +1,4 @@
-2.4.1 (unreleased)
+2.4.1 (2026-07-16)
 ---------------------
   - ci, restore PyPI/TestPyPI publish jobs dropped in a CI refactor; 2.3.4 and
     2.4.0 were tagged but never published to PyPI, fixes #316
