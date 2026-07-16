@@ -31,9 +31,8 @@ release-tag:
 ifndef VERSION
 	@echo "usage: make release VERSION='M.m.p'" && false
 else
-	sed -i '' -e 's|version = .*|version = $(VERSION)|' setup.cfg
 	sed -i '' -e "s/unreleased/$(TODAY)/" CHANGES.txt
-	git ci -m"prepare for release of $(VERSION)" CHANGES.txt setup.cfg || git commit -m"prepare for release of $(VERSION)" CHANGES.txt setup.cfg || true
+	git ci -m"prepare for release of $(VERSION)" CHANGES.txt || git commit -m"prepare for release of $(VERSION)" CHANGES.txt || true
 	git tag -a v$(VERSION) -m"release version $(VERSION)"
 	git push --tags
 	printf "%s\n%s\n%s\n  -\n" "$(NEXT_VERSION)dev (unreleased)" "---------------------" "$$(cat CHANGES.txt)" > CHANGES.txt
@@ -57,4 +56,4 @@ clean-venv:
 	rm -rf .venv
 
 version:
-	@grep -m1 '^version' setup.cfg | sed 's/.*= *//'
+	@python setup.py --version
