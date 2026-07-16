@@ -1,5 +1,9 @@
-2.4.1dev (unreleased)
+2.4.1 (unreleased)
 ---------------------
+  - ci, restore PyPI/TestPyPI publish jobs dropped in a CI refactor; 2.3.4 and
+    2.4.0 were tagged but never published to PyPI, fixes #316
+  - First PyPI release since 2.3.3; includes all 2.4.0 changes below
+
 2.4.0 (2026-03-26)
 ---------------------
   - Drop support for Python 3.8 and add CI coverage through Python 3.13.
