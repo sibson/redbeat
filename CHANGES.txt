@@ -1,5 +1,8 @@
 2.4.2 (unreleased)
 ---------------------
+  - bugfix, stop forwarding the internal `retry_period` redis option to
+    redis-py's connection classes, fixes #319
+
 2.4.1 (2026-07-16)
 ---------------------
   - ci, restore PyPI/TestPyPI publish jobs dropped in a CI refactor; 2.3.4 and

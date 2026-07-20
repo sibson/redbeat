@@ -13,7 +13,12 @@ from redis import CredentialProvider
 from redis.exceptions import ConnectionError
 
 from redbeat import RedBeatScheduler
-from redbeat.schedulers import RedBeatSchedulerEntry, acquire_distributed_beat_lock, get_redis
+from redbeat.schedulers import (
+    RedBeatSchedulerEntry,
+    RetryingConnection,
+    acquire_distributed_beat_lock,
+    get_redis,
+)
 from tests.basecase import AppCase, RedBeatCase
 
 
@@ -229,6 +234,26 @@ class NotSentinelRedBeatCase(AppCase):
     def test_sentinel_scheduler(self):
         redis_client = get_redis(app=self.app)
         assert 'Sentinel' not in str(redis_client.connection_pool)
+
+
+class RetryPeriodRedBeatCase(AppCase):
+    config_dict = {
+        'BROKER_URL': 'redis://',
+        'REDBEAT_REDIS_OPTIONS': {
+            'retry_period': 60,
+        },
+    }
+
+    def setup(self):
+        self.app.conf.update(self.config_dict)
+
+    def test_retry_period_not_forwarded_to_redis(self):
+        with mock.patch('redis.Redis.from_url') as from_url:
+            redis_client = get_redis(app=self.app)
+
+        assert isinstance(redis_client, RetryingConnection)
+        self.assertTrue(from_url.called)
+        self.assertNotIn('retry_period', from_url.call_args.kwargs)
 
 
 class ClusterRedBeatCase(AppCase):

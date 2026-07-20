@@ -119,8 +119,8 @@ def ensure_conf(app):
 def get_redis(app=None):
     app = app_or_default(app)
     conf = ensure_conf(app)
-    redis_options = conf.redbeat_redis_options
-    retry_period = redis_options.get('retry_period')
+    redis_options = dict(conf.redbeat_redis_options)
+    retry_period = redis_options.pop('retry_period', None)
 
     if not hasattr(app, REDBEAT_REDIS_KEY) or getattr(app, REDBEAT_REDIS_KEY) is None:
         if redis_options.get('cluster', False):
