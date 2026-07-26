@@ -116,17 +116,61 @@ def ensure_conf(app):
     return config
 
 
+# Options consumed by RedBeat itself, never forwarded to the redis client.
+REDBEAT_INTERNAL_OPTIONS = (
+    'retry_period',
+    'cluster',
+    'sentinels',
+    'service_name',
+    'sentinel_kwargs',
+    'startup_nodes',
+)
+
+# Connection options honored when redis options are inherited from
+# broker_transport_options, which mixes kombu transport settings
+# (visibility_timeout, ...) with connection settings. Like every other
+# consumer of that dict, take only the keys we understand and leave the
+# rest to their owners.
+INHERITED_CONNECTION_KEYS = (
+    'socket_timeout',
+    'password',
+    'db',
+    'username',
+    'credential_provider',
+)
+
+
 def get_redis(app=None):
     app = app_or_default(app)
     conf = ensure_conf(app)
     redis_options = dict(conf.redbeat_redis_options)
     retry_period = redis_options.pop('retry_period', None)
 
+    if conf.is_key_in_conf('redbeat_redis_options'):
+        # options were addressed to redbeat: pass everything except redbeat's
+        # own keys through to the client, which validates its own arguments
+        connection_options = {
+            key: value
+            for key, value in redis_options.items()
+            if key not in REDBEAT_INTERNAL_OPTIONS
+        }
+    else:
+        connection_options = {
+            key: redis_options[key] for key in INHERITED_CONNECTION_KEYS if key in redis_options
+        }
+        ignored = set(redis_options) - set(connection_options) - set(REDBEAT_INTERNAL_OPTIONS)
+        if ignored:
+            logger.debug(
+                'beat: ignoring broker_transport_options not used by redbeat: %s; '
+                'set redbeat_redis_options to pass options to the redis client',
+                ', '.join(sorted(ignored)),
+            )
+
     if not hasattr(app, REDBEAT_REDIS_KEY) or getattr(app, REDBEAT_REDIS_KEY) is None:
         if redis_options.get('cluster', False):
             from redis.cluster import RedisCluster
 
-            connection = RedisCluster.from_url(conf.redis_url, **redis_options)
+            connection = RedisCluster.from_url(conf.redis_url, **connection_options)
         elif conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
             connection_kwargs = {}
             if isinstance(conf.redis_use_ssl, dict):
@@ -156,26 +200,21 @@ def get_redis(app=None):
             ssl_options = {'ssl_cert_reqs': ssl.CERT_REQUIRED}
             if isinstance(conf.redis_use_ssl, dict):
                 ssl_options.update(conf.redis_use_ssl)
-            extras = {"decode_responses": True, **ssl_options, **redis_options}
+            extras = {"decode_responses": True, **ssl_options, **connection_options}
             connection = Redis.from_url(conf.redis_url, **extras)
         elif conf.redis_url.startswith('redis-cluster'):
             from redis.cluster import RedisCluster
 
-            if not redis_options.get('startup_nodes'):
-                startup_nodes_options = {'startup_nodes': [{"host": "localhost", "port": 30001}]}
-                redis_options.update(startup_nodes_options)
+            startup_nodes = redis_options.get('startup_nodes') or [
+                {"host": "localhost", "port": 30001}
+            ]
+            startup_nodes = [{**node, "port": int(node["port"])} for node in startup_nodes]
 
-            startup_nodes = redis_options.get('startup_nodes')
-            if startup_nodes:
-                redis_options['startup_nodes'] = [
-                    {**node, "port": int(node["port"])} for node in startup_nodes
-                ]
-
-            redis_options.update({"decode_responses": True})
-            connection = RedisCluster(**redis_options)
+            connection_options.update({"decode_responses": True})
+            connection = RedisCluster(startup_nodes=startup_nodes, **connection_options)
         else:
-            redis_options.update({"decode_responses": True})
-            connection = Redis.from_url(conf.redis_url, **redis_options)
+            connection_options.update({"decode_responses": True})
+            connection = Redis.from_url(conf.redis_url, **connection_options)
 
         if connection:
             _set_redbeat_connect(app, REDBEAT_REDIS_KEY, connection, retry_period)
@@ -212,10 +251,22 @@ class RedBeatConfig:
         self.schedule_key = self.key_prefix + ':schedule'
         self.statics_key = self.key_prefix + ':statics'
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
+        if not self.is_key_in_conf('redbeat_redis_url'):
+            warnings.warn(
+                'RedBeat will stop falling back to broker_url in version 2.5.0, '
+                'set redbeat_redis_url explicitly',
+                DeprecationWarning,
+            )
         self.redis_use_ssl = self.either_or('redbeat_redis_use_ssl', app.conf['BROKER_USE_SSL'])
         self.redbeat_redis_options = self.either_or(
             'redbeat_redis_options', app.conf['BROKER_TRANSPORT_OPTIONS']
         )
+        if not self.is_key_in_conf('redbeat_redis_options') and self.redbeat_redis_options:
+            warnings.warn(
+                'RedBeat will stop falling back to broker_transport_options in version '
+                '2.5.0, set redbeat_redis_options explicitly',
+                DeprecationWarning,
+            )
         self.lock_key = self.either_or('redbeat_lock_key', self.key_prefix + ':lock')
         if self.lock_key and not self.lock_key.startswith(self.key_prefix):
             self.lock_key = self.key_prefix + self.lock_key

@@ -256,6 +256,67 @@ class RetryPeriodRedBeatCase(AppCase):
         self.assertNotIn('retry_period', from_url.call_args.kwargs)
 
 
+class InheritedBrokerOptionsRedBeatCase(AppCase):
+    config_dict = {
+        'BROKER_URL': 'redis://',
+        'BROKER_TRANSPORT_OPTIONS': {'visibility_timeout': 3600, 'socket_timeout': 5},
+    }
+
+    def setup(self):
+        self.app.conf.update(self.config_dict)
+
+    def test_kombu_options_not_forwarded_to_redis(self):
+        with mock.patch('redis.Redis.from_url') as from_url:
+            with self.assertLogs('celery.beat', level='DEBUG') as logs:
+                get_redis(app=self.app)
+
+        kwargs = from_url.call_args.kwargs
+        self.assertNotIn('visibility_timeout', kwargs)
+        self.assertEqual(kwargs['socket_timeout'], 5)
+        self.assertTrue(kwargs['decode_responses'])
+        self.assertTrue(any('visibility_timeout' in record.getMessage() for record in logs.records))
+
+
+class ExplicitOptionsRedBeatCase(AppCase):
+    config_dict = {
+        'BROKER_URL': 'redis://',
+        'REDBEAT_REDIS_OPTIONS': {'max_connections': 10, 'service_name': 'master'},
+    }
+
+    def setup(self):
+        self.app.conf.update(self.config_dict)
+
+    def test_explicit_options_pass_through_except_internal(self):
+        with mock.patch('redis.Redis.from_url') as from_url:
+            get_redis(app=self.app)
+
+        kwargs = from_url.call_args.kwargs
+        self.assertEqual(kwargs['max_connections'], 10)
+        self.assertNotIn('service_name', kwargs)
+
+
+class InheritedClusterOptionsRedBeatCase(AppCase):
+    config_dict = {
+        'BROKER_URL': 'redis-cluster://redis-cluster:30001/0',
+        'BROKER_TRANSPORT_OPTIONS': {
+            'startup_nodes': [{"host": "192.168.1.1", "port": "30001"}],
+            'visibility_timeout': 3600,
+        },
+    }
+
+    def setup(self):
+        self.app.conf.update(self.config_dict)
+
+    def test_startup_nodes_preserved_kombu_options_dropped(self):
+        with mock.patch('redis.cluster.RedisCluster') as redis_cluster:
+            get_redis(app=self.app)
+
+        kwargs = redis_cluster.call_args.kwargs
+        self.assertNotIn('visibility_timeout', kwargs)
+        self.assertTrue(kwargs['decode_responses'])
+        self.assertEqual(kwargs['startup_nodes'], [{"host": "192.168.1.1", "port": 30001}])
+
+
 class ClusterRedBeatCase(AppCase):
     config_dict = {
         'BROKER_URL': 'redis://',
