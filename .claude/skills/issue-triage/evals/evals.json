@@ -1,7 +1,7 @@
 {
   "skill_name": "issue-triage",
   "verified_against": "9342432",
-  "notes": "Every case reads a frozen fixture rather than the live API, and every prompt runs --dry-run. See README.md for why, and for how to re-pin `verified_against` when the code moves under an expectation.",
+  "notes": "Every case reads a frozen fixture rather than the live API, and every prompt runs --dry-run. See README.md for why, and for how to re-pin `verified_against` when the code moves under an expectation. Revised 2026-07-27 after skill-creator's grader audited the rubric while grading: case 3's first assertion demanded a celery/python version floor that fixtures/issue-270.json never states, and had been failed by 8 of 8 runs across three models and both arms; case 1's label assertion was negative-only and passed for runs that proposed no labels at all. Records written before that date graded the older wording -- case 3 scores in particular are not comparable across the revision.",
   "evals": [
     {
       "id": 1,
@@ -18,9 +18,15 @@
         "Quotes actual output from an executed unittest run rather than predicted output",
         "Does not cite the shallow-clone graft boundary commit (c12e0ae) as a real change to due_at",
         "Names the topical file the test should move to at fix time (tests/test_entry.py)",
-        "Proposes only labels from the skill's fixed label set",
+        "Proposes the labels the outcome calls for (bug, confirmed, has-repro) and proposes no label outside the skill's fixed set",
         "Takes no write action: no comment posted, no branch, no PR, no label applied"
-      ]
+      ],
+      "assertion_kinds": {
+        "The proposed test subclasses RedBeatCase from tests.basecase and is marked @unittest.expectedFailure": "transcribable",
+        "The proposed test class name uses the lowercase test_ prefix convention": "transcribable",
+        "Names the topical file the test should move to at fix time (tests/test_entry.py)": "transcribable"
+      },
+      "kinds_note": "`transcribable` marks assertions whose answer is present in references/repro-harness.md, which works through this exact issue number -- the RedBeatCase subclass, the expectedFailure marker and the tests/test_entry.py destination are all in that file. A with_skill run reads it and a baseline run never sees it, so these three measure whether the skill was consulted, not whether the model can triage. They are still worth checking, because following the convention is part of the job. They must not be counted toward a skill-vs-baseline delta without saying so: on 2026-07-27 they were three of the ten assertions on the only case where the skill measurably helped."
     },
     {
       "id": 2,
@@ -45,7 +51,7 @@
       "fixture": "fixtures/issue-270.json",
       "expected_output": "Runs the reporter's own pattern against main before concluding anything, and accounts for the whole reported symptom — fires twice AND vanishes from Redis — rather than a mechanism explaining only half of it.",
       "assertions": [
-        "Notes that the reported environment predates the currently supported celery/python floor",
+        "Establishes the version basis from what the report actually provides: it names no celery, python or redbeat version, so the only temporal signal is the 2024-02-02 filing date, and says so rather than asserting a version the reporter never gave",
         "Executes the reporter's beat_schedule pattern against current main rather than reasoning from the version alone",
         "Accounts for both halves of the reported symptom: the task firing twice and the entry disappearing from Redis",
         "If claiming already-fixed, names a specific commit and shows that commit addresses the disappearance, not only the repeat firing",
