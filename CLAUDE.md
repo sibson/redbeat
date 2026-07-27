@@ -1,3 +1,25 @@
+# Conventions
+
+Tests are stdlib `unittest`, not pytest -- the `[tool:pytest]` stub in
+`setup.cfg` is vestigial and pytest is not installed. Run them with `make test`
+(`python -m unittest discover tests`); no live Redis is needed, `fakeredis`
+covers it.
+
+Two harness conventions in `tests/basecase.py` are easy to get wrong, and both
+fail silently rather than loudly:
+
+- Test classes take a lowercase `test_` prefix (`test_RedBeatEntry`), an old
+  celery convention. A `TestThing` class is not collected.
+- Subclasses override `setup()`, not `setUp()` -- `AppCase.setUp` builds the
+  celery test app and then calls `self.setup()`.
+
+`make lint` runs flake8 with the black and isort plugins: line length 100,
+single quotes (`skip-string-normalization`), isort `profile = hug`. CI enforces
+it, so run it before pushing.
+
+Every user-visible fix gets a `CHANGES.txt` entry under the `(unreleased)`
+heading, in the form `- bugfix, <description>, fixes #NNN`.
+
 # Release Process
 
 Version is derived from git tags via pbr, not stored in any file. Always

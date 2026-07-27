@@ -1,0 +1,92 @@
+name: Bug report
+description: Something in RedBeat behaves incorrectly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+
+        The two things that most often stall a bug report are missing version
+        numbers and a description we can't turn into a test. If you can give us
+        both, there's a good chance the next reply is a fix rather than a
+        question.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you observe, and what did you expect instead?
+      placeholder: |
+        The task fired at 23:55 even though the crontab is set to 00:00.
+        I expected the first run to be at midnight.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: How to reproduce
+      description: >
+        The smallest code that shows the problem — how the entry is created,
+        the schedule you used, and what you saw. If you can express it as a
+        test against `tests/basecase.py`, even better, but plain code is fine.
+      render: python
+    validations:
+      required: true
+
+  - type: input
+    id: redbeat-version
+    attributes:
+      label: RedBeat version
+      description: "`pip show celery-redbeat`"
+      placeholder: "2.4.2"
+    validations:
+      required: true
+
+  - type: input
+    id: celery-version
+    attributes:
+      label: Celery version
+      description: "`celery --version`"
+      placeholder: "5.4.0"
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      placeholder: "3.12.4"
+    validations:
+      required: true
+
+  - type: input
+    id: redis-version
+    attributes:
+      label: Redis / Valkey version and topology
+      description: >
+        Standalone, sentinel, or cluster — and managed hosting if any
+        (ElastiCache, Upstash, ...). Several past bugs turned out to be
+        topology-specific.
+      placeholder: "Redis 7.2, standalone"
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: RedBeat configuration
+      description: >
+        Your `redbeat_*` settings, plus `beat_max_loop_interval` if you set it.
+        Please redact passwords.
+      render: python
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Traceback or beat log
+      description: >
+        Full traceback if it crashed. Beat logs at DEBUG are especially useful
+        for scheduling and lock problems.
+      render: shell

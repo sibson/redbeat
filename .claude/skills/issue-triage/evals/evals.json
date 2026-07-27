@@ -1,0 +1,93 @@
+{
+  "skill_name": "issue-triage",
+  "notes": "Every prompt runs --dry-run so the suite never writes to the repo or to GitHub. Expected outcomes are pinned to backlog state as of 2026-07-27; see README.md for how to re-pin them when the underlying issues change.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "reproducible-bug-and-duplicate",
+      "prompt": "/issue-triage 307 --dry-run",
+      "expected_output": "Outcome A. Reproduces the due_at bug with a real unittest run and identifies #210 as the same defect.",
+      "files": [],
+      "assertions": [
+        "Reports outcome A (confirmed and reproducible), not B or C",
+        "Identifies #210 as the same underlying due_at/remaining_estimate defect",
+        "Cites the due_at property location in redbeat/schedulers.py with a line reference",
+        "The proposed test subclasses RedBeatCase from tests.basecase and is marked @unittest.expectedFailure",
+        "The proposed test class name uses the lowercase test_ prefix convention",
+        "Quotes actual output from an executed unittest run rather than predicted output",
+        "Proposes only labels from the skill's fixed label set",
+        "Takes no write action: no comment posted, no branch, no PR, no label applied"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "environmental-bug-not-unit-testable",
+      "prompt": "/issue-triage 218 --dry-run",
+      "expected_output": "Outcome B. Lock loss on host suspend is real but cannot be honestly reproduced under fakeredis.",
+      "files": [],
+      "assertions": [
+        "Reports outcome B (confirmed but not expressible as a unit test)",
+        "Names the specific environmental trigger that the fakeredis harness cannot produce",
+        "Does not write or propose a unit test for this issue",
+        "Proposes the needs-integration-test label",
+        "Takes no write action"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "version-obsolescence-check",
+      "prompt": "/issue-triage 270 --dry-run",
+      "expected_output": "Notes the report predates supported versions, and checks current code and git history before concluding rather than dismissing it on age alone.",
+      "files": [],
+      "assertions": [
+        "Notes that the reported environment predates the currently supported celery/python floor",
+        "Inspects current code or git history rather than concluding from the version alone",
+        "Does not claim the bug is fixed without naming a specific commit",
+        "Lands in outcome C or D, not A",
+        "Takes no write action"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "question-not-a-bug",
+      "prompt": "/issue-triage 98 --dry-run",
+      "expected_output": "Outcome F. 'How do I flush all tasks?' is a usage question, answered from the code and docs.",
+      "files": [],
+      "assertions": [
+        "Reports outcome F (question or documentation), not a bug outcome",
+        "Does not propose the bug or confirmed labels",
+        "Gives a direct, actionable answer rather than only asking for more information",
+        "References docs/ or specific redbeat API surface in the answer",
+        "Takes no write action"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "idempotency-on-rerun",
+      "prompt": "/issue-triage 291 --dry-run — note this issue has already been triaged once before; a previous triage comment is the most recent comment on the thread.",
+      "expected_output": "Detects the prior triage comment and declines to post a near-duplicate, reporting the unchanged state to the maintainer instead.",
+      "files": [],
+      "assertions": [
+        "Retrieves the issue's comments before composing any comment",
+        "Explicitly acknowledges the prior triage comment",
+        "Declines to post a near-duplicate comment, or states clearly what changed to justify a new one",
+        "Reports the situation to the maintainer in the run report rather than on the issue",
+        "Takes no write action"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "batch-and-overdue-report",
+      "prompt": "/issue-triage --dry-run",
+      "expected_output": "Batch of least-recently-updated untriaged issues plus the overdue needs-info section. Recommends, never closes.",
+      "files": [],
+      "assertions": [
+        "Triages a batch of the least-recently-updated open issues carrying no triage label",
+        "Emits one report block per issue in the format specified by SKILL.md",
+        "Includes an overdue section derived from needs-info age, even if empty",
+        "Recommends closes rather than performing them",
+        "Makes no call that sets issue state or state_reason"
+      ]
+    }
+  ]
+}
