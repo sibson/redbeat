@@ -1,3 +1,5 @@
+2.4.3 (unreleased)
+---------------------
 2.4.2 (2026-07-27)
 ---------------------
   - bugfix, restore the pre-2.4.0 handling of options inherited from
@@ -120,5 +122,6 @@
  - be more consistent about using UTC everywhere
  - various bugfixes, thanks Christopher Arndt
  - improved configuration handling, thanks Jannis Leidel
+  -
   -
   -
