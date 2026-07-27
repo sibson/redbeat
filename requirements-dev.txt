@@ -13,6 +13,6 @@ flake8-black
 flake8-isort
 
 # Testing
-fakeredis>=2.27.0
+fakeredis[lua]>=2.27.0
 
 pbr

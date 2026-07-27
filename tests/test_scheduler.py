@@ -637,3 +637,22 @@ class RedBeatStartupAcquiresLock(RedBeatSchedulerTestBase):
         self.redis_server.connected = False
         with self.assertRaises(ConnectionError):
             acquire_distributed_beat_lock(self.sender)
+
+    def test_tick_extends_lock(self):
+        # extend() runs LUA_EXTEND_TO_SCRIPT through EVALSHA, so this covers the
+        # only path where the overwritten lua_extend script actually executes.
+        acquire_distributed_beat_lock(self.sender)
+        redis = get_redis(app=self.app)
+        redis.pexpire(self.s.lock_key, 5000)
+
+        self.s.tick()
+
+        self.assertGreater(redis.pttl(self.s.lock_key), 5000)
+
+    def test_close_releases_lock(self):
+        acquire_distributed_beat_lock(self.sender)
+
+        self.s.close()
+
+        self.assertIsNone(self.s.lock)
+        self.assertIsNone(get_redis(app=self.app).get(self.s.lock_key))
