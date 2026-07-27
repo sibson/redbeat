@@ -1,0 +1,20 @@
+{
+  "_comment": "Eval fixture for issue #291, frozen as of 2025-05-15. Treat this as the authoritative issue content in place of the live API. Resolution is held out in ground-truth/ -- do not go looking for it, and do not post any of this anywhere.",
+  "issue_number": 291,
+  "as_of": "2025-05-15",
+  "comments_withheld": 4,
+  "issue": {
+    "number": 291,
+    "title": "\u201cFailed to load \u2026\u201d silently discards schedule entries",
+    "body": "#### Problem description\nWhenever RedBeat encounters a ZSET member that has lost its HASH (e.g. evicted by Redis), the scheduler does:\n\n```python\nexcept KeyError:\n    logger.warning(&#39;beat: Failed to load %s, removing&#39;, key)\n    client.zrem(self.app.redbeat_conf.schedule_key, key)\n```\n\nImpact:\n* The task **silently disappears** from the schedule.\n* Only a `WARNING` is logged, which is easy to miss in production.\n* If the entry was originally defined in `app.conf.beat_schedule`, it is not restored until the **next Beat restart**.\n\nIn systems with aggressive eviction policies (`allkeys-lfu`, etc.) this leads to unpredictable loss of periodic\ntasks.\n\n#### Expected behaviour\n1. Emit a `logger.error` (or even `critical`) so that operators notice.\n2. Attempt **self-healing**:  \n   \u2022 If the missing key matches a static entry in `app.conf.beat_schedule`, recreate it automatically instead of simply removing it.  \n   \u2022 For dynamic entries, keep the current behaviour (remove + error) because Beat doesn\u2019t know how to recreate them.\n\n#### Steps to reproduce\n```\n# 1. define static task &#34;hello&#34; in app.conf.beat_schedule\n# 2. start celery beat -S redbeat\n# 3. IN ANOTHER SHELL:\nredis-cli DEL   redbeat:hello            # delete the hash\n# don&#39;t remove it from the ZSET, simulate eviction only\n# 4. wait until the next tick\n```\nObserve log:  \n`beat: Failed to load redbeat:hello, removing` (level=WARNING).  \nTask never runs again until Beat restarts.\n\n#### Suggested fix (pseudo-patch)\n\n```diff\ndiff --git a/redbeat/schedulers.py b/redbeat/schedulers.py\n@@\n-         except KeyError:\n-             logger.warning(&#39;beat: Failed to load %s, removing&#39;, key)\n-             client.zrem(self.app.redbeat_conf.schedule_key, key)\n+        except KeyError:\n+            static_entry = self.app.redbeat_conf.schedule.get(entry_name_from(key))\n+            if static_entry:\n+                logger.error(&#39;beat: Corrupted entry %s detected, restoring from &#39;\n+                             &#39;app.conf.beat_schedule&#39;, key)\n+                self._maybe_entry(entry_name_from(key), static_entry).save()\n+            else:\n+                logger.error(&#39;beat: Lost dynamic entry %s, removing from schedule&#39;, key)\n+                client.zrem(self.app.redbeat_conf.schedule_key, key)\n```\n\nWhere `entry_name_from(key)` strips the `key_prefix`.\n\n#### Why this matters\nPeriodic tasks often execute business-critical workflows (billing, data sync, alerts).  \nAn unnoticed eviction effectively **turns them off** and violates reliability expectations.\n\n#### Work-arounds\n* Switch to `volatile-*` or `noeviction` policy in Redis.  \n* Pin Beat to a dedicated Redis instance with `maxmemory 0`.  \n* Monitor logs for the warning and trigger Beat restart.\n\nBut a built-in auto-recover mechanism would eliminate the need for manual mitigation.\n\n---\n\nThanks for maintaining RedBeat! Let me know if more details are required.",
+    "user": {
+      "login": "niksite",
+      "id": 99423,
+      "profile_url": "https://github.com/niksite",
+      "avatar_url": "https://avatars.githubusercontent.com/u/99423?v=4"
+    },
+    "created_at": "2025-05-14T19:22:25Z",
+    "comments": 4
+  },
+  "comments": []
+}

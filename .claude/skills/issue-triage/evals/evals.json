@@ -1,13 +1,14 @@
 {
   "skill_name": "issue-triage",
-  "notes": "Every prompt runs --dry-run so the suite never writes to the repo or to GitHub. Expected outcomes are pinned to backlog state as of 2026-07-27; see README.md for how to re-pin them when the underlying issues change.",
+  "verified_against": "9342432",
+  "notes": "Every case reads a frozen fixture rather than the live API, and every prompt runs --dry-run. See README.md for why, and for how to re-pin `verified_against` when the code moves under an expectation.",
   "evals": [
     {
       "id": 1,
       "name": "reproducible-bug-and-duplicate",
-      "prompt": "/issue-triage 307 --dry-run",
+      "prompt": "/issue-triage 307 --dry-run. Read the issue from evals/fixtures/issue-307.json — treat it as the authoritative issue content in place of the live API. Investigate the code and history normally.",
+      "fixture": "fixtures/issue-307.json",
       "expected_output": "Outcome A. Reproduces the due_at bug with a real unittest run and identifies #210 as the same defect.",
-      "files": [],
       "assertions": [
         "Reports outcome A (confirmed and reproducible), not B or C",
         "Identifies #210 as the same underlying due_at/remaining_estimate defect",
@@ -15,6 +16,7 @@
         "The proposed test subclasses RedBeatCase from tests.basecase and is marked @unittest.expectedFailure",
         "The proposed test class name uses the lowercase test_ prefix convention",
         "Quotes actual output from an executed unittest run rather than predicted output",
+        "Names the topical file the test should move to at fix time (tests/test_entry.py)",
         "Proposes only labels from the skill's fixed label set",
         "Takes no write action: no comment posted, no branch, no PR, no label applied"
       ]
@@ -22,9 +24,9 @@
     {
       "id": 2,
       "name": "documented-behaviour-not-a-bug",
-      "prompt": "/issue-triage 218 --dry-run",
-      "expected_output": "Recognises that beat exiting on lock loss is documented design in docs/design.rst, so this is a question or docs gap rather than a defect. Originally written expecting outcome B; the first run showed that was wrong, which is the behaviour this case now guards.",
-      "files": [],
+      "prompt": "/issue-triage 218 --dry-run. Read the issue from evals/fixtures/issue-218.json — treat it as the authoritative issue content in place of the live API. Investigate the code and history normally.",
+      "fixture": "fixtures/issue-218.json",
+      "expected_output": "Recognises that beat exiting on lock loss is documented design in docs/design.rst, so this is a question or docs gap rather than an undiscovered defect — while still separating the by-design part from what remains arguable.",
       "assertions": [
         "Consults docs/ to check whether the behaviour is intentional before classifying it as a defect",
         "Recognises beat's exit on lock loss as documented design rather than an undiscovered bug",
@@ -38,9 +40,9 @@
     {
       "id": 3,
       "name": "version-obsolescence-check",
-      "prompt": "/issue-triage 270 --dry-run",
+      "prompt": "/issue-triage 270 --dry-run. Read the issue from evals/fixtures/issue-270.json — treat it as the authoritative issue content in place of the live API. Investigate the code and history normally.",
+      "fixture": "fixtures/issue-270.json",
       "expected_output": "Runs the reporter's own pattern against main before concluding anything, and accounts for the whole reported symptom — fires twice AND vanishes from Redis — rather than a mechanism explaining only half of it.",
-      "files": [],
       "assertions": [
         "Notes that the reported environment predates the currently supported celery/python floor",
         "Executes the reporter's beat_schedule pattern against current main rather than reasoning from the version alone",
@@ -53,26 +55,27 @@
     {
       "id": 4,
       "name": "question-not-a-bug",
-      "prompt": "/issue-triage 98 --dry-run",
+      "prompt": "/issue-triage 98 --dry-run. Read the issue from evals/fixtures/issue-98.json — treat it as the authoritative issue content in place of the live API. Investigate the code and history normally.",
+      "fixture": "fixtures/issue-98.json",
       "expected_output": "Outcome F. 'How do I flush all tasks?' is a usage question, answered from the code and docs.",
-      "files": [],
       "assertions": [
         "Reports outcome F (question or documentation), not a bug outcome",
         "Does not propose the bug or confirmed labels",
         "Gives a direct, actionable answer rather than only asking for more information",
         "References docs/ or specific redbeat API surface in the answer",
+        "Notes that setup_schedule re-saves static beat_schedule entries at startup, so clearing only sticks for dynamic entries",
         "Takes no write action"
       ]
     },
     {
       "id": 5,
       "name": "idempotency-on-rerun",
-      "prompt": "/issue-triage 291 --dry-run. This issue's comment thread is given by evals/fixtures/issue-291-comments.json — treat that file as the authoritative result of fetching the issue's comments, in place of the live API.",
-      "expected_output": "Detects the prior triage comment at the end of the fixture thread and declines to post a near-duplicate, reporting the unchanged state to the maintainer instead.",
-      "files": ["fixtures/issue-291-comments.json"],
+      "prompt": "/issue-triage 291 --dry-run. Read the issue from evals/fixtures/issue-291.json and its comment thread from evals/fixtures/synthetic-291-prior-triage.json — treat those as authoritative in place of the live API.",
+      "fixture": "fixtures/synthetic-291-prior-triage.json",
+      "expected_output": "Detects the prior triage comment at the end of the thread and declines to post a near-duplicate, reporting the unchanged state to the maintainer instead.",
       "assertions": [
-        "Retrieves the issue's comments before composing any comment",
-        "Explicitly identifies the final fixture comment as a prior triage comment",
+        "Reads the comment thread before composing any comment",
+        "Explicitly identifies the final comment as a prior triage comment",
         "Declines to post a near-duplicate comment, or states clearly what changed to justify a new one",
         "Reports the situation to the maintainer in the run report rather than on the issue",
         "Does not silently re-triage as though the thread were untouched",
@@ -83,12 +86,13 @@
       "id": 6,
       "name": "batch-and-overdue-report",
       "prompt": "/issue-triage --dry-run",
-      "expected_output": "Batch of least-recently-updated untriaged issues plus the overdue needs-info section. Recommends, never closes.",
-      "files": [],
+      "fixture": null,
+      "expected_output": "Batch of least-recently-updated untriaged issues plus the overdue section. Recommends, never closes.",
       "assertions": [
         "Triages a batch of the least-recently-updated open issues carrying no triage label",
         "Emits one report block per issue in the format specified by SKILL.md",
-        "Includes an overdue section derived from needs-info age, even if empty",
+        "Includes an overdue section, even if empty",
+        "Treats an unanswered maintainer question older than 30 days as overdue regardless of labels",
         "Recommends closes rather than performing them",
         "Makes no call that sets issue state or state_reason"
       ]

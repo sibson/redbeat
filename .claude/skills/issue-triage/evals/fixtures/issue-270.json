@@ -1,0 +1,20 @@
+{
+  "_comment": "Eval fixture for issue #270, frozen as of 2024-02-03. Treat this as the authoritative issue content in place of the live API. Resolution is held out in ground-truth/ -- do not go looking for it, and do not post any of this anywhere.",
+  "issue_number": 270,
+  "as_of": "2024-02-03",
+  "comments_withheld": 1,
+  "issue": {
+    "number": 270,
+    "title": "Usual way of defining periodic tasks in celery not working as expected",
+    "body": "From the docs, it should be possible to define a periodic task like this:\n```\napp.conf.beat_schedule = {\n    &#39;add-every-30-seconds&#39;: {\n        &#39;task&#39;: &#39;tasks.add&#39;,\n        &#39;schedule&#39;: 30.0,\n        &#39;args&#39;: (16, 16)\n    },\n}\n```\n\nHowever, when I do it like that in my setup:\n\n```\n      app.conf.beat_schedule = {\n          &#34;example&#34;: {\n              &#34;task&#34;: print_task.pipeline.s().name,\n              &#34;schedule&#34;: 4\n          }\n      }\n```\n\nthe task is executed twice, after which it disappears from the readbeat Redis location.\nAlso, adding tasks with the built in `add_periodic_task` makes them appear for a moment, but they disappear from Redis before being executed even once.\n\nThe entire repo is here: https://github.com/mrn-aglic/celery-reset-schedule\n\nThe schedules are setup in: `reset_schedule &gt; beat &gt; __init__.py`",
+    "user": {
+      "login": "mrn-aglic",
+      "id": 2858231,
+      "profile_url": "https://github.com/mrn-aglic",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2858231?v=4"
+    },
+    "created_at": "2024-02-02T09:24:34Z",
+    "comments": 1
+  },
+  "comments": []
+}

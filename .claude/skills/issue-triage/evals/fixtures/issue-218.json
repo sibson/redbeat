@@ -1,0 +1,20 @@
+{
+  "_comment": "Eval fixture for issue #218, frozen as of 2022-06-16. Treat this as the authoritative issue content in place of the live API. Resolution is held out in ground-truth/ -- do not go looking for it, and do not post any of this anywhere.",
+  "issue_number": 218,
+  "as_of": "2022-06-16",
+  "comments_withheld": 3,
+  "issue": {
+    "number": 218,
+    "title": "&#34;LockNotOwnedError: Cannot extend a lock that&#39;s no longer owned&#34; When laptop goes to sleep.",
+    "body": "Hi,\n\nI&#39;m running redis and redbeat in docker containers. I&#39;ve set `celery_beat_max_loop_interval=5` and `redbeat_lock_timeout= celery_beat_max_loop_interval * 5` which means it takes 25 seconds for redis to release the lock and every 5 seconds, the ttl gets extended.\n\nMy problem happens when I let my laptop go to sleep for more than 25 seconds (go grab a coffee) and when I reopen my laptop&#39;s lid, redbeat freaks out. It says I cannot release a lock that&#39;s no longer owned because the process is shutting down because it cannot extend a lock that is no longer owned (or existing)\n\nI think this is not a bug but a design decision. Then what should I do? Should I set `--restart=on-failure` on docker?",
+    "user": {
+      "login": "Cediddi",
+      "id": 2720608,
+      "profile_url": "https://github.com/Cediddi",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2720608?v=4"
+    },
+    "created_at": "2022-06-15T14:07:41Z",
+    "comments": 3
+  },
+  "comments": []
+}
