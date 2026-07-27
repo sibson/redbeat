@@ -112,10 +112,20 @@ vanishing from the schedule (#285, #291). Canonical = oldest with the best repro
 **6. Classify.** bug, enhancement, question, or documentation. Before treating
 anything as a defect, check `docs/` — particularly `docs/design.rst` — for
 whether it is a deliberate choice. Several of redbeat's sharpest edges are
-documented design (beat exiting when it loses the lock, rather than
-re-acquiring), and a report describing intended behaviour is a question or a docs
-gap, not a bug. If the docs justify the behaviour but only somewhere the affected
-user would never look, that gap is worth naming too.
+documented design — beat exiting when it loses the lock, rather than
+re-acquiring, is the one that catches people.
+
+Finding the design note settles less than it appears to, so don't stop there.
+The documented intent usually covers *what* happens, not *how well*: exiting on
+lock loss can be deliberate while dying with an unhandled traceback instead of a
+clean logged exit is still a defect, and "we chose not to re-acquire" invites the
+question of whether that choice holds for a single-beat deployment. Say which
+part is by design and which part is still open, rather than closing the whole
+report because the headline behaviour is documented.
+
+If the docs justify the behaviour but only somewhere the affected user would
+never look, name that gap too — a design note in `docs/design.rst` doesn't help
+someone reading the setting's reference entry in `docs/config.rst`.
 
 **7. Try to reproduce.** See `references/repro-harness.md` for how to write a
 redbeat test — the conventions are unusual and you will get them wrong from

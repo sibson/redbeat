@@ -102,6 +102,23 @@ documents deliberate choices that look like defects from the outside — beat
 exiting when it loses the lock is the notable one. A test asserting documented
 behaviour pins the design in place while claiming to be a bug report.
 
+## Known harness limits
+
+`fakeredis` ships without Lua support, so anything routed through `EVALSHA`
+fails with `ResponseError: unknown command 'evalsha'`. Redis lock operations use
+a CAS-on-token Lua script, so `lock.extend()` and `lock.release()` hit this:
+
+```
+>>> r.lock('k', timeout=30).extend(30)
+ResponseError: unknown command 'evalsha', ...
+```
+
+This is a missing dev dependency, not a fact about the bug — reading it as
+"unreproducible" would be wrong. `fakeredis[lua]` (which pulls in `lupa`) makes
+these work. `requirements-dev.txt` currently pins plain `fakeredis>=2.27.0`, so a
+PR containing a lock-related test needs to bump that in the same change, or CI
+will fail on an error that has nothing to do with the test.
+
 ## Before opening the PR
 
 ```

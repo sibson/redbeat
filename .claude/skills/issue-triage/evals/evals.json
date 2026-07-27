@@ -27,7 +27,8 @@
       "files": [],
       "assertions": [
         "Consults docs/ to check whether the behaviour is intentional before classifying it as a defect",
-        "Recognises beat's exit on lock loss as documented design rather than a bug",
+        "Recognises beat's exit on lock loss as documented design rather than an undiscovered bug",
+        "Does not stop at the design note: distinguishes the documented intent from what remains arguable (unhandled traceback rather than clean exit, no re-acquire attempt)",
         "Does not write a test that asserts documented behaviour is a defect",
         "Separates the genuinely fixed half of the report (the release-side error) from the intended half, citing where it was fixed",
         "Names the docs gap: redbeat_lock_timeout in docs/config.rst does not mention that losing the lock terminates the process",
