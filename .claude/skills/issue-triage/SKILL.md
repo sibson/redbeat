@@ -44,6 +44,16 @@ mildly annoyed to get the notification. Earn it.
   `needs-integration-test`. `enhancement` and `help wanted` predate this process
   and say nothing about whether an issue has been looked at — an issue carrying
   only those is still untriaged, and several of the oldest ones are exactly that.
+
+  The batch is selected by querying the API and sorting by `updated_at`
+  ascending. It is never read off the filesystem. Files under `evals/fixtures/`
+  are frozen copies used to grade this skill, so the issues they name are the
+  ones most likely to be sitting in your context — which makes them a tempting
+  and completely wrong answer to "which issues need triage". If a run is
+  supplying a fixture in place of a live issue, that substitutes the *content*
+  of one issue you were already asked about; it never tells you which issues to
+  pick. Selecting the fixture set is the tell that the selection rule was
+  skipped.
 - `--dry-run` on either — do the whole investigation and print the report and the
   exact comment you *would* post, but take no write action. Use this whenever
   you're unsure, and note that the evals in `evals/` run this way.
@@ -113,6 +123,14 @@ often survives the rewrite. Check the current code before deciding.
 **5. Look for duplicates.** Search open and closed issues for the same symptom.
 Canonical = oldest with the best repro.
 
+Search the narrowest distinctive identifier **on its own** before adding
+qualifying terms. GitHub search ANDs the terms, so every word you add can only
+shrink the result set, and the duplicate you want is often the thread that
+described the same bug in different words. `due_at` finds #210; `due_at
+remaining_estimate` does not, because the 2021 report never used the second
+word. Add terms only to cut a result set that came back too large — never as
+your opening move.
+
 Recurring themes, as a starting point for the search and nothing more —
 verify against the actual threads before relying on any of it, because
 similar-sounding reports routinely have different causes: `due_at` /
@@ -140,6 +158,17 @@ If the docs justify the behaviour but only somewhere the affected user would
 never look, name that gap too — a design note in `docs/design.rst` doesn't help
 someone reading the setting's reference entry in `docs/config.rst`.
 
+Once you have found the design note, it constrains what you may write next: do
+not commit a test asserting that the documented behaviour is a defect. Writing
+`@unittest.expectedFailure` around "beat exits when it loses the lock" encodes
+a claim the docs contradict, and it outlives the run — the next person reads a
+failing test as an agreed bug. If the residual complaint is the *quality* of the
+documented behaviour (a bare traceback where a logged exit belongs), test that
+specific gap and say so, or leave it to prose. The verdict has to match the
+analysis: recognising the behaviour as designed and then filing it `bug` +
+`confirmed` with a failing test is the contradiction this step exists to
+prevent.
+
 **7. Try to reproduce.** See `references/repro-harness.md` for how to write a
 redbeat test — the conventions are unusual and you will get them wrong from
 instinct. Bugs that are pure scheduling arithmetic are almost always testable by
@@ -150,6 +179,16 @@ most of the skill.
 
 **8. Act.** Pick exactly one outcome from `references/decision-table.md` and
 follow its template. Read that file before writing any comment.
+
+**9. Leave the tree as you found it.** Delete the scratch files *this run*
+created, then check `git status`. If it is not clean, report exactly what is
+there — never delete a file you did not create to make the output look tidy. An
+untracked file you did not write belongs to someone: an interrupted earlier run,
+or the maintainer's work in progress. Removing it to report a clean tree is
+destroying someone else's data to improve your own status line, and it is
+unrecoverable in a way nothing else in this skill is. "Working tree clean except
+`tests/foo.py`, which predates this run and I left alone" is the correct
+outcome, not a failure.
 
 ## The overdue report
 
