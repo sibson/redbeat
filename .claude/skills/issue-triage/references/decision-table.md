@@ -6,37 +6,8 @@ with the duplicate link in the comment. Add `duplicate` to A's labels in that
 case — the outcome governs the workflow, the labels describe the issue, and an
 issue that is genuinely both should say so.
 
-## One-time label bootstrap
-
-**This is a maintainer step, not something a triage run can do.** The GitHub
-toolset a run has available is read-only for labels: `get_label` exists,
-`create_label` does not, and the direct REST API is blocked at the proxy. A run
-that meets an outcome whose label is missing can propose it and say so in the
-report, but it cannot create it.
-
-Already in the repo — use as-is, don't recreate or restyle them:
-`bug`, `duplicate`, `question`, `enhancement`, `help wanted`.
-
-Still missing as of 2026-07-27 (all six verified absent via `get_label`), so run
-this once, as the maintainer, before the first real run:
-
-```sh
-gh label create confirmed              -c d93f0b -d 'Reproduced, or traced to specific code' -R sibson/redbeat
-gh label create has-repro              -c 0e8a16 -d 'A committed test demonstrates it' -R sibson/redbeat
-gh label create needs-info             -c fbca04 -d 'Waiting on the reporter; starts the 30-day clock' -R sibson/redbeat
-gh label create probably-fixed         -c c2e0c6 -d 'Believed resolved by a named commit' -R sibson/redbeat
-gh label create documentation          -c 0075ca -d 'Docs gap rather than a code defect' -R sibson/redbeat
-gh label create needs-integration-test -c 5319e7 -d 'Real defect, not expressible in the fakeredis harness' -R sibson/redbeat
-```
-
-`confirmed` is orange rather than the red you'd expect because `help wanted` is
-already `b60205` and `bug` is `fc2929`; a third red is indistinguishable at chip
-size, and `confirmed` almost always rides alongside `bug`.
-
-Check with `get_label` before relying on any of these rather than trusting the
-list above — it is a snapshot, and a run that assumes a label exists will fail at
-the point where it has already posted the comment. Check *before* commenting, not
-after.
+All eleven labels the outcomes below use exist on the repo. Apply them as-is —
+don't recreate or restyle them, and don't invent new ones.
 
 ## A — Confirmed and reproducible
 

@@ -70,14 +70,8 @@ skill rests on that boundary being reliable. Never push to `main`.
 Labels, and only these: `bug`, `confirmed`, `has-repro`, `needs-info`,
 `probably-fixed`, `duplicate`, `documentation`, `question`,
 `needs-integration-test`, `enhancement`, `help wanted`. If none fits, that is a
-finding to report, not a licence to invent one.
-
-Six of those labels do not exist on `sibson/redbeat` yet, and you cannot create
-them — there is no `create_label` tool. Check with `get_label` before you commit
-to an outcome whose label you'd need, and if it's missing, report the label as
-proposed and point the maintainer at the bootstrap in
-`references/decision-table.md`. Do not silently drop the label, and do not
-substitute one that does exist.
+finding to report, not a licence to invent one. All eleven exist on the repo; you
+cannot create labels and have no need to.
 
 Every comment ends with the attribution footer:
 
