@@ -1,0 +1,20 @@
+{
+  "_comment": "Eval fixture for issue #98, frozen as of 2018-08-19. Treat this as the authoritative issue content in place of the live API. Resolution is held out in ground-truth/ -- do not go looking for it, and do not post any of this anywhere.",
+  "issue_number": 98,
+  "as_of": "2018-08-19",
+  "comments_withheld": 2,
+  "issue": {
+    "number": 98,
+    "title": "Clear tasks from Redis",
+    "body": "Is there a way to flush all tasks from the redis queue, or maybe get all redbeat keys in order to programatically delete them?",
+    "user": {
+      "login": "willhunt",
+      "id": 13206096,
+      "profile_url": "https://github.com/willhunt",
+      "avatar_url": "https://avatars.githubusercontent.com/u/13206096?v=4"
+    },
+    "created_at": "2018-08-18T16:02:03Z",
+    "comments": 2
+  },
+  "comments": []
+}

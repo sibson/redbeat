@@ -1,0 +1,7 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Configuration and usage documentation
+    url: https://redbeat.readthedocs.io
+    about: >
+      Worth a look before filing a "how do I ...?" issue — the configuration
+      reference, including the Redis, sentinel and lock settings, lives here.
