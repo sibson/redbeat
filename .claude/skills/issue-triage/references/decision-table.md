@@ -2,7 +2,9 @@
 
 Every triaged issue lands in exactly one of A–G. If two seem to fit, prefer the
 one that carries more evidence: a duplicate you can also reproduce is still A,
-with the duplicate link in the comment.
+with the duplicate link in the comment. Add `duplicate` to A's labels in that
+case — the outcome governs the workflow, the labels describe the issue, and an
+issue that is genuinely both should say so.
 
 ## One-time label bootstrap
 

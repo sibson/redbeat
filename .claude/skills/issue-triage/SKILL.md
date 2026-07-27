@@ -94,9 +94,10 @@ suspicion you can't.
 Check for a shallow clone first (`.git/shallow`, or a suspiciously short
 `git log`). In one, `git log -S` blames the graft boundary commit for everything
 older, which reads exactly like "changed recently" and will walk you into naming
-the wrong commit. When history is truncated, fall back to `CHANGES.txt` and the
-closed issue or PR, and cite those instead — an honest `CHANGES.txt:67` is worth
-more than a confident sha that means nothing.
+the wrong commit. When history is truncated, get it from the API instead —
+`search_commits` and the closed issue or PR will date a fix properly where local
+history can't. Failing that, cite `CHANGES.txt`: an honest `CHANGES.txt:67` is
+worth more than a confident sha that means nothing.
 
 **4. Check version relevance.** The tree supports python >= 3.9 and celery >= 5.
 A traceback from celery 4.3 on redbeat 0.13 against a function that has since
@@ -147,10 +148,19 @@ follow its template. Read that file before writing any comment.
 
 ## The overdue report
 
-A bare `/issue-triage` ends with a list of issues that have gone quiet. An issue
-is overdue when it carries `needs-info`, the newest comment is a triage comment,
-and that comment is more than 30 days old — all readable from the API, so there's
-no state file to drift out of sync.
+A bare `/issue-triage` ends with a list of issues that have gone quiet. Two ways
+in, and the second matters more than the first:
+
+- It carries `needs-info`, the newest comment is a triage comment, and that
+  comment is more than 30 days old.
+- **The newest comment is an unanswered question from a maintainer, more than 30
+  days old, whatever the labels say.** Most of this backlog predates any
+  labelling scheme, so the first rule alone sees nothing: #270 has had
+  "does this still occur with 2.3.2?" sitting unanswered since early 2025 and
+  carries no label at all. An overdue check that only finds issues the process
+  already touched will report an empty list over a backlog full of dead threads.
+
+Both are readable from the API, so there's no state file to drift out of sync.
 
 List each with number, title, days since the question, and one line on what a
 close would be based on. Recommend; don't close. The maintainer decides.

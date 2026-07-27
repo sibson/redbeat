@@ -39,13 +39,14 @@
       "id": 3,
       "name": "version-obsolescence-check",
       "prompt": "/issue-triage 270 --dry-run",
-      "expected_output": "Notes the report predates supported versions, and checks current code and git history before concluding rather than dismissing it on age alone.",
+      "expected_output": "Runs the reporter's own pattern against main before concluding anything, and accounts for the whole reported symptom — fires twice AND vanishes from Redis — rather than a mechanism explaining only half of it.",
       "files": [],
       "assertions": [
         "Notes that the reported environment predates the currently supported celery/python floor",
-        "Inspects current code or git history rather than concluding from the version alone",
-        "Does not claim the bug is fixed without naming a specific commit",
-        "Lands in outcome C or D, not A",
+        "Executes the reporter's beat_schedule pattern against current main rather than reasoning from the version alone",
+        "Accounts for both halves of the reported symptom: the task firing twice and the entry disappearing from Redis",
+        "If claiming already-fixed, names a specific commit and shows that commit addresses the disappearance, not only the repeat firing",
+        "If undetermined, identifies a concrete code path that would produce the reported symptom rather than asking a generic follow-up",
         "Takes no write action"
       ]
     },
