@@ -16,6 +16,7 @@
         "The proposed test subclasses RedBeatCase from tests.basecase and is marked @unittest.expectedFailure",
         "The proposed test class name uses the lowercase test_ prefix convention",
         "Quotes actual output from an executed unittest run rather than predicted output",
+        "Does not cite the shallow-clone graft boundary commit (c12e0ae) as a real change to due_at",
         "Names the topical file the test should move to at fix time (tests/test_entry.py)",
         "Proposes only labels from the skill's fixed label set",
         "Takes no write action: no comment posted, no branch, no PR, no label applied"

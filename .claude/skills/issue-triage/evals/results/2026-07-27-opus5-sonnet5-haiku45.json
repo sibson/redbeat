@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "run_date": "2026-07-27",
+  "skill_commit": "4d065aa",
+  "evals_verified_against": "9342432",
+  "orchestration": "agent-tool",
+  "scope": "case 1 only (reproducible-bug-and-duplicate); run to validate fixture wiring before committing to the full suite",
+  "notes": "Effort was not set per agent -- the Agent tool has no effort parameter, so all three inherited the session default, which was medium. Recorded as effort_source 'session-default' so these are not mistaken for per-model tuned runs. The 10th assertion (shallow-clone graft boundary) was added after this run, prompted by Haiku failing it; all three were graded against it from their reports.",
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "reproducible-bug-and-duplicate",
+      "model": "claude-opus-5",
+      "effort": "medium",
+      "effort_source": "session-default",
+      "outcome_reported": "A",
+      "assertions_passed": 10,
+      "assertions_total": 10,
+      "failed_assertions": [],
+      "tokens": 84513,
+      "duration_ms": 277574,
+      "tool_uses": 31,
+      "notes": "Found #210. Went materially beyond the assertions: measured that the reporter's proposed fix (remaining_estimate(now)) is wrong for interval schedules, slipping 30s per tick; then applied the correct fix locally and measured the tests/test_entry.py breakage that has blocked #210 since 2021 -- 12 microseconds of clock drift in a strict assertion bound, not a real regression. Also bounded the execution impact conservatively (error is always early, maybe_due re-checks is_due, so wasted ticks rather than missed runs) and declined to claim the 5-minute stalls reported in #210."
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "reproducible-bug-and-duplicate",
+      "model": "claude-sonnet-5",
+      "effort": "medium",
+      "effort_source": "session-default",
+      "outcome_reported": "A",
+      "assertions_passed": 8,
+      "assertions_total": 10,
+      "failed_assertions": [
+        "Identifies #210 as the same underlying due_at/remaining_estimate defect",
+        "Names the topical file the test should move to at fix time (tests/test_entry.py)"
+      ],
+      "tokens": 90637,
+      "duration_ms": 145211,
+      "tool_uses": 29,
+      "notes": "Explicitly concluded 'no duplicate issue exists', which is wrong -- #210 is the same defect and Opus found it from the same fixture. Handled the shallow clone correctly by switching to search_commits. Correctly qualified the execution impact."
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "reproducible-bug-and-duplicate",
+      "model": "claude-haiku-4-5",
+      "effort": "medium",
+      "effort_source": "session-default",
+      "outcome_reported": "A",
+      "assertions_passed": 6,
+      "assertions_total": 10,
+      "failed_assertions": [
+        "Identifies #210 as the same underlying due_at/remaining_estimate defect",
+        "Quotes actual output from an executed unittest run rather than predicted output",
+        "Does not cite the shallow-clone graft boundary commit (c12e0ae) as a real change to due_at",
+        "The proposed test class name uses the lowercase test_ prefix convention"
+      ],
+      "tokens": 55440,
+      "duration_ms": 197594,
+      "tool_uses": 40,
+      "notes": "Reached the right outcome and named the topical home unprompted, but two evidence-quality failures. Reported 'commit c12e0ae is the last change to this code (2024-08-15, formatting only)' -- c12e0ae is the shallow-clone graft boundary and the date does not match the 2025-02-16 the other runs established, so a truncation artifact was reported as a finding. And the proposed comment substitutes a hand-built before/after table for real unittest output. Class-name convention not evidenced in the report; graded as a fail rather than assumed. Cheapest in tokens but the most tool calls and slower than Sonnet."
+    }
+  ]
+}
