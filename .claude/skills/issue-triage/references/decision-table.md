@@ -8,20 +8,23 @@ issue that is genuinely both should say so.
 
 ## One-time label bootstrap
 
-The repo started with only `enhancement` and `help wanted`. The rest need
-creating once, before the first real run:
+Already in the repo — use as-is, don't recreate or restyle them:
+`bug`, `duplicate`, `question`, `enhancement`, `help wanted`.
+
+Create these once, before the first real run:
 
 | Label | Colour | Meaning |
 |---|---|---|
-| `bug` | `d73a4a` | Confirmed or credible defect |
 | `confirmed` | `b60205` | Reproduced, or traced to specific code |
 | `has-repro` | `0e8a16` | A committed test demonstrates it |
 | `needs-info` | `fbca04` | Waiting on the reporter; starts the 30-day clock |
 | `probably-fixed` | `c2e0c6` | Believed resolved by a named commit |
-| `duplicate` | `cfd3d7` | Tracked elsewhere |
 | `documentation` | `0075ca` | Docs gap rather than a code defect |
-| `question` | `d876e3` | Usage question, not a defect |
 | `needs-integration-test` | `5319e7` | Real defect, not expressible in the fakeredis harness |
+
+Check with `get_label` before creating rather than trusting this list — it is a
+snapshot, and a triage run that assumes a label exists will fail at the point
+where it has already posted the comment.
 
 ## A — Confirmed and reproducible
 
