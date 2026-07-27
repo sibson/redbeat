@@ -27,9 +27,11 @@ You wrote a test, ran it, and it failed for the reason the reporter described.
 
 1. Branch `claude/triage-issue-NNN` off the default branch.
 2. Add `tests/test_issue_NNN.py` per `repro-harness.md`, marked
-   `@unittest.expectedFailure`.
+   `@unittest.expectedFailure`, carrying the `TRIAGE ARTIFACT` docstring note
+   that names the permanent home it should move to when fixed.
 3. Confirm `python -m unittest tests.test_issue_NNN -v` and `make lint` pass.
-4. Open a PR: `test: reproduce #NNN — <symptom>`.
+4. Open a PR: `test: reproduce #NNN — <symptom>`. The body must say where the
+   test should move to at fix time, so the fixer doesn't need this skill.
 5. Comment on the issue.
 
 Labels: `bug`, `confirmed`, `has-repro`.
@@ -44,7 +46,8 @@ Labels: `bug`, `confirmed`, `has-repro`.
 > ```
 >
 > It's marked `expectedFailure` so CI stays green; whoever fixes this can drop
-> the marker and the test becomes the check.
+> the marker and the test becomes the check. It's a standalone file for now so
+> it's easy to find from here — it belongs in `tests/<home>.py` once fixed.
 
 ## B — Confirmed, but not expressible as a unit test
 

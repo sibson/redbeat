@@ -20,6 +20,15 @@ it, so run it before pushing.
 Every user-visible fix gets a `CHANGES.txt` entry under the `(unreleased)`
 heading, in the form `- bugfix, <description>, fixes #NNN`.
 
+Tests live in topical files -- `test_entry.py`, `test_scheduler.py`,
+`test_json.py`, `test_schedules.py`, `test_config.py`. A `tests/test_issue_NNN.py`
+is a triage artifact, not a permanent home: it exists so an open issue has a
+runnable reproduction attached to it. When you fix the underlying bug, move the
+test into the topical file, drop its `@unittest.expectedFailure` marker, and
+rename it for the behaviour it checks rather than the issue number. Organising
+tests by issue number ages badly -- the number stops mattering the moment the
+bug is fixed.
+
 # Release Process
 
 Version is derived from git tags via pbr, not stored in any file. Always

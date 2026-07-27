@@ -42,6 +42,11 @@ class test_Issue_307(RedBeatCase):
 
     Expected: the next 06:00 UTC occurrence after now.
     Actual:   last_run_at + (time from now until that occurrence).
+
+    TRIAGE ARTIFACT -- this file is temporary. When the fix lands, move this
+    test into tests/test_entry.py::test_RedBeatEntry, drop the
+    expectedFailure marker, rename it for the behaviour it checks rather
+    than the issue number, and delete this file.
     """
 
     @unittest.expectedFailure
@@ -101,6 +106,37 @@ Before writing any of it, check the behaviour isn't intended. `docs/design.rst`
 documents deliberate choices that look like defects from the outside — beat
 exiting when it loses the lock is the notable one. A test asserting documented
 behaviour pins the design in place while claiming to be a bug report.
+
+## Where the test lives, and where it goes
+
+A per-issue file is the right shape for triage and the wrong shape for the
+codebase. It buys something real while the issue is open — one file, obviously
+disposable, named so anyone can connect it to the thread — but a `tests/`
+directory that accumulates `test_issue_74.py`, `test_issue_154.py`,
+`test_issue_307.py` is a tree of orphans nobody dares delete, organised by the
+one fact that stops mattering the moment the bug is fixed.
+
+So the file is explicitly a staging area, and the fix is what retires it. Pick
+its permanent home when you write it, and say so in three places, because the
+person who fixes this may never read this skill:
+
+- the class docstring (the `TRIAGE ARTIFACT` note above),
+- the PR body,
+- the triage comment on the issue.
+
+Homes, by what the test touches:
+
+| Subject | Home |
+|---|---|
+| `RedBeatSchedulerEntry` — `due_at`, `score`, `save`, `reschedule` | `tests/test_entry.py` |
+| `RedBeatScheduler` — ticks, locking, schedule loading | `tests/test_scheduler.py` |
+| JSON encode/decode round-trips | `tests/test_json.py` |
+| `rrule` and schedule types | `tests/test_schedules.py` |
+| `RedBeatConfig` and settings | `tests/test_config.py` |
+
+If nothing fits, that is worth saying in the PR rather than defaulting to a new
+file — it usually means the test is aimed at something the suite doesn't cover
+yet, which is useful information about the suite.
 
 ## Known harness limits
 
