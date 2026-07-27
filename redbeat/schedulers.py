@@ -140,16 +140,13 @@ def get_redis(app=None):
         # options were addressed to redbeat: pass everything except redbeat's
         # own keys through to the client, which validates its own arguments
         connection_options = passthrough_options
+        skipped_options = {}
     else:
         # options inherited from broker_transport_options belong to the broker
-        # and are not forwarded to the client, as before 2.4.0
+        # and are not forwarded to the client, as before 2.4.0; the sentinel
+        # and cluster branches below still consume them
         connection_options = {}
-        if passthrough_options:
-            logger.debug(
-                'beat: not forwarding broker_transport_options to redis: %s; '
-                'set redbeat_redis_options to pass options to the redis client',
-                ', '.join(sorted(passthrough_options)),
-            )
+        skipped_options = passthrough_options
 
     if not hasattr(app, REDBEAT_REDIS_KEY) or getattr(app, REDBEAT_REDIS_KEY) is None:
         if redis_options.get('cluster', False):
@@ -182,6 +179,7 @@ def get_redis(app=None):
             setattr(app, REDBEAT_SENTINEL_KEY, sentinel)
             connection = None
         elif conf.redis_url.startswith('rediss'):
+            _log_skipped_broker_options(skipped_options)
             ssl_options = {'ssl_cert_reqs': ssl.CERT_REQUIRED}
             if isinstance(conf.redis_use_ssl, dict):
                 ssl_options.update(conf.redis_use_ssl)
@@ -198,6 +196,7 @@ def get_redis(app=None):
             passthrough_options.update({"decode_responses": True})
             connection = RedisCluster(startup_nodes=startup_nodes, **passthrough_options)
         else:
+            _log_skipped_broker_options(skipped_options)
             connection_options.update({"decode_responses": True})
             connection = Redis.from_url(conf.redis_url, **connection_options)
 
@@ -214,6 +213,15 @@ def get_redis(app=None):
         _set_redbeat_connect(app, REDBEAT_REDIS_KEY, connection, retry_period)
 
     return getattr(app, REDBEAT_REDIS_KEY)
+
+
+def _log_skipped_broker_options(skipped_options):
+    if skipped_options:
+        logger.debug(
+            'beat: not forwarding broker_transport_options to redis: %s; '
+            'set redbeat_redis_options to pass options to the redis client',
+            ', '.join(sorted(skipped_options)),
+        )
 
 
 def _set_redbeat_connect(app, connect_name, connection, retry_period):
@@ -237,21 +245,25 @@ class RedBeatConfig:
         self.statics_key = self.key_prefix + ':statics'
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
         if not self.is_key_in_conf('redbeat_redis_url'):
-            warnings.warn(
+            # also log it: DeprecationWarning is silenced by default and beat
+            # usually runs as a daemon, so the warning alone would go unseen
+            message = (
                 'RedBeat will stop falling back to broker_url in version 2.5.0, '
-                'set redbeat_redis_url explicitly',
-                DeprecationWarning,
+                'set redbeat_redis_url explicitly'
             )
+            warnings.warn(message, DeprecationWarning, stacklevel=2)
+            logger.warning(message)
         self.redis_use_ssl = self.either_or('redbeat_redis_use_ssl', app.conf['BROKER_USE_SSL'])
         self.redbeat_redis_options = self.either_or(
             'redbeat_redis_options', app.conf['BROKER_TRANSPORT_OPTIONS']
         )
         if not self.is_key_in_conf('redbeat_redis_options') and self.redbeat_redis_options:
-            warnings.warn(
+            message = (
                 'RedBeat will stop falling back to broker_transport_options in version '
-                '2.5.0, set redbeat_redis_options explicitly',
-                DeprecationWarning,
+                '2.5.0, set redbeat_redis_options explicitly'
             )
+            warnings.warn(message, DeprecationWarning, stacklevel=2)
+            logger.warning(message)
         self.lock_key = self.either_or('redbeat_lock_key', self.key_prefix + ':lock')
         if self.lock_key and not self.lock_key.startswith(self.key_prefix):
             self.lock_key = self.key_prefix + self.lock_key
