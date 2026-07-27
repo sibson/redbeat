@@ -105,9 +105,16 @@ old trace as live — but don't leap from "old" to "invalid": the underlying bug
 often survives the rewrite. Check the current code before deciding.
 
 **5. Look for duplicates.** Search open and closed issues for the same symptom.
-Known clusters: `due_at`/`remaining_estimate` (#210, #307), lock ownership and
-re-election (#218, #230, #306), lock release on shutdown (#129), entries
-vanishing from the schedule (#285, #291). Canonical = oldest with the best repro.
+Canonical = oldest with the best repro.
+
+Recurring themes, as a starting point for the search and nothing more —
+verify against the actual threads before relying on any of it, because
+similar-sounding reports routinely have different causes: `due_at` /
+`remaining_estimate` arithmetic; lock ownership, extension and re-election;
+lock release on shutdown; entries disappearing from the schedule. A shared
+error message is not a shared cause — `LockNotOwnedError` alone spans a
+documented design exit, a stale lock after restart, and a null lock after a
+dropped connection.
 
 **6. Classify.** bug, enhancement, question, or documentation. Before treating
 anything as a defect, check `docs/` — particularly `docs/design.rst` — for

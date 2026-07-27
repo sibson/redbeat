@@ -66,14 +66,15 @@
     {
       "id": 5,
       "name": "idempotency-on-rerun",
-      "prompt": "/issue-triage 291 --dry-run — note this issue has already been triaged once before; a previous triage comment is the most recent comment on the thread.",
-      "expected_output": "Detects the prior triage comment and declines to post a near-duplicate, reporting the unchanged state to the maintainer instead.",
-      "files": [],
+      "prompt": "/issue-triage 291 --dry-run. This issue's comment thread is given by evals/fixtures/issue-291-comments.json — treat that file as the authoritative result of fetching the issue's comments, in place of the live API.",
+      "expected_output": "Detects the prior triage comment at the end of the fixture thread and declines to post a near-duplicate, reporting the unchanged state to the maintainer instead.",
+      "files": ["fixtures/issue-291-comments.json"],
       "assertions": [
         "Retrieves the issue's comments before composing any comment",
-        "Explicitly acknowledges the prior triage comment",
+        "Explicitly identifies the final fixture comment as a prior triage comment",
         "Declines to post a near-duplicate comment, or states clearly what changed to justify a new one",
         "Reports the situation to the maintainer in the run report rather than on the issue",
+        "Does not silently re-triage as though the thread were untouched",
         "Takes no write action"
       ]
     },

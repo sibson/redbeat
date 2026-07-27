@@ -47,8 +47,14 @@ the suite, but the expectations need re-pinning when it happens:
 - `notes` in `evals.json` records the date the expectations were pinned. Update
   it when you re-pin.
 
-Case 5 describes prior-triage state in the prompt rather than depending on #291
-actually having a triage comment, so it stays valid regardless of backlog state.
+Case 5 uses `fixtures/issue-291-comments.json` rather than the live thread, so it
+stays valid regardless of backlog state. It has to: the first version of this
+case simply *asserted* in the prompt that a prior triage comment existed. The run
+checked the real thread, found the newest comment was the reporter's, and flagged
+the contradiction instead of playing along — the right call, and one that left
+the eval unable to test the thing it was named for. An eval that describes a
+world the agent can check has to be right about that world, or it tests
+credulity. Hence a fixture.
 
 A worked example of the above, from the suite's first run: case 2 originally
 asserted that #218 was a confirmed-but-untestable defect. The run showed that

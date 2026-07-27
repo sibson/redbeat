@@ -140,6 +140,20 @@ yet, which is useful information about the suite.
 
 ## Known harness limits
 
+Two that cost time because they look like the code path never ran:
+
+**The logger is `celery.beat`, not `redbeat`** (`redbeat/schedulers.py:27` —
+`get_logger('celery.beat')`). So `assertLogs('redbeat')` fails with "no logs
+triggered", which reads as "my repro didn't reach the code" when in fact the
+assertion is just watching the wrong logger. Use `assertLogs('celery.beat')`.
+
+**Construct the scheduler with `lazy=True`** when your test depends on state you
+set up in Redis by hand. A non-lazy `RedBeatScheduler(app=...)` runs
+`setup_schedule()` during construction, which re-saves every static entry — so
+the orphaned or deleted entry you just arranged is quietly restored before your
+assertion runs.
+
+
 `fakeredis` ships without Lua support, so anything routed through `EVALSHA`
 fails with `ResponseError: unknown command 'evalsha'`. Redis lock operations use
 a CAS-on-token Lua script, so `lock.extend()` and `lock.release()` hit this:
