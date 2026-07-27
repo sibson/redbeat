@@ -318,6 +318,16 @@ class InheritedClusterOptionsRedBeatCase(AppCase):
         self.assertTrue(kwargs['decode_responses'])
         self.assertEqual(kwargs['startup_nodes'], [{"host": "192.168.1.1", "port": 30001}])
 
+    def test_no_skip_log_when_options_are_forwarded(self):
+        # the "not forwarding" debug log belongs to the redis:// and rediss://
+        # branches only; here the options do reach the client
+        with mock.patch('redis.cluster.RedisCluster'):
+            with mock.patch('redbeat.schedulers.logger') as logger_mock:
+                get_redis(app=self.app)
+
+        for call in logger_mock.debug.call_args_list:
+            self.assertNotIn('not forwarding', call.args[0])
+
 
 class ClusterRedBeatCase(AppCase):
     config_dict = {

@@ -6,10 +6,18 @@
     `visibility_timeout` no longer crash beat at startup. RedBeat's own
     options (`retry_period`, `cluster`, ...) are never forwarded on any
     URL type, fixes #319. Options set explicitly via `redbeat_redis_options`
-    still pass through to the client as introduced in 2.4.0.
+    still pass through to the client as introduced in 2.4.0. Note this means
+    keys unknown to redis-py in an explicitly set `redbeat_redis_options`
+    now raise a TypeError at startup, where 2.3.3 silently ignored them on
+    `redis://` and `rediss://` URLs.
+  - bugfix, `get_redis` no longer mutates the options dict in place, so the
+    fallback no longer leaks `decode_responses` (and, on cluster URLs, the
+    normalized `startup_nodes`) into `broker_transport_options`
   - deprecation, falling back to `broker_url` and `broker_transport_options`
     now emits a DeprecationWarning; RedBeat 2.5.0 will require
-    `redbeat_redis_url` and `redbeat_redis_options` to be set explicitly
+    `redbeat_redis_url` and `redbeat_redis_options` to be set explicitly.
+    The message is also logged at warning level, since DeprecationWarning
+    is silenced by default and beat usually runs as a daemon
 
 2.4.1 (2026-07-16)
 ---------------------
