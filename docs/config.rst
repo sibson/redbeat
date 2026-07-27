@@ -24,10 +24,12 @@ accepted by redis-py (``password``, ``socket_timeout``,
 ``credential_provider``, ...) can be given here. Unknown options are
 rejected by redis-py itself.
 
-If not set, RedBeat falls back to `broker_transport_options`_, from which
-only the standard connection keys are used (``socket_timeout``,
-``password``, ``db``, ``username``, ``credential_provider``); broker
-transport settings such as ``visibility_timeout`` are ignored.
+If not set, RedBeat falls back to `broker_transport_options`_. Inherited
+broker options are not forwarded to the redis client on ``redis://`` and
+``rediss://`` URLs (the behavior before 2.4.0); RedBeat only reads its own
+keys from them, and the sentinel and cluster backends keep reading the
+options documented below. Set ``redbeat_redis_options`` explicitly to pass
+connection options through to the client.
 
 If ``retry_period`` is given, retry the connection for ``retry_period``
 seconds. If not set, the retrying mechanism is not triggered. If set

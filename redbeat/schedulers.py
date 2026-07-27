@@ -126,19 +126,6 @@ REDBEAT_INTERNAL_OPTIONS = (
     'startup_nodes',
 )
 
-# Connection options honored when redis options are inherited from
-# broker_transport_options, which mixes kombu transport settings
-# (visibility_timeout, ...) with connection settings. Like every other
-# consumer of that dict, take only the keys we understand and leave the
-# rest to their owners.
-INHERITED_CONNECTION_KEYS = (
-    'socket_timeout',
-    'password',
-    'db',
-    'username',
-    'credential_provider',
-)
-
 
 def get_redis(app=None):
     app = app_or_default(app)
@@ -146,31 +133,29 @@ def get_redis(app=None):
     redis_options = dict(conf.redbeat_redis_options)
     retry_period = redis_options.pop('retry_period', None)
 
+    passthrough_options = {
+        key: value for key, value in redis_options.items() if key not in REDBEAT_INTERNAL_OPTIONS
+    }
     if conf.is_key_in_conf('redbeat_redis_options'):
         # options were addressed to redbeat: pass everything except redbeat's
         # own keys through to the client, which validates its own arguments
-        connection_options = {
-            key: value
-            for key, value in redis_options.items()
-            if key not in REDBEAT_INTERNAL_OPTIONS
-        }
+        connection_options = passthrough_options
     else:
-        connection_options = {
-            key: redis_options[key] for key in INHERITED_CONNECTION_KEYS if key in redis_options
-        }
-        ignored = set(redis_options) - set(connection_options) - set(REDBEAT_INTERNAL_OPTIONS)
-        if ignored:
+        # options inherited from broker_transport_options belong to the broker
+        # and are not forwarded to the client, as before 2.4.0
+        connection_options = {}
+        if passthrough_options:
             logger.debug(
-                'beat: ignoring broker_transport_options not used by redbeat: %s; '
+                'beat: not forwarding broker_transport_options to redis: %s; '
                 'set redbeat_redis_options to pass options to the redis client',
-                ', '.join(sorted(ignored)),
+                ', '.join(sorted(passthrough_options)),
             )
 
     if not hasattr(app, REDBEAT_REDIS_KEY) or getattr(app, REDBEAT_REDIS_KEY) is None:
         if redis_options.get('cluster', False):
             from redis.cluster import RedisCluster
 
-            connection = RedisCluster.from_url(conf.redis_url, **connection_options)
+            connection = RedisCluster.from_url(conf.redis_url, **passthrough_options)
         elif conf.redis_url.startswith('redis-sentinel') and 'sentinels' in redis_options:
             connection_kwargs = {}
             if isinstance(conf.redis_use_ssl, dict):
@@ -210,8 +195,8 @@ def get_redis(app=None):
             ]
             startup_nodes = [{**node, "port": int(node["port"])} for node in startup_nodes]
 
-            connection_options.update({"decode_responses": True})
-            connection = RedisCluster(startup_nodes=startup_nodes, **connection_options)
+            passthrough_options.update({"decode_responses": True})
+            connection = RedisCluster(startup_nodes=startup_nodes, **passthrough_options)
         else:
             connection_options.update({"decode_responses": True})
             connection = Redis.from_url(conf.redis_url, **connection_options)

@@ -1,13 +1,12 @@
 2.4.2 (unreleased)
 ---------------------
-  - bugfix, stop forwarding options redis-py does not understand to its
-    connection classes, which crashed beat at startup since 2.4.0: RedBeat's
-    own options (`retry_period`, `cluster`, ...) are never forwarded, fixes
-    #319, and options inherited from `broker_transport_options` only
-    contribute the standard connection keys (`socket_timeout`, `password`,
-    `db`, `username`, `credential_provider`), so kombu settings such as
-    `visibility_timeout` no longer break the scheduler. Explicitly set
-    `redbeat_redis_options` still pass through to redis-py unchanged.
+  - bugfix, restore the pre-2.4.0 handling of options inherited from
+    `broker_transport_options`: they are no longer forwarded to the redis
+    client on `redis://` and `rediss://` URLs, so broker settings such as
+    `visibility_timeout` no longer crash beat at startup. RedBeat's own
+    options (`retry_period`, `cluster`, ...) are never forwarded on any
+    URL type, fixes #319. Options set explicitly via `redbeat_redis_options`
+    still pass through to the client as introduced in 2.4.0.
   - deprecation, falling back to `broker_url` and `broker_transport_options`
     now emits a DeprecationWarning; RedBeat 2.5.0 will require
     `redbeat_redis_url` and `redbeat_redis_options` to be set explicitly

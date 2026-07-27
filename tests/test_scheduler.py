@@ -265,14 +265,14 @@ class InheritedBrokerOptionsRedBeatCase(AppCase):
     def setup(self):
         self.app.conf.update(self.config_dict)
 
-    def test_kombu_options_not_forwarded_to_redis(self):
+    def test_inherited_options_not_forwarded_to_redis(self):
         with mock.patch('redis.Redis.from_url') as from_url:
             with self.assertLogs('celery.beat', level='DEBUG') as logs:
                 get_redis(app=self.app)
 
         kwargs = from_url.call_args.kwargs
         self.assertNotIn('visibility_timeout', kwargs)
-        self.assertEqual(kwargs['socket_timeout'], 5)
+        self.assertNotIn('socket_timeout', kwargs)
         self.assertTrue(kwargs['decode_responses'])
         self.assertTrue(any('visibility_timeout' in record.getMessage() for record in logs.records))
 
@@ -300,19 +300,21 @@ class InheritedClusterOptionsRedBeatCase(AppCase):
         'BROKER_URL': 'redis-cluster://redis-cluster:30001/0',
         'BROKER_TRANSPORT_OPTIONS': {
             'startup_nodes': [{"host": "192.168.1.1", "port": "30001"}],
-            'visibility_timeout': 3600,
+            'max_connections': 10,
         },
     }
 
     def setup(self):
         self.app.conf.update(self.config_dict)
 
-    def test_startup_nodes_preserved_kombu_options_dropped(self):
+    def test_startup_nodes_preserved_options_forwarded(self):
+        # cluster URLs are not a kombu transport, so inherited options keep
+        # their historical passthrough behavior
         with mock.patch('redis.cluster.RedisCluster') as redis_cluster:
             get_redis(app=self.app)
 
         kwargs = redis_cluster.call_args.kwargs
-        self.assertNotIn('visibility_timeout', kwargs)
+        self.assertEqual(kwargs['max_connections'], 10)
         self.assertTrue(kwargs['decode_responses'])
         self.assertEqual(kwargs['startup_nodes'], [{"host": "192.168.1.1", "port": 30001}])
 
