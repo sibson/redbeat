@@ -86,6 +86,13 @@ jobs:
       id-token: write  # IMPORTANT: mandatory for sigstore
 
     steps:
+    # `make release` rewrites the top of CHANGES.txt to `VERSION (DATE)` and
+    # commits it before tagging, so the tagged tree carries this release's
+    # notes.
+    - name: Check out source code
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: false
     - name: Download all the dists
       uses: actions/download-artifact@v4
       with:
@@ -97,6 +104,23 @@ jobs:
         inputs: >-
           ./dist/*.tar.gz
           ./dist/*.whl
+    - name: Extract release notes from CHANGES.txt
+      run: |
+        version="${GITHUB_REF_NAME#v}"
+        awk -v ver="$version" '
+          # section header for this version, e.g. "2.4.2 (2026-07-27)"
+          index($0, ver " (") == 1 { found = 1; next }
+          # stop at the next version header
+          found && /^[0-9]+\.[0-9]+\.[0-9]+ \(/ { exit }
+          found && /^-+$/ { next }          # underline beneath the header
+          found && /^[[:space:]]*-[[:space:]]*$/ { next }  # empty placeholder bullet
+          found { print }
+        ' CHANGES.txt | sed -e 's/^  //' > release-notes.md
+        if [ ! -s release-notes.md ]; then
+          echo "::warning::no CHANGES.txt entry found for $version"
+          printf 'release version %s\n' "$version" > release-notes.md
+        fi
+        cat release-notes.md
     - name: Create GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -104,7 +128,9 @@ jobs:
         gh release create
         "$GITHUB_REF_NAME"
         --repo "$GITHUB_REPOSITORY"
-        --notes ""
+        --title "$GITHUB_REF_NAME"
+        --notes-file release-notes.md
+        --generate-notes
     - name: Upload artifact signatures to GitHub Release
       env:
         GITHUB_TOKEN: ${{ github.token }}
