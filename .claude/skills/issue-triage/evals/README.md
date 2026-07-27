@@ -1,8 +1,9 @@
 # issue-triage evals
 
-Six cases covering the outcomes that are easy to get wrong, plus the two
-behaviours the design depends on: never closing an issue, and never posting a
-duplicate comment on a re-run.
+Seven cases covering the outcomes that are easy to get wrong, plus the three
+behaviours the design depends on: never closing an issue, never posting a
+duplicate comment on a re-run, and never opening a PR on top of one that is
+already waiting for review.
 
 ## Why these read fixtures, not the live API
 
@@ -28,6 +29,15 @@ Batch mode reads a frozen backlog the same way, from `fixtures/backlog.json`.
 Which issues it picks and what it calls overdue are judgments, and both change
 as the real backlog is worked — so they need pinning too, or the case measures
 the state of the repo rather than the quality of the selection.
+
+The open PR list is frozen for the same reason, in `fixtures/open-prs.json`, and
+shared by every case that could turn one up. It has to be *every* open PR rather
+than the one the case is about: "search the number, then skim the list" is the
+step under test, and a fixture holding only #287 would hand the answer over
+before the search ran. Note that this fixture cannot lie by omission — if a case
+freezes a world with no open PR for its issue and the real repo has one, the run
+can check, find it, and be right against a failing assertion. Case 5's lesson
+generalises: freeze what's true or don't freeze it.
 
 ## Get the repo into the state the skill assumes, first
 
@@ -85,6 +95,11 @@ python .claude/skills/issue-triage/evals/check_no_writes.py \
 python snapshot.py --number 319 --as-of 2026-07-21 < fetched.json
 ```
 
+`--list` and `--prs` refresh `backlog.json` and `open-prs.json` the same way.
+Re-freeze the PR list when a case's expectation depends on one merging or
+closing, and re-check the cases that read it — an open PR going away is exactly
+the drift `verified_against` exists to catch.
+
 Pin `--as-of` to the day the issue was filed, so the fixture is the report rather
 than the discussion that followed.
 
@@ -99,12 +114,13 @@ so the distinction has to be made when choosing the case, not at grading time.
 
 | Case | Guards against |
 |---|---|
-| `reproducible-bug-and-duplicate` (#307) | The happy path. Also the only case where a duplicate and a reproduction coexist — #210 is the same defect. |
+| `reproducible-bug-and-duplicate` (#307) | The happy path. Also the only case where a duplicate and a reproduction coexist — #210 is the same defect — and where outcome A's branch-and-PR sequence has to be held back because #308 is already open. |
 | `documented-behaviour-not-a-bug` (#218) | Confirming a defect that `docs/design.rst` says is intentional — and the opposite error of closing the whole report because the headline behaviour is documented. |
 | `version-obsolescence-check` (#270) | Both failure directions: treating a celery 4.x trace as current, and dismissing a live bug because the report is old. |
 | `question-not-a-bug` (#98) | Labelling a usage question as a bug and asking for a traceback that will never exist. |
 | `idempotency-on-rerun` (#291) | Re-commenting on an already-triaged issue. |
 | `batch-and-overdue-report` | Closing anything, and an overdue check that only finds issues the process already touched. |
+| `open-pr-already-proposed` (#285) | Triaging an issue as untouched when a fix has been sitting in review since 2025, and the opposite error of waving #287 through as "fixed by" when it argues with `docs/design.rst`. |
 
 Case 5 uses `fixtures/synthetic-291-prior-triage.json` — a hand-written thread
 ending in a triage comment, not a snapshot. It has to be synthetic: the whole

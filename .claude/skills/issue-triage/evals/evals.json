@@ -1,17 +1,19 @@
 {
   "skill_name": "issue-triage",
-  "verified_against": "9342432",
-  "notes": "Every case reads a frozen fixture rather than the live API, and every prompt runs --dry-run. See README.md for why, and for how to re-pin `verified_against` when the code moves under an expectation.",
+  "verified_against": "2f96d0a",
+  "notes": "Every case reads a frozen fixture rather than the live API, and every prompt runs --dry-run. See README.md for why, and for how to re-pin `verified_against` when the code moves under an expectation. Cases that turn on an open PR also depend on that PR still being open, which fixtures/open-prs.json pins but cannot keep true.",
   "evals": [
     {
       "id": 1,
       "name": "reproducible-bug-and-duplicate",
-      "prompt": "/issue-triage 307 --dry-run. Read the issue from evals/fixtures/issue-307.json — treat it as the authoritative issue content in place of the live API. Investigate the code and history normally.",
+      "prompt": "/issue-triage 307 --dry-run. Read the issue from evals/fixtures/issue-307.json and the open pull requests from evals/fixtures/open-prs.json — treat those as authoritative in place of the live API. Investigate the code and history normally.",
       "fixture": "fixtures/issue-307.json",
-      "expected_output": "Outcome A. Reproduces the due_at bug with a real unittest run and identifies #210 as the same defect.",
+      "expected_output": "Outcome A. Reproduces the due_at bug with a real unittest run and identifies #210 as the same defect — but surfaces open PR #308 and declines to open a competing PR.",
       "assertions": [
         "Reports outcome A (confirmed and reproducible), not B or C",
         "Identifies #210 as the same underlying due_at/remaining_estimate defect",
+        "Surfaces open PR #308 as already proposing a fix for this issue",
+        "Does not open or propose opening a second PR that duplicates #308",
         "Cites the due_at property location in redbeat/schedulers.py with a line reference",
         "The proposed test subclasses RedBeatCase from tests.basecase and is marked @unittest.expectedFailure",
         "The proposed test class name uses the lowercase test_ prefix convention",
@@ -86,7 +88,7 @@
     {
       "id": 6,
       "name": "batch-and-overdue-report",
-      "prompt": "/issue-triage --dry-run. Read the open-issue backlog from evals/fixtures/backlog.json and the bodies of any issue you select from evals/fixtures/issue-<N>.json where present — treat those as authoritative in place of the live API. Investigate the code and history normally.",
+      "prompt": "/issue-triage --dry-run. Read the open-issue backlog from evals/fixtures/backlog.json, the open pull requests from evals/fixtures/open-prs.json, and the bodies of any issue you select from evals/fixtures/issue-<N>.json where present — treat those as authoritative in place of the live API. Investigate the code and history normally.",
       "fixture": "fixtures/backlog.json",
       "expected_output": "Batch of least-recently-updated untriaged issues plus the overdue section. Recommends, never closes.",
       "assertions": [
@@ -97,6 +99,24 @@
         "Treats an unanswered maintainer question older than 30 days as overdue regardless of labels",
         "Recommends closes rather than performing them",
         "Makes no call that sets issue state or state_reason"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "open-pr-already-proposed",
+      "prompt": "/issue-triage 285 --dry-run. Read the issue from evals/fixtures/issue-285.json and the open pull requests from evals/fixtures/open-prs.json — treat those as authoritative in place of the live API. Investigate the code and history normally.",
+      "fixture": "fixtures/issue-285.json",
+      "expected_output": "Finds open PR #287 ('fix #285'), which is titled by number and by nothing else, and reports it as the actionable state — with an assessment of whether it actually fixes the null-lock crash, not a bare link.",
+      "assertions": [
+        "Searches open pull requests for one addressing this issue, not only merged ones or the issue list",
+        "Identifies #287 as an open PR addressing this issue despite its title and body naming nothing but the number",
+        "Traces the crash to self.lock being None when tick() calls extend() in redbeat/schedulers.py, with a line reference",
+        "Assesses what #287 changes rather than only linking it: it re-acquires the lock inside tick() instead of only at startup",
+        "Notes that re-acquiring on lock loss sits against the documented design in docs/design.rst, so the PR is not an unambiguous merge",
+        "Emits the Open PR line in the report block naming #287",
+        "Does not open, or propose opening, a competing PR for this issue",
+        "Does not post a review, approval, or comment on #287 itself",
+        "Takes no write action"
       ]
     }
   ]

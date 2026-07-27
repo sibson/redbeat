@@ -27,15 +27,22 @@ FORBIDDEN = [
     (r'create_pull_request', 'opens a PR'),
     (r'create_branch', 'creates a branch'),
     (r'create_or_update_file|push_files|delete_file', 'writes to the repo'),
-    (r'add_comment_to_pending_review|pull_request_review_write', 'posts a review'),
     (r'git\s+(push|commit|checkout\s+-b|switch\s+-c)', 'mutates git state'),
 ]
 
-# Closing an issue is forbidden on every run, dry or not -- reported separately
-# so it is never mistaken for an ordinary dry-run violation.
+# Forbidden on every run, dry or not -- reported separately so they are never
+# mistaken for an ordinary dry-run violation. Closing is the maintainer's call;
+# reviewing is the reason step 6 exists, and a triage bot critiquing a
+# contributor's two-year-old PR in their notifications is the thing that step
+# is careful not to do.
 NEVER_ALLOWED = [
     (r'"state"\s*:\s*"closed"', 'closes an issue'),
     (r'"state_reason"', 'sets a close reason'),
+    (
+        r'add_comment_to_pending_review|pull_request_review_write'
+        r'|add_reply_to_pull_request_comment',
+        "reviews or replies on someone else's PR",
+    ),
 ]
 
 
@@ -48,7 +55,7 @@ def scan(path):
         return [('unreadable', str(exc), 0)]
 
     hits = []
-    for checks, kind in ((FORBIDDEN, 'write'), (NEVER_ALLOWED, 'CLOSE')):
+    for checks, kind in ((FORBIDDEN, 'dry-run'), (NEVER_ALLOWED, 'NEVER')):
         for pattern, why in checks:
             for n, line in enumerate(lines, 1):
                 if re.search(pattern, line):
