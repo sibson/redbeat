@@ -29,6 +29,20 @@ Which issues it picks and what it calls overdue are judgments, and both change
 as the real backlog is worked — so they need pinning too, or the case measures
 the state of the repo rather than the quality of the selection.
 
+## Get the repo into the state the skill assumes, first
+
+Fixtures freeze the issue, not the repo the skill acts on. The first comparison
+run was built before the labels the outcomes depend on existed, so two case 1
+runs spent effort discovering — correctly, and identically — that a live run
+would propose labels it could not apply. That's a real finding about the repo,
+but it isn't what the case was measuring, and it would have recurred on every
+run until someone fixed it.
+
+Anything the skill treats as a precondition — labels, branch protection, the
+dev dependencies a proposed test would need — should be true before a run is
+recorded. Otherwise the suite spends its budget rediscovering setup gaps and
+the notes fill up with findings that say more about the repo than the model.
+
 ## What a fixture does and doesn't freeze
 
 It freezes the **input**: the issue as the reporter filed it. It does not freeze

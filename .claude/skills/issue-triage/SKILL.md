@@ -70,8 +70,8 @@ skill rests on that boundary being reliable. Never push to `main`.
 Labels, and only these: `bug`, `confirmed`, `has-repro`, `needs-info`,
 `probably-fixed`, `duplicate`, `documentation`, `question`,
 `needs-integration-test`, `enhancement`, `help wanted`. If none fits, that is a
-finding to report, not a licence to invent one. (First run in a fresh repo: these
-need creating once — see `references/decision-table.md`.)
+finding to report, not a licence to invent one. All eleven exist on the repo; you
+cannot create labels and have no need to.
 
 Every comment ends with the attribution footer:
 

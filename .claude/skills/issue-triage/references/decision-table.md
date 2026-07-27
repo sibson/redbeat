@@ -6,25 +6,8 @@ with the duplicate link in the comment. Add `duplicate` to A's labels in that
 case — the outcome governs the workflow, the labels describe the issue, and an
 issue that is genuinely both should say so.
 
-## One-time label bootstrap
-
-Already in the repo — use as-is, don't recreate or restyle them:
-`bug`, `duplicate`, `question`, `enhancement`, `help wanted`.
-
-Create these once, before the first real run:
-
-| Label | Colour | Meaning |
-|---|---|---|
-| `confirmed` | `b60205` | Reproduced, or traced to specific code |
-| `has-repro` | `0e8a16` | A committed test demonstrates it |
-| `needs-info` | `fbca04` | Waiting on the reporter; starts the 30-day clock |
-| `probably-fixed` | `c2e0c6` | Believed resolved by a named commit |
-| `documentation` | `0075ca` | Docs gap rather than a code defect |
-| `needs-integration-test` | `5319e7` | Real defect, not expressible in the fakeredis harness |
-
-Check with `get_label` before creating rather than trusting this list — it is a
-snapshot, and a triage run that assumes a label exists will fail at the point
-where it has already posted the comment.
+All eleven labels the outcomes below use exist on the repo. Apply them as-is —
+don't recreate or restyle them, and don't invent new ones.
 
 ## A — Confirmed and reproducible
 

@@ -36,8 +36,7 @@
     "Haiku on case 6 triaged the five issues that have fixture files in evals/fixtures/ instead of querying the backlog for least-recently-updated untriaged issues -- substituting visible test data for the selection rule. Worth guarding in SKILL.md, since it is a failure mode that only appears under evaluation.",
     "Opus on case 2 found a real repo problem outside the assertions: requirements-dev.txt pins plain fakeredis, which has no Lua, so every lock extend/release raises ResponseError 'unknown command evalsha'. Any future lock-related test needs fakeredis[lua] in the same change.",
     "Effort changed the answer on case 1 in the one place the case cares about: Sonnet at high effort found #210, Sonnet at default effort did not and reported no duplicate at all. The difference is search-query breadth ('due_at' vs 'due_at remaining_estimate'), which suggests the duplicate-search step in SKILL.md should say to search the narrowest distinctive identifier alone before adding qualifying terms.",
-    "Sonnet at high effort reports 10/10 on case 1 against Opus's 10/10 in the earlier record, so case 1 no longer discriminates between them at that effort and its assertions want tightening if it is to stay a comparison case.",
-    "Both case 1 runs independently flagged that decision-table.md's one-time label bootstrap has never been run on this repo -- confirmed, has-repro, needs-info, probably-fixed, documentation and needs-integration-test do not exist. A live run would propose labels it cannot apply."
+    "Sonnet at high effort reports 10/10 on case 1 against Opus's 10/10 in the earlier record, so case 1 no longer discriminates between them at that effort and its assertions want tightening if it is to stay a comparison case."
   ],
   "runs": [
     {
