@@ -17,6 +17,7 @@ from redbeat.schedulers import (
     RedBeatSchedulerEntry,
     RetryingConnection,
     acquire_distributed_beat_lock,
+    ensure_conf,
     get_redis,
 )
 from tests.basecase import AppCase, RedBeatCase
@@ -83,6 +84,31 @@ class test_RedBeatScheduler_schedule(RedBeatSchedulerTestBase):
 
         self.assertNotIn(up_next2.name, schedule)
         self.assertNotIn(later.name, schedule)
+
+    def test_stored_entries_are_listable_via_the_schedule_key(self):
+        # the recipe documented in docs/tasks.rst: .schedule is a due-window
+        # query, walking the sorted set is how you enumerate every entry
+        due = self.create_entry(name='due', s=due_now).save()
+        later = self.create_entry(name='later', s=self.due_later).save()
+
+        self.assertNotIn(later.name, self.s.schedule)
+
+        conf = ensure_conf(self.app)
+        keys = get_redis(self.app).zrange(conf.schedule_key, 0, -1)
+        entries = [RedBeatSchedulerEntry.from_key(key, app=self.app) for key in keys]
+
+        self.assertEqual(sorted(e.name for e in entries), [due.name, later.name])
+
+    def test_entry_is_loadable_by_generated_key(self):
+        entry = self.create_entry(name='findme', s=due_now).save()
+
+        key = RedBeatSchedulerEntry.generate_key(self.app, 'findme')
+        self.assertEqual(RedBeatSchedulerEntry.from_key(key, app=self.app).key, entry.key)
+
+        with self.assertRaises(KeyError):
+            RedBeatSchedulerEntry.from_key(
+                RedBeatSchedulerEntry.generate_key(self.app, 'nosuchtask'), app=self.app
+            )
 
 
 class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
