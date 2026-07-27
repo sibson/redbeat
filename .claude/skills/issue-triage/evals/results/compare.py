@@ -17,6 +17,35 @@ from collections import defaultdict
 
 PROVENANCE = ('skill_commit', 'evals_verified_against')
 
+# USD per million tokens, (input, output). Snapshot -- prices move, and Sonnet 5
+# is on introductory pricing, so a record compared long after it was made can be
+# costed wrongly. PRICING_AS_OF is printed with every cost figure for that reason.
+PRICING_AS_OF = '2026-06-24'
+PRICING = {
+    'claude-fable-5': (10.00, 50.00),
+    'claude-opus-5': (5.00, 25.00),
+    'claude-opus-4-8': (5.00, 25.00),
+    'claude-opus-4-7': (5.00, 25.00),
+    'claude-opus-4-6': (5.00, 25.00),
+    'claude-sonnet-5': (2.00, 10.00),  # introductory; reverts to 3.00/15.00 after 2026-08-31
+    'claude-sonnet-4-6': (3.00, 15.00),
+    'claude-haiku-4-5': (1.00, 5.00),
+}
+
+# Runs record total tokens, not the input/output split, so cost needs an assumed
+# blend. Agentic loops re-send a large prefix every turn and generate relatively
+# little, so they sit well toward input; 0.9 is a deliberate default rather than a
+# measurement. Override with --blend and say so if you report the number.
+DEFAULT_INPUT_SHARE = 0.9
+
+
+def cost_usd(model, tokens, input_share):
+    """Estimated USD for a run. None when the model isn't in the table."""
+    if model not in PRICING or not tokens:
+        return None
+    price_in, price_out = PRICING[model]
+    return tokens * (input_share * price_in + (1 - input_share) * price_out) / 1e6
+
 
 def load(path):
     with open(path, encoding='utf-8') as fh:
@@ -63,12 +92,27 @@ def main():
     p.add_argument('baseline')
     p.add_argument('candidate')
     p.add_argument('--model', help='restrict to one model id')
+    p.add_argument(
+        '--blend',
+        type=float,
+        default=DEFAULT_INPUT_SHARE,
+        help=f'assumed input share of tokens for costing (default {DEFAULT_INPUT_SHARE})',
+    )
     args = p.parse_args()
 
     base, cand = load(args.baseline), load(args.candidate)
 
     for w in check_provenance(base, cand):
         print(f'WARNING  {w}')
+
+    unpriced = {
+        r.get('model')
+        for rec in (base, cand)
+        for r in rec.get('runs', [])
+        if r.get('model') not in PRICING
+    }
+    if unpriced:
+        print(f'WARNING  no price on file for: {", ".join(sorted(m or "?" for m in unpriced))}')
     print()
 
     bi, ci = index(base, args.model), index(cand, args.model)
@@ -77,10 +121,15 @@ def main():
         print('no runs to compare')
         return 1
 
-    by_model = defaultdict(lambda: [0, 0, 0, 0])  # passed, total, tokens_b, tokens_c
+    # passed, total, tokens_b, tokens_c, cost_b, cost_c
+    by_model = defaultdict(lambda: [0, 0, 0, 0, 0.0, 0.0])
 
-    print(f'{"case":<34} {"model":<20} {"base":>7} {"cand":>7} {"delta":>7}  tokens')
-    print('-' * 92)
+    header = (
+        f'{"case":<32} {"model":<18} {"base":>6} {"cand":>6} '
+        f'{"delta":>6}  {"tokens":>17}  {"cost":>15}'
+    )
+    print(header)
+    print('-' * 108)
     for name, model in keys:
         b, c = bi.get((name, model)), ci.get((name, model))
         rb, rc = (rate(b) if b else None), (rate(c) if c else None)
@@ -89,8 +138,14 @@ def main():
         fd = f'{rc - rb:+.0%}' if (rb is not None and rc is not None) else '--'
         tb = b.get('tokens', 0) if b else 0
         tc = c.get('tokens', 0) if c else 0
+        cb = cost_usd(model, tb, args.blend) or 0.0
+        cc = cost_usd(model, tc, args.blend) or 0.0
         tok = f'{tb:,} -> {tc:,}' if (tb and tc) else f'{tb or tc:,}'
-        print(f'{name[:34]:<34} {(model or "?")[:20]:<20} {fb:>7} {fc:>7} {fd:>7}  {tok}')
+        usd = f'${cb:.3f} -> ${cc:.3f}' if (cb and cc) else f'${cb or cc:.3f}'
+        print(
+            f'{name[:32]:<32} {(model or "?")[:18]:<18} '
+            f'{fb:>6} {fc:>6} {fd:>6}  {tok:>17}  {usd:>15}'
+        )
 
         agg = by_model[model]
         if c:
@@ -98,19 +153,30 @@ def main():
             agg[1] += c.get('assertions_total', 0)
         agg[2] += tb
         agg[3] += tc
+        agg[4] += cb
+        agg[5] += cc
 
         # An outcome flip is the finding; a pass-rate tie can hide one.
         ob = b.get('outcome_reported') if b else None
         oc = c.get('outcome_reported') if c else None
         if ob and oc and ob != oc:
-            print(f'{"":<34} outcome changed: {ob} -> {oc}')
+            print(f'{"":<32} outcome changed: {ob} -> {oc}')
 
-    print('-' * 92)
-    for model, (passed, total, tb, tc) in sorted(by_model.items(), key=lambda kv: kv[0] or ''):
+    print('-' * 108)
+    for model, (passed, total, tb, tc, cb, cc) in sorted(
+        by_model.items(), key=lambda kv: kv[0] or ''
+    ):
         pr = f'{passed / total:.0%}' if total else '--'
-        print(f'{model or "?":<20} candidate {pr} ({passed}/{total})   tokens {tb:,} -> {tc:,}')
+        print(
+            f'{model or "?":<18} candidate {pr:>4} ({passed}/{total})   '
+            f'tokens {tb:,} -> {tc:,}   cost ${cb:.3f} -> ${cc:.3f}'
+        )
 
-    print('\nPass rate is the weakest signal here -- read outcome_reported and notes too.')
+    print(
+        f'\nCost assumes a {args.blend:.0%}/{1 - args.blend:.0%} input/output token split '
+        f'(runs record only totals) at prices as of {PRICING_AS_OF}.'
+    )
+    print('Pass rate is the weakest signal here -- read outcome_reported and notes too.')
     return 0
 
 
