@@ -4,8 +4,7 @@
   "skill_commit": "45506e6",
   "evals_verified_against": "9342432",
   "orchestration": "workflow",
-  "scope": "cases 2-6 x 3 models, 15 runs. Case 1 is not in this record -- see case_1_missing.",
-  "case_1_missing": "Case 1 was left to the earlier agent-tool record (2026-07-27-opus5-sonnet5-haiku45.json) and a re-run on Sonnet was attempted twice here and failed both times, for two unrelated environment reasons rather than anything about the model. (1) With effort:'high' set on a Sonnet subagent, the harness permission handler stripped the required parameter from every single tool call -- Read lost file_path, Bash lost command, Grep/Glob lost pattern, ToolSearch lost query -- so the agent could not read the skill, the fixture or the repo. It surfaced first as a StructuredOutput retry-cap failure, which was downstream of the agent having no data to report. Reproduced twice; the same model with no effort override ran fine 5x in this matrix. (2) The control run with the override removed died on the account session limit. Anyone re-running should treat effort:'high' on Sonnet subagents as broken here until shown otherwise, and should not read either failure as a skill or model result.",
+  "scope": "cases 2-6 x 3 models (15 runs) at session-default effort, plus case 1 on Sonnet 5 at high and at default effort (2 runs).",
   "pricing_basis": {
     "as_of": "2026-06-24",
     "input_share_assumed": 0.9,
@@ -27,7 +26,7 @@
     "caveat": "claude-sonnet-5 is on introductory pricing through 2026-08-31, after which it reverts to 3.00/15.00 \u2014 a rerun after that date is not cost-comparable to this one without adjusting."
   },
   "grading": "Graded by hand from each run's full report against evals.json assertions, not self-reported. Reports are not committed -- they are large and regenerable; the failed_assertions and notes fields carry what mattered.",
-  "notes": "Effort was not set per agent; all 15 inherited the session default (medium), so this is comparable to the earlier agent-tool record on effort but not a per-model tuned comparison. Ordering by assertions passed -- Opus 31/32, Sonnet 25/32, Haiku 18/32 -- understates the gap, because the failures are not evenly serious: Opus's single miss is a dating nitpick on #270, while Sonnet's and Haiku's include reaching the wrong verdict on #218 and #270 and, for Haiku, ignoring the batch selection rule entirely. Cost tracks the same order at 6.8x between the ends ($2.60 / $1.55 / $0.38), but Sonnet is the outlier on efficiency rather than Opus: it burned the most tokens of any model (554k vs Opus's 371k) for a worse result, and its case 6 run alone cost 198k tokens and 16 minutes for the same verdicts Opus reached in half that.",
+  "notes": "Effort was not set per agent; all 15 inherited the session default (medium), so this is comparable to the earlier agent-tool record on effort but not a per-model tuned comparison. Ordering by assertions passed -- Opus 31/32, Sonnet 25/32, Haiku 18/32 -- understates the gap, because the failures are not evenly serious: Opus's single miss is a dating nitpick on #270, while Sonnet's and Haiku's include reaching the wrong verdict on #218 and #270 and, for Haiku, ignoring the batch selection rule entirely. Cost tracks the same order at 6.8x between the ends ($2.60 / $1.55 / $0.38), but Sonnet is the outlier on efficiency rather than Opus: it burned the most tokens of any model (554k vs Opus's 371k) for a worse result, and its case 6 run alone cost 198k tokens and 16 minutes for the same verdicts Opus reached in half that. Case 1 additions: the two Sonnet runs are the only per-agent-effort entries in this record (effort_source 'per-agent'); every other run inherited the session default of medium, so a high-vs-default comparison is available on case 1 only.",
   "findings": [
     "The #270 Opus/Sonnet divergence from the first comparison reproduced exactly -- Opus C, Sonnet D -- so it is a stable property of the case, not run-to-run noise. Haiku also said D, misattributing the commit.",
     "Case 5 (idempotency) is now non-discriminating: 3/3 models pass every assertion. Per the results README's own rule, it should be tightened or dropped rather than kept as a pass.",
@@ -35,9 +34,50 @@
     "Sonnet on case 2 wrote a test marked @unittest.expectedFailure asserting that documented behaviour is a defect -- the exact artifact assertion 4 exists to forbid, and the kind of thing that would have been committed to the repo in a live run.",
     "Sonnet on case 2 also deleted a pre-existing untracked file it had not created (tests/test_triage_scratch.py) in order to report a clean tree. SKILL.md should say to restrict cleanup to files the run itself created and to report anything else as found, not remove it.",
     "Haiku on case 6 triaged the five issues that have fixture files in evals/fixtures/ instead of querying the backlog for least-recently-updated untriaged issues -- substituting visible test data for the selection rule. Worth guarding in SKILL.md, since it is a failure mode that only appears under evaluation.",
-    "Opus on case 2 found a real repo problem outside the assertions: requirements-dev.txt pins plain fakeredis, which has no Lua, so every lock extend/release raises ResponseError 'unknown command evalsha'. Any future lock-related test needs fakeredis[lua] in the same change."
+    "Opus on case 2 found a real repo problem outside the assertions: requirements-dev.txt pins plain fakeredis, which has no Lua, so every lock extend/release raises ResponseError 'unknown command evalsha'. Any future lock-related test needs fakeredis[lua] in the same change.",
+    "Effort changed the answer on case 1 in the one place the case cares about: Sonnet at high effort found #210, Sonnet at default effort did not and reported no duplicate at all. The difference is search-query breadth ('due_at' vs 'due_at remaining_estimate'), which suggests the duplicate-search step in SKILL.md should say to search the narrowest distinctive identifier alone before adding qualifying terms.",
+    "Sonnet at high effort reports 10/10 on case 1 against Opus's 10/10 in the earlier record, so case 1 no longer discriminates between them at that effort and its assertions want tightening if it is to stay a comparison case.",
+    "Both case 1 runs independently flagged that decision-table.md's one-time label bootstrap has never been run on this repo -- confirmed, has-repro, needs-info, probably-fixed, documentation and needs-integration-test do not exist. A live run would propose labels it cannot apply."
   ],
   "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "reproducible-bug-and-duplicate",
+      "model": "claude-sonnet-5",
+      "effort": "high",
+      "effort_source": "per-agent",
+      "outcome_reported": "A",
+      "assertions_passed": 10,
+      "assertions_total": 10,
+      "failed_assertions": [],
+      "tokens": 83262,
+      "duration_ms": 174193,
+      "tool_uses": 36,
+      "wrote_anything": false,
+      "tree_clean": true,
+      "cost_usd_estimate": 0.2331,
+      "notes": "Full pass. Found #210 and read its whole comment thread, surfacing the 2021 finding that the naive fix (swap last_run_at for now) breaks tests/test_entry.py::test_RedBeatEntry::test_due_at because that test sets last_run_at = now and so cannot distinguish the two implementations -- which dovetails with what Opus found by actually applying the fix in the earlier record (the breakage is 12us of clock drift against a strict bound). Two findings beyond the assertions: it diffed against origin/main (74fd84e) after noticing the checkout was on a feature branch, and it checked the proposed labels with get_label and reported that confirmed and has-repro do not exist yet, so decision-table.md's one-time label bootstrap has never been run on this repo."
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "reproducible-bug-and-duplicate",
+      "model": "claude-sonnet-5",
+      "effort": "medium",
+      "effort_source": "session-default",
+      "outcome_reported": "A",
+      "assertions_passed": 9,
+      "assertions_total": 10,
+      "failed_assertions": [
+        "Identifies #210 as the same underlying due_at/remaining_estimate defect"
+      ],
+      "tokens": 61261,
+      "duration_ms": 104162,
+      "tool_uses": 27,
+      "wrote_anything": false,
+      "tree_clean": true,
+      "cost_usd_estimate": 0.1715,
+      "notes": "Identical verdict and a clean repro, but missed #210 entirely and stated 'no open duplicate found' -- i.e. it failed the duplicate half of the case it is named for. The cause is search breadth, not reasoning: it searched 'due_at remaining_estimate' and got only #307 and an unrelated 2017 RRULE issue, where the high-effort run searched the broader 'due_at' and found #210 immediately. Everything else, including the shallow-clone discipline, was as good as the high-effort run."
+    },
     {
       "eval_id": 2,
       "eval_name": "documented-behaviour-not-a-bug",
@@ -335,5 +375,6 @@
       "notes": "Same correct selection and label reasoning as Opus, overdue section present, and explicit that a close 'is the maintainer's call, not mine'. Most expensive run in the matrix by a wide margin -- 198k tokens and 16 minutes, roughly double Opus for the same verdicts.",
       "cost_usd_estimate": 0.554
     }
-  ]
+  ],
+  "case_1_note": "Case 1 on Opus and Haiku stays in the earlier agent-tool record; only Sonnet was re-run here. Two earlier attempts failed and both were environmental, not model or skill results. The first two runs with effort:'high' hit a harness fault where the permission handler stripped the required parameter from every tool call (Read lost file_path, Bash lost command, Grep/Glob lost pattern, ToolSearch lost query), surfacing first as a StructuredOutput retry-cap failure that was downstream of the agent having no data; a control run with the override removed then died on the account session limit. After the limit reset, the same effort:'high' run succeeded on the first try. The fault was therefore transient and effort:'high' is NOT broken for Sonnet subagents -- do not read the earlier note as a standing limitation."
 }

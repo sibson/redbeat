@@ -53,12 +53,25 @@ def load(path):
 
 
 def index(record, model=None):
-    """Map (eval_name, model) -> run, optionally filtered to one model."""
+    """Map (eval_name, model, effort) -> run, optionally filtered to one model.
+
+    Effort is part of the key because the same model at two effort levels is
+    two different measurements -- keying on (eval_name, model) alone silently
+    drops one of them, which is how a record can appear to hold fewer runs
+    than it does.
+    """
     out = {}
     for run in record.get('runs', []):
         if model and run.get('model') != model:
             continue
-        out[(run.get('eval_name'), run.get('model'))] = run
+        key = (run.get('eval_name'), run.get('model'), run.get('effort'))
+        if key in out:
+            print(
+                f'WARNING  duplicate run for {key} -- record holds two entries '
+                f'with the same case, model and effort; keeping the first'
+            )
+            continue
+        out[key] = run
     return out
 
 
@@ -125,13 +138,13 @@ def main():
     by_model = defaultdict(lambda: [0, 0, 0, 0, 0.0, 0.0])
 
     header = (
-        f'{"case":<32} {"model":<18} {"base":>6} {"cand":>6} '
+        f'{"case":<30} {"model":<18} {"effort":<7} {"base":>6} {"cand":>6} '
         f'{"delta":>6}  {"tokens":>17}  {"cost":>15}'
     )
     print(header)
-    print('-' * 108)
-    for name, model in keys:
-        b, c = bi.get((name, model)), ci.get((name, model))
+    print('-' * 116)
+    for name, model, effort in keys:
+        b, c = bi.get((name, model, effort)), ci.get((name, model, effort))
         rb, rc = (rate(b) if b else None), (rate(c) if c else None)
         fb = f'{rb:.0%}' if rb is not None else '--'
         fc = f'{rc:.0%}' if rc is not None else '--'
@@ -143,11 +156,11 @@ def main():
         tok = f'{tb:,} -> {tc:,}' if (tb and tc) else f'{tb or tc:,}'
         usd = f'${cb:.3f} -> ${cc:.3f}' if (cb and cc) else f'${cb or cc:.3f}'
         print(
-            f'{name[:32]:<32} {(model or "?")[:18]:<18} '
+            f'{name[:30]:<30} {(model or "?")[:18]:<18} {(effort or "?")[:7]:<7} '
             f'{fb:>6} {fc:>6} {fd:>6}  {tok:>17}  {usd:>15}'
         )
 
-        agg = by_model[model]
+        agg = by_model[(model, effort)]
         if c:
             agg[0] += c.get('assertions_passed', 0)
             agg[1] += c.get('assertions_total', 0)
@@ -160,15 +173,17 @@ def main():
         ob = b.get('outcome_reported') if b else None
         oc = c.get('outcome_reported') if c else None
         if ob and oc and ob != oc:
-            print(f'{"":<32} outcome changed: {ob} -> {oc}')
+            print(f'{"":<30} outcome changed: {ob} -> {oc}')
 
-    print('-' * 108)
-    for model, (passed, total, tb, tc, cb, cc) in sorted(
-        by_model.items(), key=lambda kv: kv[0] or ''
+    print('-' * 116)
+    # Totalled per (model, effort): summing a model across effort levels would
+    # report a number that describes no run anyone actually made.
+    for (model, effort), (passed, total, tb, tc, cb, cc) in sorted(
+        by_model.items(), key=lambda kv: (kv[0][0] or '', kv[0][1] or '')
     ):
         pr = f'{passed / total:.0%}' if total else '--'
         print(
-            f'{model or "?":<18} candidate {pr:>4} ({passed}/{total})   '
+            f'{model or "?":<18} {effort or "?":<7} candidate {pr:>4} ({passed}/{total})   '
             f'tokens {tb:,} -> {tc:,}   cost ${cb:.3f} -> ${cc:.3f}'
         )
 
