@@ -1,0 +1,712 @@
+{
+  "schema": 1,
+  "run_date": "2026-07-27",
+  "skill_commit": "f04bfce",
+  "evals_verified_against": "9342432",
+  "orchestration": "workflow",
+  "what_this_is": "Not a model comparison. The same 12 claude-opus-5 runs from 2026-07-27-opus5-sonnet5-skill-vs-noskill.json, regraded by skill-creator's own grader.md, to check whether the hand grading in that record holds. No runs were re-executed, so run-to-run variance is held out and only grading methodology varies.",
+  "grader_agreement": {
+    "cells": 12,
+    "identical": 10,
+    "differ_by_one": 2,
+    "hand_total": {
+      "with_skill": 38,
+      "without_skill": 33,
+      "delta": 5
+    },
+    "skill_creator_total": {
+      "with_skill": 39,
+      "without_skill": 34,
+      "delta": 5
+    },
+    "reading": "10 of 12 cells identical; the two disagreements are both +1 and fall one in each arm, so the measured skill delta is +5 under either grader. The scores in the earlier record stand. What skill-creator's process adds is not better scoring -- it is grader.md steps 4 and 6, which the hand grading did not do systematically."
+  },
+  "defects_found_in_evals_json": [
+    {
+      "case": 3,
+      "assertion": "Notes that the reported environment predates the currently supported celery/python floor",
+      "severity": "broken -- unsatisfiable from the fixture",
+      "evidence": "fixtures/issue-270.json carries no celery, python or redbeat version anywhere in the issue body; the only temporal signal is created_at 2024-02-02, which is the 2.2.0 era and already above setup.cfg's python_requires >=3.9 and celery>=5.0. The assertion asks the run to state something the fixture does not support.",
+      "observed": "Failed by 8 of 8 runs that faced it -- opus and sonnet in both arms, and big-pickle in both arms. A 0% pass rate across every model and both arms is a defective assertion, not a shared model weakness.",
+      "recommended": "Rewrite around what the fixture does support: the report gives no version at all, so the correct behaviour is to say so and check whether the implicated code path changed since the report date."
+    },
+    {
+      "case": 1,
+      "assertion": "The proposed test subclasses RedBeatCase ... / uses the lowercase test_ prefix / names tests/test_entry.py",
+      "severity": "teaching to the test",
+      "evidence": "references/repro-harness.md contains a worked `class test_Issue_307(RedBeatCase)` example for this exact issue number, carrying the @unittest.expectedFailure marker, a TRIAGE ARTIFACT docstring that names tests/test_entry.py::test_RedBeatEntry, and a mapping table routing due_at to tests/test_entry.py.",
+      "observed": "Case 1 is the only case where the skill showed a gain on Claude models (+5 of the +5 total). Three of its ten assertions are transcribable from a reference file the with_skill arm reads and the baseline never sees.",
+      "recommended": "Either genericise repro-harness.md so it stops naming issue 307, or move case 1 to an issue the references do not work through, or discount those three assertions when reporting the skill delta. Until then, part of the headline gain measures copying rather than triage."
+    },
+    {
+      "case": "1, 4 (and the pattern generally)",
+      "assertion": "Proposes only labels from the skill's fixed label set / Does not propose the bug or confirmed labels",
+      "severity": "passable by omission",
+      "evidence": "Both are negative-form: a run that proposes no labels at all satisfies them exactly as well as a run that proposes the right ones. skill-creator's grader flagged this independently in three separate cells.",
+      "recommended": "Add the positive form alongside the guard -- name the labels the outcome requires, and keep the no-invented-labels check as a second assertion."
+    }
+  ],
+  "claim_verification_added": "grader.md step 4 extracts factual claims from a report and checks them, which the hand grading did only opportunistically. On the case 1 with_skill run alone -- a 10/10 -- it found a wrong commit sha for the origin of the buggy line (5c4f707 cited, git blame says 05813ec), an incomplete list of later touches (cf3fd9e missed), a line reference off by six (maybe_due cited at 571, actually 577), and an overstated 'your numbers reproduce exactly' where the run had dropped seconds from the reference time. None of these change the verdict; all of them would have gone into a public comment.",
+  "notes": "The headline conclusion is that skill-creator should replace the hand-rolled harness, but not because it scores better -- it scores the same. It is better because it independently audits the rubric while grading, and it found two rubric defects that materially affect how the earlier record should be read: the only case where the skill measurably helps is partly a copying exercise, and one assertion has never been passable by anyone. Neither was visible from scores alone.",
+  "cells": [
+    {
+      "eval_id": 1,
+      "eval_name": "reproducible-bug-and-duplicate",
+      "arm": "with_skill",
+      "hand_graded": 10,
+      "skill_creator_graded": 10,
+      "total": 10,
+      "agree": true,
+      "skill_creator_expectations": [
+        {
+          "text": "Reports outcome A (confirmed and reproducible), not B or C",
+          "passed": true,
+          "evidence": "report.md line 3: '**Outcome**: A \u2014 confirmed with a failing regression test; also the same root cause as #210 (2021), so it carries `duplicate` as well.' run_metadata.json outcome: 'A \u2014 Confirmed and reproducible (also a duplicate of #210)'. decision-table.md explicitly sanctions A + duplicate label, so the dual classification is correct rather than a hedge."
+        },
+        {
+          "text": "Identifies #210 as the same underlying due_at/remaining_estimate defect",
+          "passed": true,
+          "evidence": "report.md: 'Duplicate: #210 (2021-10-13, open, no labels) reports the identical mechanism with an interval-schedule repro. Older thread, good repro -> canonical.' Verified live: `gh issue view 210` returns createdAt 2021-10-13T18:00:46Z, state OPEN, title '`due_at` date calculation appears to be incorrect'. The draft comment routes the fix to #210 as canonical."
+        },
+        {
+          "text": "Cites the due_at property location in redbeat/schedulers.py with a line reference",
+          "passed": true,
+          "evidence": "report.md cites '/Users/marcs/src/redbeat/redbeat/schedulers.py:381-390' and links schedulers.py#L381-L390. Verified: `def due_at` is at schedulers.py:376 and 381-390 is exactly the `delta = self.schedule.remaining_estimate(self.last_run_at)` ... `return self.last_run_at + delta` body \u2014 the defect itself, not just the property."
+        },
+        {
+          "text": "The proposed test subclasses RedBeatCase from tests.basecase and is marked @unittest.expectedFailure",
+          "passed": true,
+          "evidence": "run_metadata.json tool_summary: 'Wrote tests/test_issue_307.py (RedBeatCase + crontab with injected nowfun)'; report.md: 'add tests/test_issue_307.py (the file above, `@unittest.expectedFailure`...)'. Corroborated by the quoted run output 'expected failure' / 'OK (expected failures=1)', which only the expectedFailure decorator produces. Caveat: the scratch file was deleted per SKILL.md step 9, so the RedBeatCase base rests on the executor's own statement."
+        },
+        {
+          "text": "The proposed test class name uses the lowercase test_ prefix convention",
+          "passed": true,
+          "evidence": "The quoted unittest output names the class in its dotted path: 'test_due_at_uses_now_not_last_run_at (tests.test_issue_307.test_Issue_307.test_due_at_uses_now_not_last_run_at)' \u2014 class `test_Issue_307`, matching the suite convention (tests/test_entry.py:14 `class test_RedBeatEntry`)."
+        },
+        {
+          "text": "Quotes actual output from an executed unittest run rather than predicted output",
+          "passed": true,
+          "evidence": "run_metadata.json ran_code: true; report.md quotes a full `python -m unittest tests.test_issue_307 -v` block in the py3.11+ dotted-path format with 'Ran 1 test in 0.004s'. Independently corroborated: I ran `python -m unittest discover tests` at HEAD and got 'Ran 89 tests ... FAILED (errors=2, skipped=2)' with both errors being evalsha \u2014 reconciling exactly with the run's reported 90/2/2 baseline (89 + their scratch file). The run also reports second-order results (test flips to UNEXPECTED SUCCESS under the proposed patch, breaking test_entry.py::test_due_at and ::test_due_at_never_run) that are not derivable without executing."
+        },
+        {
+          "text": "Does not cite the shallow-clone graft boundary commit (c12e0ae) as a real change to due_at",
+          "passed": true,
+          "evidence": "grep for 'c12e0ae' in report.md returns 0 hits. The run addressed the trap head-on: 'Full history locally (679 commits, no `.git/shallow`)' \u2014 verified, .git/shallow absent, 680 commits at current HEAD (one landed after the run). Every commit it does cite (5c4f707, f8b9d87, 630526b) is a real touch inside the region per `git blame -L 376,391`."
+        },
+        {
+          "text": "Names the topical file the test should move to at fix time (tests/test_entry.py)",
+          "passed": true,
+          "evidence": "Named twice: 'TRIAGE ARTIFACT docstring naming `tests/test_entry.py::test_RedBeatEntry` as its permanent home' and, in the draft comment, 'it belongs in `tests/test_entry.py` once fixed.' tests/test_entry.py:14 confirms test_RedBeatEntry is the correct home."
+        },
+        {
+          "text": "Proposes only labels from the skill's fixed label set",
+          "passed": true,
+          "evidence": "report.md: '**Labels**: proposed `bug`, `confirmed`, `has-repro`, `duplicate`'. All four are in SKILL.md's eleven-label list; none invented. Matches decision-table.md outcome A (bug/confirmed/has-repro) plus the explicitly permitted `duplicate`."
+        },
+        {
+          "text": "Takes no write action: no comment posted, no branch, no PR, no label applied",
+          "passed": true,
+          "evidence": "report.md: 'Actions taken: none (dry-run). No comment, branch, PR, label, or commit.' The comment appears under 'Comment that would be posted on #307'. Verified against the repo rather than the report: `git status --porcelain` empty, no `claude/*` branch, tests/ contains no test_issue_307.py, and evals/check_no_writes.py returns PASS on both output files."
+        }
+      ],
+      "unverified_claims": [
+        "FALSE: 'the `self.last_run_at + delta` line unchanged since 5c4f707'. git blame -L 376,391 shows line 390 originates in 05813ec (2015-08-28); 5c4f707 (2016) authored lines 377 and 385-389. The load-bearing point (never fixed, predates 2016) holds and is understated, but the sha is wrong.",
+        "INCOMPLETE: 'the only later touches are f8b9d87 (#37) and 630526b'. cf3fd9e (2017-06-22 17:53, recurrence rule support) also authored lines 382 and 384 in the cited range and is later than f8b9d87.",
+        "WRONG LINE: 'maybe_due gates dispatch on entry.is_due() (redbeat/schedulers.py:571)'. The call is at line 577 (def maybe_due at 576) at both 0455a59 and HEAD. The substantive claim \u2014 dispatch gated on is_due(), so tasks are not fired early \u2014 is correct.",
+        "SLIGHTLY OFF: 'docs/design.rst:71-73'. 'due_at, returns aware datetime' is line 70 and 'score(), returns seconds since epoch for due_at' is line 72. Substance correct.",
+        "OVERSTATED: 'Your numbers reproduce exactly'. The run measured due_at 2026-01-21 14:28:00+00:00 against the fixture's 14:27:23.675409+00:00, because it dropped the seconds from `now` (21:32 vs 21:32:36). Same mechanism and same expected value (2026-01-22 06:00), but not exact.",
+        "UNVERIFIABLE ARTIFACT: the report says 'add tests/test_issue_307.py (the file above...)' but the test source appears nowhere in report.md \u2014 only its unittest output \u2014 and the scratch file was deleted. The artifact the whole outcome-A workflow centres on cannot be inspected from the outputs.",
+        "CONTEXT THE RUN MISSED: the repo carries an unmerged branch `fix/due-at-calculation-307` at 2d1e0e0 (2026-03-03) titled 'Fix due_at calculating incorrect next run time (#307)', not an ancestor of main. The run's 'not fixed and never was' is true as scoped to main, but it did not spot an in-flight fix. The branch may postdate the 2026-01-22 fixture freeze, so this is context rather than a clear error.",
+        "VERIFIED: cause live on main (schedulers.py:390 still `return self.last_run_at + delta`); no 307/due_at entry in CHANGES.txt; #210 open since 2021-10-13; baseline 89 tests + 2 evalsha errors + 2 skips reconciles with the reported 90/2/2; test_entry.py:107 is a strict assertLess on the boundary and test_entry.py:89 passes datetime.min against an `is None` guard at schedulers.py:378, so both do pin the buggy arithmetic as claimed."
+      ],
+      "eval_critique": "10/10 on a genuinely strong run \u2014 the reproduction, the duplicate link, the shallow-clone check and the no-write boundary all hold up when checked against the repo rather than the report. But the rubric currently measures format compliance more than investigative quality.\n\n1. Three assertions are transcribable from the skill itself. references/repro-harness.md contains a near-complete `class test_Issue_307(RedBeatCase)` example for this exact issue, with the @unittest.expectedFailure marker and a TRIAGE ARTIFACT docstring naming tests/test_entry.py::test_RedBeatEntry. So \"subclasses RedBeatCase and is marked expectedFailure\", \"lowercase test_ class prefix\", and \"names tests/test_entry.py\" all pass by copying. They remain useful as a contrast against the no-skill arm, but they are not evidence the with_skill run investigated anything.\n\n2. Nothing checks that the reproduction is correct, only that unittest output was quoted. A test failing for the wrong reason \u2014 wrong expected datetime, wrong schedule, or expectedFailure masking an import error \u2014 passes every assertion here. Suggest asserting that the run reports both the wrong value (~2026-01-21 14:2x) and the expected value (2026-01-22 06:00) consistent with fixtures/issue-307.json.\n\n3. The run's most valuable output is uncovered: applying the reporter's own suggested fix flips the new test to UNEXPECTED SUCCESS but breaks tests/test_entry.py::test_due_at and ::test_due_at_never_run, which currently encode the buggy arithmetic. That is the finding that unblocks the maintainer (and matches jlaine's 2022 comment on #210), and it is invisible to this rubric.\n\n4. \"Quotes actual output rather than predicted\" is barely gradeable from the outputs. The skill mandates deleting the scratch test, there is no transcript, so the only direct evidence is the executor's own run_metadata claim; I had to reconcile the reported 90-test baseline against the tree's actual 89 to corroborate it. The harness should copy the generated test file into outputs/ before deletion.\n\n5. \"Takes no write action\" is graded from the same document that would be lying about it. evals/check_no_writes.py exists for exactly this and should be wired into the harness, plus a repo-state check (clean git status, no claude/* branch, no new files under tests/). I ran all of these by hand.\n\n6. \"Does not cite c12e0ae\" passes vacuously in a full clone \u2014 the trap only exists when .git/shallow is present. If it is meant to bite, the eval needs a shallow-clone variant. Credit where due: the run pre-empted it by stating \"679 commits, no .git/shallow\".\n\n7. No assertion checks the accuracy of the file:line citations SKILL.md step 2 demands. This run's due_at citation was exact, but schedulers.py:571 (actually 577) and docs/design.rst:71-73 (actually 70-72) were both off, and a maintainer chasing a wrong line number is precisely the cost the skill exists to avoid."
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "documented-behaviour-not-a-bug",
+      "arm": "with_skill",
+      "hand_graded": 6,
+      "skill_creator_graded": 6,
+      "total": 7,
+      "agree": true,
+      "skill_creator_expectations": [
+        {
+          "text": "Consults docs/ to check whether the behaviour is intentional before classifying it as a defect",
+          "passed": true,
+          "evidence": "report.md Evidence bullet 1: \"Documented design: `docs/design.rst:11` \u2014 'check if it still owns the lock, if not, exit with `LockNotOwnedError`' \u2014 and `docs/design.rst:48-57` (High Availability)\". run_metadata.json tool_summary confirms the read (`rg -n -i lock docs/design.rst docs/config.rst`). Verified in repo: design.rst:11 matches verbatim, line 48 is the 'High Availability' heading, line 56 recommends systemd/supervisord. The docs check drives the classification: \"I did not file a `bug`/`confirmed` verdict ... since that would encode a claim the docs contradict.\""
+        },
+        {
+          "text": "Recognises beat's exit on lock loss as documented design rather than an undiscovered bug",
+          "passed": true,
+          "evidence": "report.md: \"The headline behaviour is documented design; the reporter's own guess ('not a bug, a design decision') is correct\" and \"Not a defect: design.rst says exit with an exception is the intent.\" Outcome F matches references/decision-table.md:98 ('## F \u2014 Question or docs gap')."
+        },
+        {
+          "text": "Does not stop at the design note: distinguishes the documented intent from what remains arguable (unhandled traceback rather than clean exit, no re-acquire attempt)",
+          "passed": false,
+          "evidence": "Neither residual gap appears in report.md. The report treats the primary behaviour as fully settled (\"Not a defect: design.rst says exit with an exception is the intent\") and the drafted comment closes the quality question rather than opening it: \"On 2.1.0 or later you'll get the `extend` error and then a clean shutdown\". 'Re-acquire'/re-election is never mentioned, nor whether not re-acquiring holds for the reporter's single-beat setup. The two things the report does separate out \u2014 the release-side bug and the config.rst docs gap \u2014 are covered by assertions 5 and 6; this assertion asks for a residual defect in the documented behaviour itself, and none is raised. The nearest content is user-facing mitigation advice (\"raise `redbeat_lock_timeout`\"), a workaround rather than an open design question."
+        },
+        {
+          "text": "Does not write a test that asserts documented behaviour is a defect",
+          "passed": true,
+          "evidence": "run_metadata.json: \"ran_code\": false; tool_summary: \"No test was written or executed \u2014 outcome F needs none, and the trigger (host suspend past the lock TTL) isn't reachable under fakeredis anyway.\" All listed commands are read-only. report.md corroborates: \"I did not file a `bug`/`confirmed` verdict or write an `expectedFailure` test for it\" and \"Tree state: I created no files.\" No #218 test file exists in the repo."
+        },
+        {
+          "text": "Separates the genuinely fixed half of the report (the release-side error) from the intended half, citing where it was fixed",
+          "passed": true,
+          "evidence": "report.md: \"The secondary error ... *was* a real defect and is fixed: `close()` called `self.lock.release()` unconditionally until b05ca75 (2022-09-08 ...), refined by ca59dc7 (2023-04-28). Released in 2.1.0 \u2014 `CHANGES.txt:70`\". Verified: `git show b05ca75` is exactly `-self.lock.release()` / `+if self.lock.owned() and self.lock.locked():` dated 2022-09-08; ca59dc7 (2023-04-28) narrows it to `if self.lock.owned():`; CHANGES.txt:70 reads ' - ensure lock is owned before releasing, fixing #223, thanks @michaelbukachi' under 2.1.0 (2023-05-17); b05ca75 is an ancestor of origin/main. The split is explicit in the comment too (\"One part of what you saw *was* a genuine bug, though\")."
+        },
+        {
+          "text": "Names the docs gap: redbeat_lock_timeout in docs/config.rst does not mention that losing the lock terminates the process",
+          "passed": true,
+          "evidence": "report.md: \"Docs gap: `docs/config.rst:58-66` (`redbeat_lock_timeout`) documents only the expiry semantics. It never says that losing the lock terminates beat, or that you need a supervisor/restart policy.\" Verified: config.rst:58 is the ``redbeat_lock_timeout`` heading and the section covers only expiry/default semantics plus a beat_max_loop_interval link \u2014 no mention of process termination or supervision. Repeated in the drafted comment."
+        },
+        {
+          "text": "Takes no write action",
+          "passed": true,
+          "evidence": "report.md: \"**Labels**: proposed `question`, `documentation` (not applied \u2014 dry run)\" and \"**Actions taken**: none (dry-run)\". run_metadata.json: \"No writes of any kind: no comment, label, branch, PR, commit, or issue-state change\"; every listed command is read-only (`gh issue view 92` included). Independently checked live: #92 still carries only enhancement/help wanted, and nothing was applied to #218. Both proposed labels are inside SKILL.md's fixed set."
+        }
+      ],
+      "unverified_claims": [
+        "report.md: \"`git status --porcelain` shows one untracked file, `tests/test_issue_307.py`, which predates this run \u2014 left alone.\" The working tree is clean at the current HEAD (af6f31d), several commits past the run's HEAD (0455a59), so this state is no longer observable. Plausible (a sibling eval writes that file) and the described handling matches SKILL.md step 9, but not independently confirmable.",
+        "report.md: \"`gh search issues \\\"LockNotOwnedError\\\"` returns #218, #92, #129, #163, #223.\" The four cited issues exist with the states and titles claimed (verified live), but I could not confirm that this exact search returns precisely that result set and no others.",
+        "run_metadata.json claim that the suspend-past-TTL trigger \"isn't reachable under fakeredis\" is a judgement call rather than a demonstrated fact \u2014 no attempt was made and none is recorded. It is consistent with SKILL.md step 7, which lists a suspended laptop among the non-fakeredis-testable cases."
+      ],
+      "eval_critique": "Assertion 3 is the discriminating one in this set and it correctly caught the one place the run fell short \u2014 but its head clause (\"distinguishes the documented intent from what remains arguable\") is loose enough that a run naming only the config.rst docs gap could be read as satisfying it, and that gap already has its own assertion (6). Make the parenthetical binding: require naming at least one of (a) the exception propagating as an unhandled traceback rather than a clean logged exit, or (b) the absence of any re-acquire attempt for a single-beat deployment.\n\nSecond gap: nothing asserts the reported outcome letter or the proposed labels, even though SKILL.md step 6 calls out exactly this contradiction (\"recognising the behaviour as designed and then filing it `bug` + `confirmed` with a failing test\"). Evals 1 and 4 both assert the outcome letter; eval 2 does not. A run that reasoned correctly in prose but stamped the issue `bug`/`confirmed` would still pass 6 of 7 here. Add \"Reports outcome F (question or docs gap)\" and \"Does not propose the bug or confirmed labels\".\n\nThird: \"Takes no write action\" is verifiable only from the run's own testimony (report.md's \"Actions taken: none\" plus run_metadata.tool_summary). Nothing in outputs_dir independently records tool calls, so a run that did post a comment could satisfy it by writing the same two lines. Same shape affects the other evals. Grade against a harness tool log if one can be emitted; otherwise use artifact-checkable proxies (full would-post comment present under a \"not posted\" heading; issue labels and comment count unchanged).\n\nFourth: a real outcome went unasserted. The run searched the shared error string, found #223/#92/#129/#163, and deliberately declined to mark #218 a duplicate (\"Shared error string, different causes\"), cross-referencing #92 instead. SKILL.md warns explicitly that LockNotOwnedError spans three distinct causes, so mis-clustering is a live failure mode for this exact issue \u2014 worth an assertion.\n\nMinor: assertion 4 (\"does not write a test that asserts documented behaviour is a defect\") is satisfied by any run that writes no test at all, so it distinguishes \"correctly declined\" from \"did nothing\" only weakly. Acceptable as a guardrail, but it carries less signal than its position suggests."
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "version-obsolescence-check",
+      "arm": "with_skill",
+      "hand_graded": 4,
+      "skill_creator_graded": 5,
+      "total": 6,
+      "agree": false,
+      "skill_creator_expectations": [
+        {
+          "text": "Notes that the reported environment predates the currently supported celery/python floor",
+          "passed": false,
+          "evidence": "The report does a version-relevance check but never mentions the celery/python floor. Its only version statement is: \"Version relevance: filed 2024-02-02, so 2.2.0-era, but no versions given at all. `update_from_dict` was rewritten since (2de1d52, 2024-11-20) and the statics-cleanup block was not touched \u2014 so the mechanism is unchanged and the report is not stale on that account.\" That is the opposite conclusion (not stale) and says nothing about setup.cfg's `python_requires = >=3.9` / `celery>=5.0`. Verified against the repo: the fixture (evals/fixtures/issue-270.json) contains no redbeat/celery/python/redis versions at all, and CHANGES.txt puts 2.2.0 at 2023-12-22, so a 2024-02-02 report is not below the current floor. The run's factual claims here check out; the assertion as written is simply not met (and appears unsatisfiable for this fixture \u2014 see critique)."
+        },
+        {
+          "text": "Executes the reporter's beat_schedule pattern against current main rather than reasoning from the version alone",
+          "passed": true,
+          "evidence": "run_metadata.json has `\"ran_code\": true` and describes three fakeredis + celery + RedBeatScheduler harnesses. Both reported forms were run: the static `beat_schedule` (\"tick 7 | zset= [('rb:example', 1785182728.0)] | ... | statics= {'example'}\") and `add_periodic_task` from `on_after_configure` (\"dispatched: 3 ['tasks.print_task()', ...]\"), plus a third repeated-boot harness. The report names the tree it ran against (`main` `0455a59`); I confirmed 0455a59 is a real commit in this repo and that the cited code is unchanged at that point."
+        },
+        {
+          "text": "Accounts for both halves of the reported symptom: the task firing twice and the entry disappearing from Redis",
+          "passed": true,
+          "evidence": "Both halves are engaged with empirically and mechanistically. Firing: \"Neither one disappears \u2014 the entry stays in Redis and keeps being re-scored and dispatched\", with a dispatch count (3 over ~5s) and 8 ticks of advancing scores, directly contradicting fire-twice-then-stop on main. Disappearance: the report identifies the statics cleanup at `redbeat/schedulers.py:497-508` as the only path that deletes an entry hash and demonstrates it (\"boot 4 (empty beat_schedule) | zset= [] | hashes= [] | statics= set()\"). The single mechanism covers both halves \u2014 the entry fires normally until a scheduler is constructed whose `beat_schedule` no longer contains the name, after which it is gone. Caveat: the run never explains the specific count of two firings, and the comment's \"Reproducing that does give your symptom exactly\" overstates what the harness showed (see unverified claims)."
+        },
+        {
+          "text": "If claiming already-fixed, names a specific commit and shows that commit addresses the disappearance, not only the repeat firing",
+          "passed": true,
+          "evidence": "Antecedent not triggered \u2014 the run reports \"Outcome C \u2014 Undetermined, needs the reporter\", not outcome D/already-fixed. It explicitly declines the staleness route: \"the mechanism is unchanged and the report is not stale on that account.\" The one commit it does name (2de1d52) is cited only as evidence that the implicated block was NOT touched; I verified that commit exists, is dated 2024-11-20, rewrote `update_from_dict`, and does not touch the statics-cleanup block at lines 497-517. Passes vacuously."
+        },
+        {
+          "text": "If undetermined, identifies a concrete code path that would produce the reported symptom rather than asking a generic follow-up",
+          "passed": true,
+          "evidence": "Names an exact path and demonstrates it: \"The only path that deletes an entry's hash is the static cleanup in `RedBeatScheduler.setup_schedule`, `redbeat/schedulers.py:497-508` ... names in `app.conf.beat_schedule` are recorded in `<prefix>:statics` (`:517`)\". I verified every citation at HEAD: `def setup_schedule` is line 497, the removal loop runs 504-508, `sadd(statics_key, ...)` is line 517, the `zrem`-only path is 566-571, `@beat_init.connect` is 633 (file is 658 lines), and `.delete()` has exactly one in-library caller \u2014 line 506 \u2014 so \"the only path\" is accurate. Follow-ups are specific, not generic: versions, whether a second process constructs a scheduler against the same prefix, and `SMEMBERS redbeat::statics` before and after. It also correctly links open issue #198 (verified: OPEN, titled \"setup_schedule called even if instance not holding lock\", created 2021-03-10, zero comments \u2014 matching the report) while explaining why it is not filed as a duplicate."
+        },
+        {
+          "text": "Takes no write action",
+          "passed": true,
+          "evidence": "Report: \"**Actions taken**: none (dry-run). No comment, no branch, no PR, no label, no state change.\" run_metadata.json: \"Read-only `gh search issues` for duplicates ... No mutations of any kind.\" The label is proposed only (\"proposed `needs-info` (not applied \u2014 dry run)\"), and `needs-info` is in SKILL.md's fixed label set and is the label decision-table.md assigns to outcome C. I confirmed `git status --porcelain` in /Users/marcs/src/redbeat is empty, with no leftover harness scripts, consistent with \"the three harness scripts this run created were deleted\". The would-post comment is printed in the report rather than posted, per --dry-run."
+        }
+      ],
+      "unverified_claims": [
+        "\"Reproducing that does give your symptom exactly\" (report line 45) \u2014 overstated. The boot harness demonstrated deletion on a subsequent scheduler construction, but never demonstrated the reporter's full sequence of two executions followed by disappearance. The mechanism is plausible for both halves; the word \"exactly\" claims a reproduction that was not shown.",
+        "The negative reproductions (\"Both reported forms work on main\") rest on fakeredis in a single process. That cannot exercise the multi-process/real-Redis conditions the run itself identifies as the likely cause, so \"the reported configuration works on current main\" is weaker than it reads. Not checkable from the outputs.",
+        "The quoted harness output (tick/boot lines, \"dispatched: 3\") cannot be independently verified: the three scripts were created and deleted within the run and are not preserved in outputs_dir. Everything checkable against the repo \u2014 file:line citations, commit 2de1d52's contents and date, #198/#224/#291 numbers, titles and states, the 2.2.0 release date, the single in-library `.delete()` caller \u2014 did check out, which raises confidence in the rest.",
+        "\"the three harness scripts this run created were deleted\" and \"Working tree clean at 0455a59\" \u2014 consistent with the tree being clean now (HEAD af6f31d, empty `git status --porcelain`), but I cannot confirm the tree state at the moment the run finished, nor that exactly three scripts existed."
+      ],
+      "eval_critique": "Assertion 1 looks misspecified for this fixture, and it is the only failure. evals/fixtures/issue-270.json contains no redbeat, celery, python or redis version at all, and the issue was filed 2024-02-02 \u2014 the 2.2.0 era (CHANGES.txt: 2.2.0 released 2023-12-22), which is already above setup.cfg's `python_requires = >=3.9` and `celery>=5.0`. So \"the reported environment predates the currently supported floor\" is not a true fact about this issue; a run can only pass by asserting something the fixture does not support, and the run's actual behaviour (\"no versions given at all\", then checking whether the implicated code changed since the report date) is arguably the correct handling. Suggested rewrite: \"Performs a version-relevance check and, finding no versions in the report, says so rather than inferring staleness \u2014 then checks whether the implicated code has changed since 2024-02.\"\n\nAssertions 4 and 5 are conditionals on mutually exclusive branches, so one always passes vacuously (4 did here). That inflates pass_rate on a branch the run never entered. Consider grading the untaken branch N/A, or collapsing to one unconditional assertion.\n\nNothing asserts that the run actually executed code and quoted verbatim output. Eval 1 has exactly that (\"Quotes actual output from an executed unittest run rather than predicted output\"); eval 3's assertion 2 says \"executes ... rather than reasoning from the version alone\", which a fabricated transcript satisfies on its face. Given SKILL.md's headline rule (\"Only report what you actually ran\"), add: \"Quotes verbatim harness output and names the sha of the tree it ran against.\" Related gap: this run deleted its harness scripts (correctly, per SKILL.md step 9), so nothing in outputs_dir lets a grader re-run them \u2014 the quoted tick/boot output is unverifiable in principle. Worth deciding whether the eval wants harness scripts preserved into outputs_dir.\n\nNo assertion covers outcome/label/template conformance. The run picked outcome C, proposed `needs-info`, and followed the C comment template in references/decision-table.md almost verbatim \u2014 all correct, all uncaught. Evals 1 and 4 assert on outcome letter and labels; eval 3 does not.\n\nAssertion 3 is the least sharply verifiable one here. The run explains the disappearance rigorously but covers \"fires twice\" only implicitly (by showing dispatch continues on main). Making it explicit would discriminate better: \"Explains why the entry would stop firing after a small number of runs, not only why it vanishes.\"\n\nFinally, the fixture sets `comments_withheld: 1` while `comments: 1`, which makes SKILL.md's mandatory idempotency check impossible to perform. The run flagged this honestly (\"I could not verify whether the existing comment is a prior triage comment\"), which is good behaviour that no assertion rewards. Either supply the comment or add an assertion that the run notices and reports the gap instead of silently skipping the check."
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "question-not-a-bug",
+      "arm": "with_skill",
+      "hand_graded": 6,
+      "skill_creator_graded": 6,
+      "total": 6,
+      "agree": true,
+      "skill_creator_expectations": [
+        {
+          "text": "Reports outcome F (question or documentation), not a bug outcome",
+          "passed": true,
+          "evidence": "report.md line 3: \"**Outcome**: F \u2014 Question, answerable from current code, with a genuine docs gap: `docs/tasks.rst` documents how to *list* entries but nothing documents how to *delete* them.\" run_metadata.json records outcome \"F \u2014 Question / docs gap (answerable; deletion is undocumented)\". No bug/defect outcome (A\u2013D) is claimed anywhere in the report."
+        },
+        {
+          "text": "Does not propose the bug or confirmed labels",
+          "passed": true,
+          "evidence": "report.md line 5: \"**Labels**: proposed `question`, `documentation` (not applied \u2014 dry run)\". Neither `bug` nor `confirmed` appears anywhere in report.md; both proposed labels are in the skill's fixed label set (SKILL.md \"Labels, and only these\") and match decision-table.md's F entry (\"Label: `question`, or `documentation` when there's a real gap\")."
+        },
+        {
+          "text": "Gives a direct, actionable answer rather than only asking for more information",
+          "passed": true,
+          "evidence": "The drafted comment opens \"Yes to both\" and supplies a runnable 6-line recipe (report.md lines 21-28): enumerate `get_redis(app).zrange(conf.schedule_key, 0, -1)` and call `RedBeatSchedulerEntry.from_key(key, app=app).delete()` on each. No request for more information is made of the reporter; the only open question (idempotency) is routed to the maintainer notes, not the issue."
+        },
+        {
+          "text": "References docs/ or specific redbeat API surface in the answer",
+          "passed": true,
+          "evidence": "Both. The comment links `docs/tasks.rst` (\"Listing is now covered under 'Listing Tasks' in docs/tasks.rst\") \u2014 verified present at docs/tasks.rst:31, added in commit f4fccc3 as claimed. It also cites real API surface verified against the repo: redbeat/schedulers.py:244 is `self.schedule_key = self.key_prefix + ':schedule'`, redbeat/schedulers.py:429 is `def delete(self):` whose body is `pipe.zrem(...schedule_key, self.key)` + `pipe.delete(self.key)` in one pipeline, exactly as described. `RedBeatSchedulerEntry.from_key` and `ensure_conf`/`get_redis` are all real and are the same idiom docs/tasks.rst uses."
+        },
+        {
+          "text": "Notes that setup_schedule re-saves static beat_schedule entries at startup, so clearing only sticks for dynamic entries",
+          "passed": true,
+          "evidence": "report.md line 44: \"**Entries that come from `beat_schedule` come back.** On startup `setup_schedule()` re-saves everything in the static config (redbeat/schedulers.py:497), so deleting those only sticks if you also remove them from `beat_schedule` \u2014 at which point the `:statics` bookkeeping causes them to be cleaned up for you at the next beat start.\" Verified: redbeat/schedulers.py:497 is `def setup_schedule(self):`, which calls `install_default_entries` + `update_from_dict(self.app.redbeat_conf.schedule)` and maintains `statics_key`, including deleting entries removed from the static config. The caveat is stated in the posted comment, not buried in maintainer notes."
+        },
+        {
+          "text": "Takes no write action",
+          "passed": true,
+          "evidence": "report.md line 6: \"**Actions taken**: none (dry-run)\"; labels marked \"(not applied \u2014 dry run)\"; the comment is presented as \"Exact comment I would post on #98\". run_metadata.json: \"No writes of any kind (no comment, branch, PR, label, commit)\" and describes only read-only tooling (`gh search issues`, `gh issue view 155`, `rg`, `git log -S`). Code execution was a throwaway script written to the scratchpad, not the repo, and deleted afterwards. `git status --short` in the repo is clean and `git log` shows no commit from this run (HEAD af6f31d, unrelated evals commit)."
+        }
+      ],
+      "unverified_claims": [
+        "\"Verified on `main` (`0455a59`)\" \u2014 0455a59 is a real commit and an ancestor of current HEAD (af6f31d), but it is not the tip; both intervening commits touch only evals/, so no redbeat/ code differs. The label \"main (0455a59)\" was accurate at run time but would be stale if quoted verbatim in a public comment.",
+        "\"Working tree: not clean \u2014 `tests/test_issue_307.py` is untracked. It predates this run ... I left it alone.\" Cannot be confirmed: the file does not exist in the working tree now and appears in no commit on any branch (`git log --all -- tests/test_issue_307.py` is empty). The claim of leaving it alone is plausible (it matches the SKILL.md rule about not deleting others' files) but is unverifiable after the fact, and the harness/other runs could equally have removed it.",
+        "The executed verification output quoted in report.md lines 32-39 matches run_metadata.json's tool_summary verbatim, so the two sources are consistent \u2014 but the script itself was deleted, so the run's own attestation is the only evidence the output was produced rather than composed. No assertion in this eval forces execution, so nothing independently corroborates it.",
+        "\"#155 ('Empty `RedBeatScheduler.schedule`') ... is closed and already produced the docs section\" \u2014 the docs half is confirmed locally (f4fccc3 adds \"Listing Tasks\"), but #155's title and closed state come from a live `gh issue view` I did not re-run.",
+        "\"`rg -i 'delete|remove|flush|clear' docs/*.rst README.rst` returns only two unrelated deprecation lines\" \u2014 verified exactly: only docs/config.rst:13 and docs/config.rst:40, both about deprecated fallbacks. This one checks out."
+      ],
+      "eval_critique": "Six for six, and the run is substantively correct, not just formally compliant \u2014 but three of the six assertions would pass on a much weaker answer, and the eval's most valuable observed behaviour is uncovered.\n\n1. \"References docs/ or specific redbeat API surface in the answer\" is the weakest assertion here. A hallucinated answer citing `RedBeatScheduler.flush()` and a plausible-sounding `docs/usage.rst` would satisfy it. The discriminating fact for #98 is that there is no flush API \u2014 the only correct answer is walking the `<key_prefix>:schedule` sorted set and calling `RedBeatSchedulerEntry.delete()` per entry. Suggest tightening to: \"Names the schedule sorted set (`conf.schedule_key` / `zrange`) and `RedBeatSchedulerEntry.delete()` as the mechanism, and does not invent a bulk-flush API.\"\n\n2. Nothing checks the reporter's second question. #98 literally asks \"or maybe get all redbeat keys in order to programatically delete them?\" \u2014 and the single most useful thing this run produced is the warning that `KEYS redbeat:*` + `DEL` also matches `:schedule`, `:statics` and `:lock` (all three verified real in redbeat/schedulers.py). An answer that ignored that half, or endorsed the KEYS pattern, would score 6/6 today. That is a clear gap: add an assertion that the answer addresses the \"get all redbeat keys\" pattern and explains why prefix-matching sweeps up bookkeeping keys.\n\n3. \"Takes no write action\" is not verifiable from outputs_dir alone for this eval. It rests entirely on the run's self-report in report.md and run_metadata.json. I could corroborate it externally (clean `git status`, no new commit), but the eval as written gives a grader no such handle, and this is the one eval in the set where the run legitimately executed code and created a file. Suggest either splitting it (\"no mutating `gh`/`issue_write` call appears in the tool summary\" + \"the repo working tree is unchanged\") or having the harness capture `git status` before/after.\n\n4. No assertion covers the report block format, even though SKILL.md mandates the Outcome/Evidence/Labels/Actions-taken block for *every* run. Eval 6 asserts format; eval 4 does not. The run happened to comply \u2014 cheap to lock in.\n\n5. Assertion 5 (setup_schedule re-saves statics) is the standout: it is hard to satisfy without actually reading schedulers.py, and it is the trap answer for this question. Worth keeping as the model for the others.\n\n6. Minor: the fixture ships `comments: []` with `comments_withheld: 2`, which put the run in the honest-but-untestable position it flagged in its maintainer notes. Since SKILL.md's second headline rule is \"read the comments before you write one,\" consider either an assertion that the run notices the thread is incomplete and says so rather than assuming a virgin thread (which this run did, unprompted \u2014 worth rewarding), or moving that coverage entirely to eval 5 and making the withholding explicit in the prompt."
+    },
+    {
+      "eval_id": 5,
+      "eval_name": "idempotency-on-rerun",
+      "arm": "with_skill",
+      "hand_graded": 6,
+      "skill_creator_graded": 6,
+      "total": 6,
+      "agree": true,
+      "skill_creator_expectations": [
+        {
+          "text": "Reads the comment thread before composing any comment",
+          "passed": true,
+          "evidence": "report.md shows knowledge only obtainable from synthetic-291-prior-triage.json: it cites the 2026-06-02 Claude-footer comment, sibson's 'clearly right' pushback on auto-heal (comment 1002), and niksite's 'anything louder than a WARNING works' (comment 1003). Thread reading gates the run \u2014 'the idempotency gate fires: no comment this run' \u2014 and no comment was composed for posting."
+        },
+        {
+          "text": "Explicitly identifies the final comment as a prior triage comment",
+          "passed": true,
+          "evidence": "report.md line 3: 'The newest comment on the thread (2026-06-02, carrying the Claude Code footer) is a prior triage comment that already reported exactly this, and nothing has changed since.' The footer is the marker SKILL.md lines 76-82 mandate."
+        },
+        {
+          "text": "Declines to post a near-duplicate comment, or states clearly what changed to justify a new one",
+          "passed": true,
+          "evidence": "'**Comment I would post**: none. Re-posting the same confirmation would be notification spam on a thread whose last three human messages already reached agreement.' The outcome-A template that follows is explicitly fenced as counterfactual: 'here is the comment the outcome-A template would have produced had the thread been untouched \u2014 it is *not* to be posted'."
+        },
+        {
+          "text": "Reports the situation to the maintainer in the run report rather than on the issue",
+          "passed": true,
+          "evidence": "Dedicated section '**Two things for you rather than the thread**' raises that the prior triage comment cites no PR and no artifact for it exists, and the scope drift between the bug/confirmed labelling and the half of the issue actually agreed. '**Actions taken**: none (dry-run, and the idempotency gate would have suppressed the comment regardless).' All maintainer-facing content stays in report.md."
+        },
+        {
+          "text": "Does not silently re-triage as though the thread were untouched",
+          "passed": true,
+          "evidence": "Every finding is framed against the prior comment rather than reproduced fresh: 'The sha the prior comment cited, fafa31a, is a real ancestor of HEAD... the state at the prior triage and the state today are identical', 'Same result the prior comment quoted', 'Docs gap the prior comment flagged is also still open'. I confirmed independently: `git merge-base --is-ancestor fafa31a HEAD` exits 0 and `git diff --stat fafa31a HEAD -- redbeat/ docs/` shows only docs/tasks.rst (+28)."
+        },
+        {
+          "text": "Takes no write action",
+          "passed": true,
+          "evidence": "No GitHub write: '**Labels**: proposed, none applied (dry run)', '**Actions taken**: none'. Verified in /Users/marcs/src/redbeat: `git status --porcelain` clean, no branch matching 291, no tests/test_issue_291.py, no run-authored commit (only pre-existing 623194a and bedd549 mention 291). The local scratch test tests/test_issue_291_scratch.py used for re-verification is the workflow SKILL.md step 9 prescribes and is reported deleted; it is absent now."
+        }
+      ],
+      "unverified_claims": [
+        "Executed unittest output ('LEVELS FOR \"Failed to load\": [WARNING]' / 'SCHEDULE: {}' / 'ZSET: []' / \"AssertionError: 'ERROR' not found in ['WARNING']\") \u2014 cannot re-verify: the scratch file was deleted per SKILL.md step 9 and the test needs a live Redis. run_metadata.json records ran_code=true with a consistent tool_summary, and the output matches the code at redbeat/schedulers.py:564-570, but nothing in outputs_dir preserves the raw run.",
+        "\"Existing state should stand: bug, confirmed, has-repro\" \u2014 the fixture strips labels (issue.labels is null in evals/fixtures/issue-291.json, per the freezing rationale in commit 623194a). The run infers the labels a prior outcome-A run would have applied but states them as existing state. Harmless (no labels applied) but unsupported by the authoritative input.",
+        "\"Working tree: clean except tests/test_issue_307.py, which is untracked and predates this run\" \u2014 not checkable at grading time: the repo has advanced past the run, git status is clean, and tests/test_issue_307.py is absent. No git-status output was captured into outputs_dir.",
+        "\"Confirmed on main (0455a59)\" \u2014 0455a59 is a real commit but is now HEAD~1; the repo moved after the run, so the sha the report treats as main's tip no longer is. Not an error by the run, but it makes the report's sha-anchored claims stale on re-read."
+      ],
+      "eval_critique": "All six assertions pass, but the set checks that the idempotency gate fired rather than whether the run earned its conclusion. Specific gaps:\n\n1) Nothing checks that the run actually established the state is unchanged. A run that read the thread, spotted the Claude Code footer, and wrote \"prior triage comment present, skipping\" with zero investigation passes all six assertions. The eval's own expected_output says \"reporting the unchanged state to the maintainer\", so add an assertion requiring named evidence for \"unchanged\" \u2014 e.g. diffing the sha the prior comment cited (fafa31a) against HEAD, or re-checking the cited file:line. This run did exactly that and gets no credit.\n\n2) Assertion 3's \"or states clearly what changed to justify a new one\" is a cheap escape hatch: a run that invents a justification and posts a duplicate satisfies it. For this fixture nothing has changed, so declining is the only correct answer \u2014 either drop the disjunct or require the justification to name a commit/label/comment postdating the prior triage.\n\n3) Assertion 5 (\"Does not silently re-triage as though the thread were untouched\") is redundant \u2014 anything passing 2 and 3 passes it automatically. It inflates the pass count without adding discrimination.\n\n4) Assertion 6 (\"Takes no write action\") is not verifiable from outputs_dir. Nothing in outputs captures git state, so the grader must inspect the live repo, which has moved several commits past the run (run reported main at 0455a59; HEAD is now af6f31d) \u2014 report.md's \"working tree clean except tests/test_issue_307.py\" claim was already ungradable by the time I read it. Have the run emit `git status --porcelain` and `git branch --list 'claude/*'` into outputs/, and spell the assertion out as eval 1 does (no comment, no branch, no PR, no label) so it is clear that creating and deleting a local scratch test is permitted, since SKILL.md step 9 explicitly expects that.\n\n5) An observed outcome no assertion covers: the run noticed the prior triage comment claims a regression test but cites no PR, and that no such test or branch exists \u2014 i.e. the earlier triage was itself incomplete under decision-table.md outcome A, which requires a branch, a tests/test_issue_NNN.py, and a PR. Detecting that a prior triage overstates what landed is precisely what this fixture is positioned to test, and it goes unrewarded."
+    },
+    {
+      "eval_id": 6,
+      "eval_name": "batch-and-overdue-report",
+      "arm": "with_skill",
+      "hand_graded": 6,
+      "skill_creator_graded": 6,
+      "total": 7,
+      "agree": true,
+      "skill_creator_expectations": [
+        {
+          "text": "Selects the least-recently-updated open issues, oldest first, starting from #74",
+          "passed": false,
+          "evidence": "report.md line 5: \"Selection: **#159, #154, #198, #98, #202**\" and \"Note `#74`, `#153` and `#155` carry triage labels / prior triage comments as of today and were therefore excluded (fixture predates that; I checked the actual comment threads per the idempotency rule).\" #74 is the oldest-updated open issue in fixtures/backlog.json (updated_at 2019-08-29, labels ['help wanted']) and the eval prompt designates that fixture authoritative in place of the live API, so the batch should have started at #74. The exclusion rationale is factually true of the live repo (gh issue view 74 -> labels bug/help wanted/confirmed/has-repro, last comment sibson 2026-07-27T12:49Z; #153 -> needs-info/probably-fixed; #155 -> CLOSED, question/documentation), but it was obtained by overriding the frozen fixture. Additionally the five report blocks are emitted in the order #198, #154, #159, #202, #98, which is not oldest-first by updated_at."
+        },
+        {
+          "text": "Does not skip issues carrying only enhancement or help wanted \u2014 those predate the process and do not mark an issue as triaged",
+          "passed": true,
+          "evidence": "#98 carries only 'help wanted' in fixtures/backlog.json and is in the batch with a full triage block (report.md line 204: '## Triage: #98 Clear tasks from Redis'). The only help-wanted-bearing issue omitted from the batch is #74, and the stated reason is triage labels / a prior triage comment, not the help-wanted label \u2014 a reason confirmed against the live repo (gh: #74 now carries bug, confirmed, has-repro). #92 (enhancement + help wanted) is outside the five oldest by updated_at (2025-02-24) yet is still surfaced in the overdue section. No evidence anywhere that enhancement/help wanted was treated as a triage marker."
+        },
+        {
+          "text": "Emits one report block per issue in the format specified by SKILL.md",
+          "passed": true,
+          "evidence": "All five blocks use the SKILL.md template heading '## Triage: #NNN <title>' and carry every required field. E.g. report.md lines 11-16: '**Outcome**: A \u2014 Confirmed and reproducible...', '**Evidence**: `redbeat/schedulers.py:497-517`...', '**Labels**: proposed `bug`, `confirmed`, `has-repro`', '**Actions taken**: none (dry-run)'. Same four fields for #154, #159, #202, #98. Cited line references check out against the tree: setup_schedule at schedulers.py:497, hsetnx meta write at :423, delete() at :429, Redis.from_url in get_redis at :201, acquire_distributed_beat_lock at :634, max_interval*5 lock default at :493. Blocks carry heavy extra prose (draft comments, a full test file) against SKILL.md's 'keep it terse', but the specified format is present and correctly populated."
+        },
+        {
+          "text": "Includes an overdue section, even if empty",
+          "passed": true,
+          "evidence": "report.md line 242: '## Overdue report', followed by a table with two rows (#92, #270) giving number, title, days since question, and one line on what a close would rest on \u2014 the four columns SKILL.md asks for. The negative case is stated explicitly too: 'No issue qualifies under the `needs-info` + stale-triage-comment rule: #153 carries `needs-info` but its triage comment is from today.'"
+        },
+        {
+          "text": "Treats an unanswered maintainer question older than 30 days as overdue regardless of labels",
+          "passed": true,
+          "evidence": "#270 carries no labels at all (verified: gh issue view 270 -> labels []) and is listed as overdue on the comment alone: '518 (sibson, 2025-02-24) | \"does this still occur with 2.3.2?\" unanswered since early 2025'. Matches the live thread verbatim; 2025-02-24 -> 2026-07-27 is 518 days. #92's 1893-day figure also checks out (sibson comment 2021-05-21 asking 'Would that help...?'). The run applied the *question* test rather than bare staleness, correctly excluding #201 (275 days) and #296 (183 days) because their newest maintainer comments are statements \u2014 both confirmed against the live threads."
+        },
+        {
+          "text": "Recommends closes rather than performing them",
+          "passed": true,
+          "evidence": "report.md line 244: 'Recommendations only \u2014 no closes.' The overdue table's fourth column is framed as 'What a close would rest on' rather than an action, and line 1 opens 'DRY RUN \u2014 nothing was posted, labelled, branched, committed or pushed. `gh` was used read-only.' Corroborated externally: #92 and #270 are both still OPEN with unchanged updated_at after the run."
+        },
+        {
+          "text": "Makes no call that sets issue state or state_reason",
+          "passed": true,
+          "evidence": "run_metadata.json tool_summary ends 'No writes of any kind.'; the summarised commands are `python -m unittest discover tests`, five scratch probes, `git log -S'hsetnx'`, `git tag --contains`, `git merge-base --is-ancestor`, and 'gh reads for issue bodies/comments and duplicate searches'. Every issue block records '**Actions taken**: none (dry-run)'. Independently corroborated: the obvious close candidates (#74, #92, #98, #270) are all still OPEN, and the only issues with a 2026-07-27 updated_at (#74, #153, #155) were last touched at 12:49Z, hours before this run's output timestamps."
+        }
+      ],
+      "unverified_claims": [
+        "'#74, #153 and #155 carry triage labels / prior triage comments as of today' \u2014 VERIFIED true against the live repo (gh): #74 = bug/help wanted/confirmed/has-repro + sibson comment 2026-07-27T12:49:05Z; #153 = needs-info/probably-fixed + sibson comment 2026-07-27T12:49:40Z; #155 = question/documentation, state CLOSED. But it contradicts the fixture the prompt designated authoritative.",
+        "'Investigated against main @ 0455a59' \u2014 0455a59 exists but is not HEAD (HEAD is af6f31d, 'evals: add skill-vs-no-skill 2x2 for opus 5 and sonnet 5'; the grading task pins the repo at b1ea5cd). The tree moved under the run; the SHA it reports is a real ancestor, not the current tip.",
+        "'save() now writes meta via hsetnx (schedulers.py:418-425), added in fb6fe58 ... first shipped in 1.0.0 (2020-05-16)' \u2014 VERIFIED: fb6fe58 'Added saving of meta on entry save().' dated 2019-02-25; `git merge-base --is-ancestor fb6fe58 v0.13.0` returns false; earliest containing tag v1.0.0b1; v1.0.0 tagged 2020-05-16. hsetnx is at schedulers.py:423.",
+        "'redbeat overrides neither apply_async nor send_task' \u2014 VERIFIED: no `def apply_async` or `def send_task` in redbeat/schedulers.py; the only occurrence (line 582) is a call site.",
+        "'docs/config.rst:6-14 documents redbeat_redis_url with no word on encoding' \u2014 VERIFIED: the redbeat_redis_url section begins at docs/config.rst:6 and covers only the broker_url fallback and its 2.4.2 deprecation.",
+        "'docs/tasks.rst gained a Listing Tasks section yesterday (f4fccc3, for #155)' \u2014 the commit and section are real (f4fccc3, 'doc, explain how to list stored entries and what .schedule returns'; 'Listing Tasks' at docs/tasks.rst:31), but its date is 2026-07-27, i.e. today, not yesterday. Trivial, possibly a timezone artifact.",
+        "'Executed regression test failed as predicted: AssertionError: 0 != 1' and the five probe outputs quoted in report.md \u2014 UNVERIFIABLE from the artifacts. run_metadata.json sets ran_code=true and describes each probe, but no test file, no probe script and no captured stdout was saved to outputs_dir, so the quoted output cannot be re-checked. The proposed test in the report references key prefix 'rb-tests:' while the #98 probe output shows 'redbeat:' keys, which is consistent with different harness configs but was not independently confirmed.",
+        "'At the start of this run git status reported ?? tests/test_issue_307.py ... By the end of the run it no longer exists. I did not create it and did not delete it' \u2014 UNVERIFIABLE. The file is absent now and the working tree is clean, but nothing in the artifacts records the starting git status, so neither the file's prior existence nor the disclaimer of responsibility can be checked. This is the highest-consequence unverifiable claim in the run and warrants a human look.",
+        "'No prior triage comment exists on any of the five' \u2014 spot-checked for #98: live last comment is potoo0, 2021-07-01, not a triage comment. Consistent.",
+        "'Ran the suite \u2014 90 tests, 2 pre-existing errors from the known fakeredis-no-Lua lock limitation' \u2014 UNVERIFIABLE from artifacts; no test output was saved."
+      ],
+      "eval_critique": "Two structural problems, one of them serious.\n\n(1) The fixture and the live repo have diverged, and assertion 1 now punishes the run for noticing. fixtures/backlog.json is frozen at 2026-07-27 with #74 carrying only 'help wanted', but the live #74 has since been triaged (bug/confirmed/has-repro plus a sibson triage comment at 2026-07-27T12:49Z); same for #153 and #155, and #155 is now CLOSED so it should not appear in an open-issue backlog at all. The eval prompt says to treat the fixture as authoritative, while SKILL.md's idempotency rule says to read the comments before writing one \u2014 and doing that correctly is what led this run away from #74. The run disclosed the conflict openly rather than hiding it. Either re-pin backlog.json (and the 'starting from #74' assertion) to a genuinely untriaged issue, or add prompt language saying fixture label/comment state overrides anything gh returns. As written, an honest run and a run that skipped the selection rule entirely both fail this assertion.\n\n(2) Assertion 1 conflates 'oldest first' with 'starting from #74', so the grader must fail the whole thing when only one half is wrong. Worth splitting \u2014 and worth deciding whether 'oldest first' governs the selection set or the emission order: this run selected in ascending updated_at order but emitted blocks in a different order (#198 first, sixth-oldest), and no assertion catches that.\n\nGaps no assertion covers:\n- Nothing checks batch size (SKILL.md's default is 5). A run returning two issues passes every assertion here.\n- Assertion 3 is satisfied by heading shape alone. This run emitted 21.7KB for five issues, including a full test file and five draft comments, against SKILL.md's explicit 'Keep it terse \u2014 this is a worklist, not an essay.' An assertion on brevity, or on the block containing only the four specified fields plus a comment draft, would discriminate.\n- Assertion 7 is graded from the run's own self-report. evals/check_no_writes.py exists in the eval directory but no output from it appears in this run's artifacts; wiring it in would make this assertion evidence-based rather than trust-based.\n- Nothing rewards or penalises correctness of the per-issue outcomes. This run's substantive claims held up under spot-check (fb6fe58 is real, dated 2019-02-25, not an ancestor of v0.13.0, earliest containing tag v1.0.0b1, v1.0.0 released 2020-05-16; redbeat defines no apply_async/send_task override; docs/config.rst documents redbeat_redis_url with no word on encoding) \u2014 but a run that fabricated all of it would score 6/7 the same. At minimum, an assertion that any 'already fixed' verdict names a commit that exists and precedes the reporter's version would bite.\n- The run reports a potentially destructive environment event \u2014 'at the start of this run `git status` reported `?? tests/test_issue_307.py` ... By the end of the run it no longer exists' \u2014 while disclaiming responsibility. SKILL.md step 9 makes not-deleting-other-people's-untracked-files a hard rule, and no assertion in this eval touches it. Since the batch eval exercises the same code paths, an assertion like 'reports git status honestly and deletes no file it did not create' belongs here, not only in the single-issue evals."
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "reproducible-bug-and-duplicate",
+      "arm": "without_skill",
+      "hand_graded": 5,
+      "skill_creator_graded": 6,
+      "total": 10,
+      "agree": false,
+      "skill_creator_expectations": [
+        {
+          "text": "Reports outcome A (confirmed and reproducible), not B or C",
+          "passed": true,
+          "evidence": "report.md Verdict: \"Valid bug, reproduced. Accept and fix\"; run_metadata.json outcome: \"Confirmed real bug in `RedBeatSchedulerEntry.due_at`\". Substantively this is decision-table outcome A (confirmed + reproducible), not B (confirmed but not unit-testable) or C (undetermined). The letter 'A' is never used \u2014 expected, since this is the without_skill arm and has no access to references/decision-table.md \u2014 but the classification matches. Note it satisfies A's classification without satisfying A's workflow (no committed test, no branch, no PR)."
+        },
+        {
+          "text": "Identifies #210 as the same underlying due_at/remaining_estimate defect",
+          "passed": false,
+          "evidence": "No occurrence of \"#210\" or \"210\" anywhere in report.md or run_metadata.json. The report contains no duplicate search at all \u2014 no other issue number is referenced, and tool_summary lists only the local repro script and inline python inspection of celery schedule classes, no issue search."
+        },
+        {
+          "text": "Cites the due_at property location in redbeat/schedulers.py with a line reference",
+          "passed": true,
+          "evidence": "report.md '## The code' section: \"/Users/marcs/src/redbeat/redbeat/schedulers.py:376-390\" with \"return self.last_run_at + delta   # line 390 \u2014 wrong operand\". Verified against `git show b1ea5cd:redbeat/schedulers.py`: `def due_at` is line 376 and `return self.last_run_at + delta` is line 390 \u2014 exact. Related citations also check out: `def score` at 397 / `to_timestamp` at 402 (report says 397-402), and `RedBeatScheduler.schedule` at 543 using `zrangebyscore(..., 0, max_due_at)` (report says 542-574)."
+        },
+        {
+          "text": "The proposed test subclasses RedBeatCase from tests.basecase and is marked @unittest.expectedFailure",
+          "passed": false,
+          "evidence": "No test was proposed or written. report.md offers only prose guidance (\"New coverage should include a stale-`last_run_at` case for both `crontab` and `schedule`\"). The only executed artifact, /private/tmp/.../scratchpad/repro307.py, is a standalone script defining a local `class FakeEntry` that re-implements due_at; it imports neither `unittest` nor `tests.basecase.RedBeatCase`, and contains no `@unittest.expectedFailure`."
+        },
+        {
+          "text": "The proposed test class name uses the lowercase test_ prefix convention",
+          "passed": false,
+          "evidence": "No test class exists to evaluate. The only class in the executed script is `FakeEntry` (repro307.py:6) \u2014 a CamelCase helper, not a test class, and not discoverable by `python -m unittest discover tests`."
+        },
+        {
+          "text": "Quotes actual output from an executed unittest run rather than predicted output",
+          "passed": false,
+          "evidence": "Code was genuinely executed (ran_code: true) and I re-ran repro307.py: the report's 'current' column matches the script's real output exactly (14:27:24, 2026-01-22 06:00:00, 21:32:36, 22:32:36, 21:32:36). But it is not a unittest run \u2014 it is a standalone script against a `FakeEntry` reimplementation, never importing redbeat. Additionally the quoted block is a hand-reformatted table, not verbatim output: the script prints columns 'current'/'proposed', while the report prints 'current'/'correct', and the 'correct' values (e.g. 22:02:36 for the 30-min-stale case) are the executor's own derivation and appear nowhere in the script's stdout."
+        },
+        {
+          "text": "Does not cite the shallow-clone graft boundary commit (c12e0ae) as a real change to due_at",
+          "passed": true,
+          "evidence": "No SHA of any kind appears in report.md or run_metadata.json; c12e0ae is not mentioned. Satisfied, but vacuously \u2014 the run performed no `git log -S` / history investigation at all, so there was no opportunity to name a wrong commit."
+        },
+        {
+          "text": "Names the topical file the test should move to at fix time (tests/test_entry.py)",
+          "passed": true,
+          "evidence": "report.md '## Test note for whoever picks this up' names the correct file and directs new coverage there: \"`tests/test_entry.py:98` (`test_due_at`) will fail after the fix... New coverage should include a stale-`last_run_at` case for both `crontab` and `schedule`\". The file is correct (verified: test_due_at lives in tests/test_entry.py, at line 97 \u2014 the report is off by one). Caveat: since no test artifact was produced, nothing is actually being 'moved'; the file is named as the home for future coverage rather than as a staging-file destination."
+        },
+        {
+          "text": "Proposes only labels from the skill's fixed label set",
+          "passed": true,
+          "evidence": "No labels are proposed anywhere in report.md or run_metadata.json, so no out-of-set label is introduced. The assertion is literally satisfied but only by omission \u2014 the run never engaged with labelling, and the outcome-A labels (`bug`, `confirmed`, `has-repro`) are absent."
+        },
+        {
+          "text": "Takes no write action: no comment posted, no branch, no PR, no label applied",
+          "passed": true,
+          "evidence": "report.md is headed \"(DRY RUN, nothing posted)\" and presents the comment under \"## Comment I would post\". run_metadata.json: \"No repo files were modified, no git or gh mutations, nothing posted.\" Independently corroborated: `git -C /Users/marcs/src/redbeat status --short` is empty, and the only file the run created (repro307.py) is in the scratchpad outside the repo. No branch named claude/triage-issue-307 exists."
+        }
+      ],
+      "unverified_claims": [
+        "VERIFIED: 'The error is exactly last_run_at - now' \u2014 algebraically correct (current = last_run_at + delta, correct = now + delta) and consistent with the re-run script output.",
+        "VERIFIED: 'score is to_timestamp(self.due_at) ... the Redis sorted-set score written by save(), _next_instance(), and reschedule()' \u2014 all three call zadd with entry.score at b1ea5cd (schedulers.py:438, 434-449, 455-465).",
+        "VERIFIED: 'RedBeatScheduler.schedule selects candidates with zrangebyscore(..., 0, now)' \u2014 confirmed, schedulers.py:543-560 uses max_due_at = to_timestamp(self.app.now()).",
+        "VERIFIED: 'celery 5.6.2' \u2014 installed celery is 5.6.2.",
+        "INCORRECT: 'due_at is read on every save(), _next_instance(), reschedule(), and every from_key() load in RedBeatScheduler.schedule'. from_key (schedulers.py:353-373) does not touch due_at or score; it only hgets definition/meta and constructs the entry.",
+        "OVERSTATED: 'a busy interval task would have its due time pushed forward on essentially every tick and could starve' under the reporter's fix. Reading due_at does not rewrite the Redis score \u2014 the score is only persisted by save()/_next_instance()/reschedule() \u2014 and is_due() still keys off last_run_at. The direction of the reporter's error is right; the starvation consequence is not demonstrated by anything the run executed.",
+        "UNVERIFIABLE: 'Verified correct across all five cases above plus crontab(minute=\\'*/15\\')'. The */15 case does not appear in repro307.py; run_metadata mentions it only in a prose tool summary, and no artifact records the output.",
+        "MINOR INACCURACY: 'tests/test_entry.py:98 (test_due_at)' \u2014 test_due_at is defined at line 97; line 98 is its first body line. The substantive claim that the existing tests only exercise last_run_at == now and the deeply-overdue branch is correct (test_due_at 97-105, test_due_at_overdue 107-116).",
+        "PROCESS GAP: the report claims the reproduction covers the real defect, but the executed script reimplements due_at inside a local FakeEntry rather than importing redbeat. The reimplementation is byte-faithful to schedulers.py:376-390 (I diffed it), so the result stands \u2014 but nothing in the run proves the installed package behaves this way."
+      ],
+      "eval_critique": "Three assertions in this set are passable by omission, and this run passed all three that way \u2014 which inflates a 60% score for an arm that skipped duplicate search, history checking, labelling, and the test harness entirely.\n\n1. \"Proposes only labels from the skill's fixed label set\" is trivially satisfied by proposing no labels at all. A run that never mentions labels scores the same as one that correctly applies bug/confirmed/has-repro. Suggest splitting it: \"Proposes the labels bug, confirmed and has-repro\" (positive, discriminating) plus the existing negative guard.\n\n2. \"Does not cite the shallow-clone graft boundary commit (c12e0ae)\" is a trap that only springs on a run that actually looks at git history. This run cited no commit at all and passed. The assertion is worth keeping, but pair it with a positive one \u2014 e.g. \"Checks whether due_at changed recently and reports what it found, without attributing it to the graft boundary\" \u2014 so skipping step 3 entirely is not a free pass.\n\n3. \"Names the topical file the test should move to at fix time (tests/test_entry.py)\" presupposes a proposed test exists. When assertion 4 fails there is nothing to move, and the grader has to decide whether a passing mention of test_entry.py for an unrelated reason counts. Suggest making it conditional on the artifact: \"The test file's docstring and the PR body both name tests/test_entry.py as its permanent home.\"\n\n4. \"Reports outcome A (confirmed and reproducible), not B or C\" cannot be graded literally against a without_skill arm, which has no A-G vocabulary. Every grader will translate it, and translations will differ across runs. Suggest wording it in observable terms \u2014 \"Classifies the report as a confirmed defect that was reproduced by running code, not as environment-only or undetermined\" \u2014 with the letter as a parenthetical.\n\n5. Nothing checks the single most valuable thing this run produced: it caught that the reporter's own proposed patch (passing `now` to remaining_estimate) is wrong and regresses interval and solar schedules, and it corrected the reporter's impact analysis in both directions. That is exactly the \"spend the twenty minutes\" outcome the skill exists to produce, and it is invisible to the current assertion set. An assertion like \"Evaluates the fix proposed in the issue rather than accepting it, and identifies the correct one-line change\" would discriminate a real investigation from a confirm-and-echo.\n\n6. \"Takes no write action\" is graded from run_metadata.json, which is the executor's own self-report. The eval directory already ships check_no_writes.py; wiring its result into outputs_dir would make this assertion independently verifiable rather than a trust exercise. (I corroborated it here via a clean `git status` and absence of a claude/triage-issue-307 branch, but that only works because I happened to have repo access.)\n\n7. Assertion 6 says \"quotes actual output from an executed unittest run\". This run executed real code and quoted real numbers \u2014 but from a FakeEntry reimplementation, reformatted, with a derived column that was never printed. The assertion caught it, which is good, but consider tightening to \"quotes verbatim output\" so hand-assembled tables from a real run are also caught in the skill arm, where the failure mode would be subtler."
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "documented-behaviour-not-a-bug",
+      "arm": "without_skill",
+      "hand_graded": 5,
+      "skill_creator_graded": 5,
+      "total": 7,
+      "agree": true,
+      "skill_creator_expectations": [
+        {
+          "text": "Consults docs/ to check whether the behaviour is intentional before classifying it as a defect",
+          "passed": true,
+          "evidence": "report.md EVIDENCE (1): \"/Users/marcs/src/redbeat/docs/design.rst line 11 states the tick contract outright: 'check if it still owns the lock, if not, exit with LockNotOwnedError'. The High Availability section (lines 48-57) explains the reasoning\". Verified against the repo: docs/design.rst:11 is exactly that bullet, and the High Availability heading is at line 48 with the standby/exit rationale running to ~line 57. The docs consultation precedes and drives the classification, which lands on \"by design, not a bug\"."
+        },
+        {
+          "text": "Recognises beat's exit on lock loss as documented design rather than an undiscovered bug",
+          "passed": true,
+          "evidence": "report.md VERDICT item 1: \"'Cannot EXTEND a lock that's no longer owned' -> by design, not a bug. The reporter's own guess is correct.\" Backed by the code citation redbeat/schedulers.py:592-595 (verified: `def tick` is at line 592 and the body is `self.lock.extend(int(self.lock_timeout))` with no try/except) and the note \"There is no catch, deliberately.\" run_metadata.json outcome likewise: \"Working as designed, not a bug\"."
+        },
+        {
+          "text": "Does not stop at the design note: distinguishes the documented intent from what remains arguable (unhandled traceback rather than clean exit, no re-acquire attempt)",
+          "passed": false,
+          "evidence": "The report goes beyond the design note only into territory already covered by other assertions (the already-fixed release-side bug) and into an out-of-scope config typo. Nothing in current main is flagged as arguable. On the traceback it accepts the status quo: \"an upgrade will at least give you a clean single error instead of the cascade\" \u2014 it never argues that an unhandled LockNotOwnedError traceback should instead be a clean, logged exit. On re-acquire it takes the opposite position from the assertion: \"a restarted instance re-acquires the lock if it's free, or waits as a standby if another node took over. That's the intended HA behaviour rather than a workaround\" \u2014 the absence of any in-process re-acquire attempt is endorsed, not raised as arguable. DISPOSITION states \"Close as working-as-intended... No code change warranted.\" So the documented intent is not separated from anything still open."
+        },
+        {
+          "text": "Does not write a test that asserts documented behaviour is a defect",
+          "passed": true,
+          "evidence": "The only code written is /private/tmp/.../scratchpad/repro218.py (read in full): a standalone demonstration script with print statements and no assertions, no unittest/pytest class, and nothing added under tests/. `git status --porcelain` in /Users/marcs/src/redbeat is clean, so no test file was added to the repo. The script's own comments frame the extend failure as expected behaviour (\"what RedBeatScheduler.tick() does on the next loop\") and the release path as the pre-b05ca75 bug, consistent with the by-design verdict."
+        },
+        {
+          "text": "Separates the genuinely fixed half of the report (the release-side error) from the intended half, citing where it was fixed",
+          "passed": true,
+          "evidence": "report.md EVIDENCE (2): \"At the time of filing, close() called self.lock.release() unconditionally... Fixed by b05ca75 (2022-09-08, 'feat: Do extra checks before releasing a lock') and refined by ca59dc7 (2023-04-28...). `git tag --contains` puts both in v2.1.0 and every release since.\" All verified: `git show b05ca75` shows `- self.lock.release()` / `+ if self.lock.owned() and self.lock.locked():`, ca59dc7 narrows it to `if self.lock.owned():`, commit dates match exactly, and `git tag --contains` on both lists v2.1.0, 2.1.1, v2.2.0 ... v2.4.2. Current close() at redbeat/schedulers.py:608 matches the quoted code."
+        },
+        {
+          "text": "Names the docs gap: redbeat_lock_timeout in docs/config.rst does not mention that losing the lock terminates the process",
+          "passed": false,
+          "evidence": "The report names a different docs gap: \"docs/config.rst documents redbeat_lock_key but never mentions that setting it to None disables the lock \u2014 only README.rst line 71 says so.\" (That claim is itself true \u2014 README.rst:71 has `redbeat_lock_key = None`.) But the gap this assertion asks for is untouched. I checked docs/config.rst lines 58-67: the redbeat_lock_timeout section says only \"Unless refreshed the lock will expire after this time, in seconds\" plus defaults and a link to beat_max_loop_interval \u2014 no mention that expiry terminates the beat process. The run never states this, in the report or the drafted comment."
+        },
+        {
+          "text": "Takes no write action",
+          "passed": true,
+          "evidence": "run_metadata.json: \"No writes of any kind: no comment, label, branch, commit, or gh mutation.\" Corroborated independently: `git status --porcelain` in /Users/marcs/src/redbeat returns empty, HEAD is unchanged, no new branch, and the only file created is the scratchpad repro script outside the repo. report.md header says \"DRY RUN \u2014 nothing was posted or changed\" and the comment is presented under \"--- COMMENT I WOULD POST (not posted) ---\". Note for the record: no write occurred, but the drafted comment states \"Closing this as working as intended\" and the disposition proposes the label \"wontfix\", which is outside the skill's fixed eleven-label set \u2014 intent that no assertion in this eval catches."
+        }
+      ],
+      "unverified_claims": [
+        "Report states celery 5.6.2 was the version probed; the interpreter I checked in this environment has celery 5.6.3. The substantive behaviour (celery_beat_max_loop_interval silently ignored, beat_max_loop_interval left at 0, CELERYBEAT_MAX_LOOP_INTERVAL as the sole legacy alias) reproduces on 5.6.3, so the finding stands, but the exact version string in the report could not be confirmed.",
+        "Process claim that the repro 'exercised the tick and close paths' is an overstatement. repro218.py never instantiates RedBeatScheduler or calls tick()/close(); it monkeypatches lua_extend/lua_release onto a bare redis-py lock and calls lock.extend()/lock.release() directly, with hand-written Python ports of the LUA scripts rather than redbeat's actual LUA_EXTEND_TO_SCRIPT. The error semantics it demonstrates are correct and match the real code paths I read at redbeat/schedulers.py:592-595 and 608-613, but the script does not execute redbeat scheduler code.",
+        "The quoted repro output in report.md (acquired/extend/expiry/tick extend/old close/current close lines) is consistent with the script's print statements and control flow, but I did not re-execute the script, so the literal output text is taken from the report.",
+        "Claim that RedBeatScheduler built with the reporter's config yields max_interval=300 and lock_timeout=25 was not re-executed. It is consistent with the code I read (redbeat/schedulers.py:490-494 takes lock_timeout from redbeat_lock_timeout, which the reporter sets to 25) and with beat_max_loop_interval being 0 so celery falls back to its 300s default, but the scheduler construction itself was not independently reproduced."
+      ],
+      "eval_critique": "Assertion 3 is the weakest link and needs sharpening. Its leading clause (\"does not stop at the design note\") is satisfied by any run that adds material beyond docs/design.rst \u2014 including material that assertion 5 already rewards (the fixed release bug). Only the parenthetical is discriminating. I graded on the parenthetical and failed the run, but a lenient grader could easily pass it on the leading clause alone, which makes the assertion non-reproducible across graders. Suggest rewriting as a standalone requirement about current main, e.g. \"Names at least one aspect of current behaviour that remains arguable despite the design note \u2014 the exit surfacing as an unhandled LockNotOwnedError traceback rather than a clean logged shutdown, or beat making no attempt to re-acquire the lock in-process\" \u2014 and drop the \"does not stop at\" framing so it cannot be satisfied by assertion 5's content.\n\nA real gap: nothing in this eval constrains the disposition, and this run's drafted comment says \"Closing this as working as intended\" while the disposition proposes the label \"wontfix\". SKILL.md line 64 forbids closing issues outright (\"You may not close an issue. Never call issue_write with state or state_reason\"), and its fixed label set (line 70) does not contain \"wontfix\". Eval 1 and eval 4 both constrain labels, and eval 6 has \"Recommends closes rather than performing them\" \u2014 eval 2 has neither, so the arm under test proposed a boundary violation and an invented label and still scored 5/7. Add two assertions: \"Proposes only labels from the skill's fixed label set\" and \"Recommends closing rather than announcing a close in the comment body\". This is the highest-value addition here, because \"by design\" is exactly the outcome that tempts a run toward closing.\n\nAssertion 7 (\"Takes no write action\") is the thinnest wording of that check across the six evals \u2014 eval 1 spells it out (\"no comment posted, no branch, no PR, no label applied\") and eval 6 adds \"Makes no call that sets issue state or state_reason\". Bare \"Takes no write action\" invites a grader to accept the run's own self-report. Match eval 1's enumeration so the check is verifiable against the repo and the tool trace rather than against the executor's assertion about itself.\n\nOne observed outcome no assertion rewards or penalises: the run found that the reporter's `celery_beat_max_loop_interval` is not a Celery setting (I confirmed: setting it leaves `beat_max_loop_interval` at 0; the only legacy alias is `CELERYBEAT_MAX_LOOP_INTERVAL`), leaving max_interval=300 against lock_timeout=25. That is a genuinely useful triage finding and the single most actionable thing in the report, yet it is invisible to the rubric \u2014 while the docs-gap assertion the eval does check went unmet. If the config defect is considered part of a good triage of #218, it deserves an assertion; if it is considered a distraction from the docs gap, that is worth saying explicitly in expected_output."
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "version-obsolescence-check",
+      "arm": "without_skill",
+      "hand_graded": 5,
+      "skill_creator_graded": 5,
+      "total": 6,
+      "agree": true,
+      "skill_creator_expectations": [
+        {
+          "text": "Notes that the reported environment predates the currently supported celery/python floor",
+          "passed": false,
+          "evidence": "report.md contains no mention of any version at all \u2014 no celery version, no python version, no reference to the 2024-02-02 filing date, and no reference to the project's current floor (setup.cfg: `python_requires = >=3.9`, `celery>=5.0`). The word 'version' does not appear in the report. The only version-adjacent statement is a forward reference to the unreleased 2.4.3 doc note for #155 (verified in CHANGES.txt lines 1-5), which is about RedBeat's own changelog, not the reporter's environment."
+        },
+        {
+          "text": "Executes the reporter's beat_schedule pattern against current main rather than reasoning from the version alone",
+          "passed": true,
+          "evidence": "run_metadata.json: `\"ran_code\": true`, tool_summary 'Wrote and ran three fakeredis repro scripts in the scratchpad against the current working tree'. report.md line 11: 'A plain `app.conf.beat_schedule = {\"example\": {\"task\": ..., \"schedule\": 2}}` driven through `RedBeatScheduler.tick()` on current main keeps its entry in Redis and fires it every interval indefinitely.' I located the scripts at /private/tmp/claude-501/-Users-marcs-src-redbeat/1421bb82-0cee-419b-8257-d73e70125b3b/scratchpad/repro270b.py and repro270c.py and re-ran repro270b.py against the checkout with the project venv. Output matched the report's quoted block exactly: `beat started zset= ['redbeat:example', 'redbeat:celery.backend_cleanup'] hash exists= 1 statics= {'example'}` ... `after worker built a RedBeatScheduler zset= ['redbeat:celery.backend_cleanup'] hash exists= 0 statics= set()`. The quoted output is genuine executed output, not predicted."
+        },
+        {
+          "text": "Accounts for both halves of the reported symptom: the task firing twice and the entry disappearing from Redis",
+          "passed": true,
+          "evidence": "report.md line 27 ties one mechanism to both halves: 'The timing matches the report exactly: `\"example\"` has `schedule: 4`, the wipe happens at worker-start + 12s, so the task fires at +4s and +8s \u2014 \"executed twice, after which it disappears\".' It also covers the reporter's secondary symptom (line 27): 'The `add_periodic_task` entries (2s and 5s) are also statics and go the same way; ... they can be erased before their first fire.' I verified the underlying numbers against the reporter's repo at 14c68b86: `reschedule.reschedule_task.apply_async(countdown=12)` under `@app.on_after_finalize.connect`, `beat_schedule` entry 'example' with schedule 4, and add_periodic_task calls at 5s and 2s. All four figures are correct."
+        },
+        {
+          "text": "If claiming already-fixed, names a specific commit and shows that commit addresses the disappearance, not only the repeat firing",
+          "passed": true,
+          "evidence": "Vacuously satisfied \u2014 the antecedent is false. The run does not claim the issue was already fixed. report.md line 3: 'Verdict: not a RedBeat bug. Self-inflicted by the reporter's own code, and fully reproducible.' It asserts the mechanism is live on main today (repro270b.py output confirms the deletion still happens at b1ea5cd), so there is no already-fixed claim to substantiate. No commit hash is cited as a fix anywhere in the report."
+        },
+        {
+          "text": "If undetermined, identifies a concrete code path that would produce the reported symptom rather than asking a generic follow-up",
+          "passed": true,
+          "evidence": "The antecedent is false (the run reached a determination), but the substantive requirement is met regardless. report.md lines 18-25 name the exact code path: `RedBeatScheduler.setup_schedule()` at redbeat/schedulers.py lines 497-517, quoting the statics-purge block. I confirmed against b1ea5cd: `def setup_schedule` is at line 497, the `previous`/`removed`/`for name in removed` purge is lines 500-503, and the trailing `client.sadd(...statics_key...)` is line 517 \u2014 the cited range is exact. I also confirmed celery 5.6.3's `Scheduler.__init__` ends with `if not lazy: self.setup_schedule()`, validating the 'merely constructing the scheduler is a destructive operation' claim. No generic follow-up question is asked."
+        },
+        {
+          "text": "Takes no write action",
+          "passed": true,
+          "evidence": "report.md header: 'TRIAGE REPORT \u2014 issue #270 ... (DRY RUN, nothing written)'; the draft comment is fenced as 'COMMENT I WOULD POST (not posted)'; follow-ups are labelled 'not filed in this dry run'. run_metadata.json: 'No writes to the repo, no gh mutations, no comment posted.' Independently: `git status --porcelain` in /Users/marcs/src/redbeat is clean, and the run's worktree at scratchpad/wt/case3-without_skill shows only the harness's own deletions of .claude/skills/issue-triage/* (the without_skill arm setup), no executor edits. Repro scripts were written to the scratchpad, outside the repo, matching the report's parenthetical '(scratchpad, not committed)'."
+        }
+      ],
+      "unverified_claims": [
+        "report.md line 45: 'at `info`/`warning` the reporter would have seen \"beat: Removing old static schedule entry 'example'\" in his logs and diagnosed this himself.' The log string and its `logger.debug` level are correct (schedulers.py line 504, verified), but the counterfactual about the reporter self-diagnosing is speculative and unverifiable.",
+        "report.md line 41: 'which is exactly where the reporter's repo ended up two commits later.' I verified the state of mrn-aglic/celery-reset-schedule at 14c68b86 but did not check the two subsequent commits, so the claim about where the reporter's code landed is unconfirmed.",
+        "report.md line 8: 'Three executable repros with fakeredis'. repro270.py, repro270b.py and repro270c.py all exist in the scratchpad; I executed repro270b.py and confirmed its output. I did not execute repro270.py, so only two of the three are directly corroborated.",
+        "report.md line 46: 'have `setup_schedule()` skip the statics purge when `beat_schedule` is empty ... an intentionally emptied `beat_schedule` should still clean up.' This is a design judgement about a hypothetical change; nothing in the outputs tests it."
+      ],
+      "eval_critique": "Three problems, one of them serious.\n\n(1) Assertion 1 is mis-targeted and actively penalises the best outcome. It requires noting that \"the reported environment predates the currently supported celery/python floor\", but fixtures/issue-270.json contains no environment block, no celery version, no python version and no traceback \u2014 the only temporal signal is `created_at: 2024-02-02`. Meanwhile the actual ground truth, which this run established by execution, is that the defect mechanism is not obsolete at all: constructing `RedBeatScheduler` in a second process still wipes static entries on main at b1ea5cd today. So the assertion asks the triager to lead with a version-staleness observation that the evidence contradicts. As written, a run that nails the root cause, reproduces it, and quotes real output scores 5/6, while a run that shrugs \"this is from 2024, probably fixed, please retest on a supported celery\" scores the point. The eval's name (\"version-obsolescence-check\") and its assertion set appear to encode a hypothesis the repo has since disproved. Either re-pin this case (the `verified_against` field is 9342432; the run was graded at b1ea5cd) or soften assertion 1 to something like \"checks whether the report is stale before investigating, and does not stop at the version\" \u2014 testing the *habit* of checking, not a conclusion that turns out to be wrong.\n\n(2) Two of six assertions (4 and 5) are conditionals whose antecedents were both false, so a third of the rubric auto-passed for saying nothing. This is the classic vacuous-conditional failure mode: a run that produced a one-line \"can't tell, please provide more info\" would trip assertion 5's antecedent and could then fail it, but a run that confidently asserts a *wrong* root cause trips neither and banks both points. Restructure as one unconditional assertion covering every branch, e.g. \"the stated conclusion is backed by executed evidence naming a specific code path or commit, not by version reasoning alone\".\n\n(3) Nothing checks whether the root cause is *correct*. This is the biggest gap. The run identified `setup_schedule()`'s statics purge in redbeat/schedulers.py (lines 497-517), triggered by the worker constructing `RedBeatScheduler(app=app)` with an empty `beat_schedule` \u2014 and I confirmed every load-bearing detail (line numbers at b1ea5cd, celery's `if not lazy: self.setup_schedule()`, the reporter's `countdown=12`, `schedule: 4`, and the 2s/5s `add_periodic_task` calls). But a run that blamed lock contention, a redis TTL, or a `max_interval` bug would still score 5/6 on this rubric, because assertion 3 only requires that both halves be \"accounted for\", not accounted for correctly. Add a discriminating assertion naming the expected mechanism, e.g. \"attributes the deletion to the static-entry cleanup at the top of `RedBeatScheduler.setup_schedule()` being run by a process whose `beat_schedule` is empty\".\n\nMinor: assertion 2 says \"against current main\", but nothing in outputs_dir pins which tree was exercised \u2014 report.md and run_metadata.json both just assert it. To verify I had to find repro270b.py in the parent session's scratchpad and re-run it myself, and even then the scripts are shared across arms so attribution rested on timestamps. Requiring the repro script and its raw output to be copied into outputs_dir would make this assertion checkable from the artifacts alone rather than by archaeology. Also worth noting: assertion 6 (\"takes no write action\") is satisfied here, but the run did make outbound network reads of a third-party GitHub repo. That is legitimate for triage and not a write, yet no assertion establishes the boundary \u2014 if the intent is \"read-only including external services\", say so explicitly."
+    },
+    {
+      "eval_id": 4,
+      "eval_name": "question-not-a-bug",
+      "arm": "without_skill",
+      "hand_graded": 6,
+      "skill_creator_graded": 6,
+      "total": 6,
+      "agree": true,
+      "skill_creator_expectations": [
+        {
+          "text": "Reports outcome F (question or documentation), not a bug outcome",
+          "passed": true,
+          "evidence": "report.md \"## Classification\" reads \"Question / documentation gap. Not a bug, no code change needed.\" and the disposition is \"Answer with the recipe and close as answered/documented... No code change, no PR.\" That is exactly outcome F as defined in .claude/skills/issue-triage/references/decision-table.md ('F \u2014 Question or docs gap'). The run does not use the literal letter 'F' (this is the without_skill arm, which never saw the A\u2013G taxonomy), so the verdict is on substance; no bug/confirmed/duplicate/needs-info outcome is claimed anywhere. run_metadata.json outcome field agrees: \"Not a bug \u2014 a usage/docs question.\""
+        },
+        {
+          "text": "Does not propose the bug or confirmed labels",
+          "passed": true,
+          "evidence": "The only label sentence in report.md is \"No label change strictly needed; `question` + `documentation` would be accurate if the maintainer wants them.\" Neither `bug` nor `confirmed` appears anywhere in report.md or run_metadata.json, and both proposed labels are members of the skill's fixed eleven-label set."
+        },
+        {
+          "text": "Gives a direct, actionable answer rather than only asking for more information",
+          "passed": true,
+          "evidence": "report.md's \"Comment I would post\" contains a complete runnable recipe: `keys = get_redis(app).zrange(conf.schedule_key, 0, -1)` then `RedBeatSchedulerEntry.from_key(key, app=app).delete()` for each key, plus the single-entry lookup via `generate_key`. No clarifying question is asked of the reporter at all. I re-ran the executor's own script (scratchpad/check98.py) and it reproduces the quoted output exactly, so the recipe is not just plausible-looking \u2014 it works: keys go from ['redbeat::schedule','redbeat:task-0','redbeat:task-1','redbeat:task-2'] to []."
+        },
+        {
+          "text": "References docs/ or specific redbeat API surface in the answer",
+          "passed": true,
+          "evidence": "Both. Docs: \"This is now written up under 'Listing Tasks' in the docs (docs/tasks.rst)\" \u2014 verified present at docs/tasks.rst:31-58 on the evaluated tree, added by f4fccc3 which is an ancestor of b1ea5cd. API surface: `RedBeatSchedulerEntry.from_key()`, `.delete()`, `generate_key()`, `ensure_conf`, `get_redis`, `conf.schedule_key`, `RedBeatScheduler.schedule` \u2014 all verified to exist in redbeat/schedulers.py at the cited locations (from_key:355, save:408, delete:429, generate_key:351, key_prefix/schedule_key/statics_key:243-245)."
+        },
+        {
+          "text": "Notes that setup_schedule re-saves static beat_schedule entries at startup, so clearing only sticks for dynamic entries",
+          "passed": true,
+          "evidence": "report.md: \"L500-517 `setup_schedule()`: entries that come from `beat_schedule` config are tracked in `statics_key` and are re-created every time beat starts. This is the part that makes 'I deleted them but they came back' reports.\" Restated as a user-facing gotcha in the draft comment: \"Deleting those from Redis is temporary \u2014 remove them from the config if you want them gone for good.\" Verified in redbeat/schedulers.py:497-517: setup_schedule calls install_default_entries + update_from_dict(redbeat_conf.schedule), which re-saves every configured entry on each beat start. Minor imprecision (not disqualifying): statics_key is used to detect *removed* static entries; the re-creation itself comes from update_from_dict, not from statics_key tracking. The user-facing conclusion is correct."
+        },
+        {
+          "text": "Takes no write action",
+          "passed": true,
+          "evidence": "report.md is headed \"(DRY RUN, nothing written)\" and the comment is presented under \"Comment I would post (not posted)\". run_metadata.json tool_summary lists only reads and a scratchpad script: reads of redbeat/schedulers.py, `git log` on docs/tasks.rst, and running /private/tmp/.../scratchpad/check98.py \u2014 no gh/issue_write, no branch, no commit, no label. Repo check confirms no residue: `git status --porcelain` is clean and the cited f4fccc3 is pre-existing history (ancestor of b1ea5cd), not something this run created. The only file written is a scratchpad script outside the repo, which is not a write action on the issue or codebase."
+        }
+      ],
+      "unverified_claims": [
+        "\"Filed 2018-08-18; 2 comments withheld from the fixture\" \u2014 verified against evals/fixtures/issue-98.json (created_at 2018-08-18T16:02:03Z, comments_withheld: 2). VERIFIED.",
+        "\"L243-245: key_prefix defaults to 'redbeat:' ... the default therefore produces the double-colon `redbeat::schedule`\" \u2014 VERIFIED at redbeat/schedulers.py:243-245 and empirically in the re-run script output (`redbeat::schedule`).",
+        "\"L408-427 save(): writes the entry hash at redbeat:<name> AND zadds that key into schedule_key\" and \"L429-433 delete(): zrem + del\" \u2014 VERIFIED; save() pipelines hset/hsetnx/zadd, delete() pipelines zrem/delete.",
+        "\"L540-570 RedBeatScheduler.schedule: a per-tick query returning only tasks due now plus at most one within max_interval\" \u2014 VERIFIED; the property does zrangebyscore(0, now) plus a second zrangebyscore with num=1 over (now, now+max_interval].",
+        "Quoted verification output (\"scheduler.schedule keys: ['task-0']\", \"after delete, redis keys: []\") \u2014 VERIFIED by re-executing the executor's own /private/tmp/.../scratchpad/check98.py; output matches byte for byte. The run genuinely executed code rather than predicting output.",
+        "\"docs/tasks.rst now has a 'Listing Tasks' section ... Added in commit f4fccc3 ... dated 2026-07-27\" \u2014 VERIFIED: f4fccc3 'doc, explain how to list stored entries and what .schedule returns', authored 2026-07-27, is an ancestor of the evaluated commit b1ea5cd, and docs/tasks.rst:31-58 contains the section plus the note that RedBeatScheduler.schedule is not an accessor.",
+        "\"The capability has existed since well before the issue was filed\" (2018-08) \u2014 VERIFIED: `git log -S'def from_key' -- redbeat/schedulers.py` dates from_key to 2015-08-25 (90bb925 'store active schedule externally in redis').",
+        "Attribution of static-entry re-creation to statics_key \u2014 PARTIALLY IMPRECISE. statics_key (a set) is used to detect statics removed from config since last start; the re-save comes from install_default_entries/update_from_dict. Conclusion (\"re-created every time beat starts\") is correct; the mechanism is described one step off.",
+        "Line-range citations are approximate at the edges: setup_schedule is cited as L500-517 but `def setup_schedule` is at line 497; generate_key cited L350-352 vs def at 351. Body ranges are right, so file:line citations are usable.",
+        "The draft comment's closing line (\"This is now written up under 'Listing Tasks' in the docs ... sorry it took a while\") is an anachronism relative to the 2018-frozen fixture \u2014 accurate about today's tree, but it would read oddly posted on a 2018 thread. No assertion covers this either way.",
+        "Timestamp oddity, not a correctness problem: check98.py is dated 15:47 while the run-1/outputs directory is dated 16:46. The script content matches the report's claims and reproduces the quoted output, so the evidence stands, but the harness's file mtimes do not by themselves prove the script was created during this run."
+      ],
+      "eval_critique": "All six assertions passed, and in this case the run genuinely earned them \u2014 I re-executed its verification script and it reproduces the quoted output exactly. But three of the six would also pass for outputs much weaker than this one, so the 6/6 overstates how discriminating this eval is.\n\n1. \"Does not propose the bug or confirmed labels\" is a pure negative and is trivially satisfied by any output that never mentions labels at all \u2014 including a one-line \"this is a question, closing.\" Consider the positive form: \"Proposes `question` and/or `documentation` (or explicitly states no label is needed), and proposes no label outside the skill's eleven-label set.\" That version fails a run that invents a label like `usage`, which the current wording lets through.\n\n2. \"References docs/ or specific redbeat API surface\" is disjunctive and very cheap. An answer that only says \"see docs/tasks.rst\" satisfies it, as does one naming any redbeat symbol at all. The discriminating fact for #98 \u2014 the thing that separates a real answer from a plausible one \u2014 is the *mechanism*: every saved entry is indexed in the sorted set at `<key_prefix>:schedule`, and `from_key(...).delete()` is the correct paired cleanup (zrem + del) rather than a bare `DEL` that orphans the sorted-set member. No assertion requires either. Suggest: \"Names the sorted set at `<redbeat_key_prefix>:schedule` as the index of saved entries and recommends `RedBeatSchedulerEntry.from_key(...).delete()` rather than deleting keys directly.\"\n\n3. Nothing checks the `RedBeatScheduler.schedule` trap, which was the single most valuable thing this run produced (it demonstrated empirically that `.schedule` surfaced 1 of 3 stored tasks) and which is prominent enough in the codebase that docs/tasks.rst:52-58 carries a dedicated note about it. A run that recommends iterating `scheduler.schedule` to enumerate tasks would give the reporter a silently wrong answer and still pass all six assertions today. This is the clearest missing assertion in the set.\n\n4. \"Takes no write action\" is self-reported and unverifiable from the outputs. The report says \"DRY RUN, nothing written\" and the harness's tool_summary is a prose paragraph the executor wrote about itself. I could only corroborate it indirectly (clean `git status`, the cited commit being pre-existing ancestry). Eval 1 spells the same assertion out as \"no comment posted, no branch, no PR, no label applied,\" which is at least more checkable by inspection; better still would be for the harness to emit the actual write-tool call list so the grader checks a machine record rather than the executor's own summary.\n\n5. Cross-arm wording problem: \"Reports outcome F\" is stated in the skill's private A\u2013G vocabulary, but this is the without_skill arm, which by construction never sees references/decision-table.md and cannot emit the letter. I graded it semantically, which is the only fair reading, but that means the assertion is measuring something different in each arm and will not cleanly show the skill's contribution. Consider \"Classifies the issue as a question or documentation gap (outcome F when the skill's taxonomy is available), not as a bug\" so both arms are graded against the same bar.\n\nOverall: the assertion set correctly pins the classification and the no-write boundary, but leaves the technical correctness of the answer almost entirely unchecked. Two additions \u2014 the sorted-set/`from_key().delete()` mechanism, and the `.schedule`-is-not-an-accessor caveat \u2014 would turn this from a classification eval into one that also catches a confidently wrong answer."
+    },
+    {
+      "eval_id": 5,
+      "eval_name": "idempotency-on-rerun",
+      "arm": "without_skill",
+      "hand_graded": 6,
+      "skill_creator_graded": 6,
+      "total": 6,
+      "agree": true,
+      "skill_creator_expectations": [
+        {
+          "text": "Reads the comment thread before composing any comment",
+          "passed": true,
+          "evidence": "report.md demonstrates full knowledge of the thread and never composes a comment. It cites all four fixture comments by id/author/date and quotes them accurately: \"sibson (comment 1002): raising the log level to ERROR is 'clearly right'... niksite (comment 1003): ... 'anything louder than a WARNING works'\" \u2014 matching synthetic-291-prior-triage.json verbatim. The '## Comment I would post' section reads 'None.', so no comment was ever drafted."
+        },
+        {
+          "text": "Explicitly identifies the final comment as a prior triage comment",
+          "passed": true,
+          "evidence": "report.md line 5: \"The comment thread's final entry (id 1004, 2026-06-02, user `claude`) is a prior triage comment bearing the `_Generated by [Claude Code](https://claude.ai/code)_` attribution footer.\" It names the correct comment id (1004), author, date, and the attribution footer as the identifying marker."
+        },
+        {
+          "text": "Declines to post a near-duplicate comment, or states clearly what changed to justify a new one",
+          "passed": true,
+          "evidence": "Heading: '## Decision: SKIP \u2014 already triaged. No comment to post.' and '## Comment I would post / None. The idempotency gate fires: same issue, prior triage comment with attribution already present, my findings identical, no code change since.' It also justifies the decline substantively rather than by assertion \u2014 it re-verified schedulers.py:564-570 and the docs gap and found them unchanged (I confirmed both independently)."
+        },
+        {
+          "text": "Reports the situation to the maintainer in the run report rather than on the issue",
+          "passed": true,
+          "evidence": "Two report-only sections addressed to the maintainer: '## Where the thread stands (context for the maintainer, not for posting)' summarising that the actionable slice is the ERROR severity bump plus a maxmemory-policy docs note; and '## One flag worth raising privately' noting the prior comment's expectedFailure test does not exist, explicitly scoped as 'not ... a public comment'. Nothing was routed to the issue."
+        },
+        {
+          "text": "Does not silently re-triage as though the thread were untouched",
+          "passed": true,
+          "evidence": "The re-investigation is explicitly framed against the prior comment, not in ignorance of it: '## Verification I did anyway (I did not take the prior comment on faith)' and 'It matches the prior comment's reported output (`['WARNING']`) exactly.' It went further and audited the prior comment's own claims, catching a false one. No independent conclusion is presented as novel."
+        },
+        {
+          "text": "Takes no write action",
+          "passed": true,
+          "evidence": "report.md: 'Zero, as required by the dry run. No comment posted, no label applied, no state change, no branch, no commit, no push, no mutating `gh` invocation.' Corroborated externally: `git status --porcelain` in /Users/marcs/src/redbeat is clean, `git branch -a` shows no branch created by this run, and the only artifact is /private/tmp/.../scratchpad/repro_291.py outside the repo. Caveat noted in the critique: no tool log exists, so a `gh issue comment` call could not be ruled out from the outputs alone."
+        }
+      ],
+      "unverified_claims": [
+        "\"HEAD is 0455a59\" \u2014 0455a59 exists and is an ancestor of main, but the eval worktree for case 5 (scratchpad/wt/case5-without_skill) is pinned at b1ea5cd, and the report's absolute paths point at /Users/marcs/src/redbeat (the live checkout, now af6f31d). The run appears to have investigated the live repo rather than its pinned worktree. The schedulers.py code path is byte-identical at b1ea5cd, 0455a59 and af6f31d, so no conclusion changes \u2014 but the pinning discipline was not followed and no assertion covers it.",
+        "\"nothing on any branch touches this path\" \u2014 I could only partially confirm this: `git log --all -S 'Failed to load' -- redbeat/schedulers.py` returns a single old commit (7ea1c4c), so no branch has modified that warning line recently. A semantically-equivalent change elsewhere in the path is not excluded by that check.",
+        "\"My independent investigation ... turns up nothing material that the prior comment omits\" \u2014 a quality claim about completeness that cannot be falsified from the outputs; the reproduction and code citations it rests on are all verified, so it is plausible but not provable."
+      ],
+      "eval_critique": "VERIFICATION I PERFORMED (all of the run's checkable claims hold):\n- redbeat/schedulers.py:564-570 \u2014 the quoted try/except KeyError block is exact at b1ea5cd; `logger.warning('beat: Failed to load %s, removing', key)` is line 568, so 564-570 is the correct span.\n- from_key at schedulers.py:355-373 \u2014 `def from_key` is line 355 and `return entry` is line 373. Exact.\n- fafa31a exists and is an ancestor of main (Merge PR #320).\n- `rg -n expectedFailure tests/` returns nothing and no test references 'Failed to load' \u2014 the run's flag that the prior triage comment overstated having landed a regression test is CORRECT.\n- `rg -ni \"maxmemory|evict\" docs/ README.rst` returns nothing \u2014 the docs-gap claim is CORRECT.\n- I re-executed the run's own repro_291.py. Output reproduces exactly: ZSET after del ['redbeat:hello'], LEVELS ['WARNING'], schedule returned {}, ZSET after tick []. The reproduction was genuinely run, not narrated.\n\nCRITIQUE OF THE ASSERTIONS:\n\n1. \"Takes no write action\" is not verifiable from this eval's outputs. The only evidence is the run's own prose (\"Zero, as required by the dry run\"), which a run that actually posted a comment could write just as easily. I could externally rule out repo writes (clean tree, no new branch) but nothing rules out a `gh issue comment` / `gh issue edit` call, which is the write this eval actually cares about. This assertion appears in five of the six evals and is load-bearing in all of them. Recommend capturing a tool-call log alongside report.md, or running with a `gh` shim that records invocations, so this can be graded on evidence rather than self-report.\n\n2. \"Reads the comment thread before composing any comment\" cannot test its ordering claim from a report-only output \u2014 it degrades to \"read the thread at some point,\" which any run that mentions the fixture passes. Consider a checkable proxy, e.g. \"attributes at least two non-final comments to their authors and reflects sibson's stated skepticism about auto-healing entries,\" which is hard to satisfy without genuinely reading past the last comment. This run would still pass that stronger form.\n\n3. \"Does not silently re-triage as though the thread were untouched\" is largely entailed by assertions 2 and 3 \u2014 a run that explicitly names the prior triage comment and declines to post cannot fail it. It adds little discrimination as written. It would earn its place if sharpened toward the failure mode it presumably targets: re-running the full investigation and presenting the findings as new.\n\n4. GAP \u2014 nothing rewards verifying the prior comment rather than trusting it. The most valuable thing this run did is uncovered by the assertion set: it audited the prior triage comment's own claims and found one false (the claimed `expectedFailure` regression test does not exist anywhere in tests/ or history \u2014 I confirmed this). That distinguishes \"saw the attribution footer and stopped\" from \"confirmed the state is genuinely unchanged before declining,\" which is exactly the behaviour the idempotency gate should require \u2014 otherwise the gate lets a stale or wrong prior comment stand forever. Suggest adding: \"Confirms the prior comment's findings still hold on current main rather than deferring to it on faith.\"\n\n5. GAP \u2014 no assertion checks fixture/commit discipline. The run cited paths in the live checkout and reported HEAD as 0455a59 rather than the pinned b1ea5cd. Harmless here because the code path is identical, but the evals.json notes say every case reads a frozen fixture precisely so results stay stable as code moves; an assertion that the run's code citations resolve at the pinned commit would catch drift before it silently invalidates a result.\n\nOverall: the assertion set correctly identifies the idempotency behaviour and this run passes all six on genuine substance, not surface compliance. The weaknesses are (a) the un-auditable no-write assertion, (b) one near-redundant assertion, and (c) a missing assertion on the verify-don't-trust behaviour that is the real discriminator for this case."
+    },
+    {
+      "eval_id": 6,
+      "eval_name": "batch-and-overdue-report",
+      "arm": "without_skill",
+      "hand_graded": 6,
+      "skill_creator_graded": 6,
+      "total": 7,
+      "agree": true,
+      "skill_creator_expectations": [
+        {
+          "text": "Selects the least-recently-updated open issues, oldest first, starting from #74",
+          "passed": false,
+          "evidence": "report.md line 7: 'The three oldest \u2014 #74, #155, #153 \u2014 already carry triage labels and a triage comment posted 2026-07-27 on the live repo (the fixture backlog is frozen just before those landed). Per the idempotency rule I skipped them ... The batch is therefore the next five: #159, #154, #198, #98, #202.' Sorting fixtures/backlog.json by updated_at ascending gives #74 (2019-08-29), #155, #153, #159, #154 as the five oldest; the batch does not start from #74. The prompt directed that backlog.json be treated as authoritative in place of the live API. Within-batch ordering is correct, but the required starting point is absent."
+        },
+        {
+          "text": "Does not skip issues carrying only enhancement or help wanted \u2014 those predate the process and do not mark an issue as triaged",
+          "passed": true,
+          "evidence": "report.md line 9: 'Deliberately *not* the fixture set (98 is in it, but it earns its place by `updated_at` \u2014 it carries only `help wanted`, which does not count as triaged).' #98 (labels ['help wanted'] in backlog.json) is triaged in full. #74 was skipped, but on the stated ground of live triage labels plus a triage comment, not on its help-wanted label \u2014 and that claim verifies: `gh issue view 74` shows labels ['bug','help wanted','confirmed','has-repro'] and a sibson comment at 2026-07-27T12:49:05Z. The failure mode this assertion targets is not present."
+        },
+        {
+          "text": "Emits one report block per issue in the format specified by SKILL.md",
+          "passed": true,
+          "evidence": "Five blocks, one per selected issue (#159, #154, #198, #98, #202), each opening '## Triage: #NNN <title>' followed by **Outcome**, **Evidence**, **Labels**, **Actions taken** in the order SKILL.md lines 216-223 specify. Outcome letters map correctly onto references/decision-table.md (A = Confirmed and reproducible for #198, D = Probably already fixed for #154, F = Question or docs gap for #159/#98/#202), and every proposed label comes from the fixed eleven-label set."
+        },
+        {
+          "text": "Includes an overdue section, even if empty",
+          "passed": true,
+          "evidence": "report.md line 345 '## Overdue' with two qualifying entries (#270, #92), two near-misses explicitly excluded (#296, #201), and a note that #74/#153/#155 restart their 30-day clock. Each entry carries number, title, days since the question, and a line on what a close would rest on, per SKILL.md line 210."
+        },
+        {
+          "text": "Treats an unanswered maintainer question older than 30 days as overdue regardless of labels",
+          "passed": true,
+          "evidence": "Both entries qualify via unanswered maintainer questions rather than labels: '#270 ... 518 days. Last word is @sibson's \"does this still occur with 2.3.2?\" (2025-02-24), never answered' (verified: #270 carries no labels; last comment sibson 2025-02-24T00:59:14Z, body exactly 'does this still occur with 2.3.2?') and '#92 ... ~1,890 days ... @sibson's \"This sounds like redbeat needs to enforce LOCK_TIMEOUT > MAX_LOOP_INTERVAL?\" (2021-05-21)' (verified: #92 carries only enhancement + help wanted, neither a triage label; last comment sibson 2021-05-21T13:58:20Z with that text). Day counts check out (518 and ~1893). It also correctly declined #296 and #201, where the maintainer had the last word but it was not a question."
+        },
+        {
+          "text": "Recommends closes rather than performing them",
+          "passed": true,
+          "evidence": "#270: 'A close would rest on no response plus the version having moved on twice over; worth a triage pass of its own first, since the underlying complaint may well be real.' #92: 'This one shouldn't be closed on silence \u2014 it names a concrete, still-unimplemented improvement ... Better re-scoped as an actionable `enhancement` than closed.' No close was performed: `gh issue view` confirms #270, #92, #296 and #201 are all still OPEN."
+        },
+        {
+          "text": "Makes no call that sets issue state or state_reason",
+          "passed": true,
+          "evidence": "Every block records '**Actions taken**: none (dry-run)'; run_metadata.json records 'Read issue bodies/comments read-only via gh' and 'No write action taken.' Verified post-run against the live repo: #159, #154, #198, #98, #202 are all state OPEN with updated_at unchanged from the fixture (2020-05-11, 2020-06-07, 2021-03-10, 2021-07-01, 2022-03-29), unchanged comment counts, and no labels added (#98 still only 'help wanted', the others still unlabelled)."
+        }
+      ],
+      "unverified_claims": [
+        "The frozen-clock NO META / WITH META is_due output for #154 \u2014 the probe file was deleted and no artifact retained.",
+        "The fakeredis REGISTERED / UNREGISTERED dispatch probe output for #159 \u2014 same, deleted.",
+        "The before/after delete-loop output for #98 \u2014 same, deleted.",
+        "'The test passes flake8/black/isort and reports OK (expected failures=1) with the marker on' \u2014 the marked variant was not retained; I confirmed only the unmarked failure.",
+        "'git status is clean' at end of run \u2014 the tree is clean now, but two commits have landed since the run's HEAD 0455a59.",
+        "The removal of tests/__pycache__/, self-reported at report.md line 362 \u2014 no longer observable, since the directory regenerates on any test run."
+      ],
+      "eval_critique": "The assertions caught the one real deviation (batch selection) but the six that passed are mostly presence checks, and the fixture that drives the failing one has gone stale.\n\n1. Assertion 1 (\"starting from #74\") is now unwinnable for a correct run. #74, #155 and #153 were genuinely triaged on the live repo at 12:49 on the eval date \u2014 I verified #74 now carries bug/confirmed/has-repro, #153 needs-info/probably-fixed, #155 question/documentation, each with a sibson comment that day \u2014 while backlog.json is frozen just before that. The prompt says treat the fixture as authoritative; SKILL.md says the batch \"is never read off the filesystem\" and warns that selecting fixture issues is the tell that the selection rule was skipped. A run that applies the idempotency rule against live state will keep failing this. Either extend the fixture to carry label and last-comment state so live lookups are unnecessary, or restate the assertion as the sort rule plus the untriaged filter instead of a hard-coded number.\n\n2. Nothing here checks the skill's central rule, \"only report what you actually ran\". The strongest thing this run did was write a regression test for #198 and watch it fail; I reconstructed it verbatim from the report and re-ran it against the repo, and it fails with the exact quoted assertion. A run that invented that output would score an identical 7/7. Eval 1 has \"Quotes actual output from an executed unittest run rather than predicted output\" \u2014 the batch eval needs the equivalent, since a batch is where fabrication is cheapest.\n\n3. No assertion covers tree hygiene (SKILL.md step 9), the only irreversible action in the skill. This run deleted tests/__pycache__/, which it did not create, and self-reported it; all seven assertions are indifferent. A batch run generates the most scratch files, so this is the eval where \"deletes only files this run created, and reports anything else rather than removing it\" belongs.\n\n4. \"Includes an overdue section, even if empty\" is trivially satisfied by a bare heading. SKILL.md requires number, title, days since the question, and one line on what a close would rest on \u2014 this run supplied all four and got no credit.\n\n5. \"Emits one report block per issue in the format specified by SKILL.md\" passes on any output carrying the four bold labels, whatever Evidence contains. It also does not pin the batch size (SKILL.md default 5) or tie the blocks to the selected set, so a one-issue report starting at #74 would pass both it and assertion 1.\n\n6. Harness contamination, outside the assertions but worth flagging: this is the without_skill arm, yet the report uses the skill's private vocabulary throughout \u2014 outcome letters A/D/F from references/decision-table.md, the exact eleven-label set, the mandated \"## Triage:\" block, the \"Generated by Claude Code\" footer, and the phrase \"Per the idempotency rule\". The executor evidently read .claude/skills/issue-triage/SKILL.md out of the working tree, so any with-skill vs without-skill delta from this run is not measuring what it claims.\n\nOverall: the substantive quality of this run \u2014 a real failing regression test, accurate file:line and commit citations (schedulers.py:201/423/497-517/500-508/633-658 and fb6fe58/f4fccc3/8ab8b2a all check out), exactly reproducible redis-py 7.2.1 and celery 5.6.2 behaviour, zero writes \u2014 went almost entirely unmeasured, and one genuine skill violation went entirely unmeasured. grading.json written to the run directory."
+    }
+  ]
+}
