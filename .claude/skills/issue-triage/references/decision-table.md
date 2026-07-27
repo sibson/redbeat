@@ -8,23 +8,35 @@ issue that is genuinely both should say so.
 
 ## One-time label bootstrap
 
+**This is a maintainer step, not something a triage run can do.** The GitHub
+toolset a run has available is read-only for labels: `get_label` exists,
+`create_label` does not, and the direct REST API is blocked at the proxy. A run
+that meets an outcome whose label is missing can propose it and say so in the
+report, but it cannot create it.
+
 Already in the repo — use as-is, don't recreate or restyle them:
 `bug`, `duplicate`, `question`, `enhancement`, `help wanted`.
 
-Create these once, before the first real run:
+Still missing as of 2026-07-27 (all six verified absent via `get_label`), so run
+this once, as the maintainer, before the first real run:
 
-| Label | Colour | Meaning |
-|---|---|---|
-| `confirmed` | `b60205` | Reproduced, or traced to specific code |
-| `has-repro` | `0e8a16` | A committed test demonstrates it |
-| `needs-info` | `fbca04` | Waiting on the reporter; starts the 30-day clock |
-| `probably-fixed` | `c2e0c6` | Believed resolved by a named commit |
-| `documentation` | `0075ca` | Docs gap rather than a code defect |
-| `needs-integration-test` | `5319e7` | Real defect, not expressible in the fakeredis harness |
+```sh
+gh label create confirmed              -c d93f0b -d 'Reproduced, or traced to specific code' -R sibson/redbeat
+gh label create has-repro              -c 0e8a16 -d 'A committed test demonstrates it' -R sibson/redbeat
+gh label create needs-info             -c fbca04 -d 'Waiting on the reporter; starts the 30-day clock' -R sibson/redbeat
+gh label create probably-fixed         -c c2e0c6 -d 'Believed resolved by a named commit' -R sibson/redbeat
+gh label create documentation          -c 0075ca -d 'Docs gap rather than a code defect' -R sibson/redbeat
+gh label create needs-integration-test -c 5319e7 -d 'Real defect, not expressible in the fakeredis harness' -R sibson/redbeat
+```
 
-Check with `get_label` before creating rather than trusting this list — it is a
-snapshot, and a triage run that assumes a label exists will fail at the point
-where it has already posted the comment.
+`confirmed` is orange rather than the red you'd expect because `help wanted` is
+already `b60205` and `bug` is `fc2929`; a third red is indistinguishable at chip
+size, and `confirmed` almost always rides alongside `bug`.
+
+Check with `get_label` before relying on any of these rather than trusting the
+list above — it is a snapshot, and a run that assumes a label exists will fail at
+the point where it has already posted the comment. Check *before* commenting, not
+after.
 
 ## A — Confirmed and reproducible
 
