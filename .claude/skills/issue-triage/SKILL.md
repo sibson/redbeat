@@ -91,6 +91,13 @@ grep -n '#<NNN>' CHANGES.txt                        # changelog references
 plus `search_issues` for PRs mentioning the number. A fix you can name beats a
 suspicion you can't.
 
+Check for a shallow clone first (`.git/shallow`, or a suspiciously short
+`git log`). In one, `git log -S` blames the graft boundary commit for everything
+older, which reads exactly like "changed recently" and will walk you into naming
+the wrong commit. When history is truncated, fall back to `CHANGES.txt` and the
+closed issue or PR, and cite those instead — an honest `CHANGES.txt:67` is worth
+more than a confident sha that means nothing.
+
 **4. Check version relevance.** The tree supports python >= 3.9 and celery >= 5.
 A traceback from celery 4.3 on redbeat 0.13 against a function that has since
 been rewritten is not current evidence. Say that plainly instead of treating the
@@ -102,7 +109,13 @@ Known clusters: `due_at`/`remaining_estimate` (#210, #307), lock ownership and
 re-election (#218, #230, #306), lock release on shutdown (#129), entries
 vanishing from the schedule (#285, #291). Canonical = oldest with the best repro.
 
-**6. Classify.** bug, enhancement, question, or documentation.
+**6. Classify.** bug, enhancement, question, or documentation. Before treating
+anything as a defect, check `docs/` — particularly `docs/design.rst` — for
+whether it is a deliberate choice. Several of redbeat's sharpest edges are
+documented design (beat exiting when it loses the lock, rather than
+re-acquiring), and a report describing intended behaviour is a question or a docs
+gap, not a bug. If the docs justify the behaviour but only somewhere the affected
+user would never look, that gap is worth naming too.
 
 **7. Try to reproduce.** See `references/repro-harness.md` for how to write a
 redbeat test — the conventions are unusual and you will get them wrong from

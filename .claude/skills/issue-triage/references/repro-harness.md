@@ -74,27 +74,33 @@ from now that docstring is the only context anyone has.
 
 ## What is and isn't testable here
 
-Testable, because the trigger is arithmetic and you can inject the clock via
-`nowfun`:
+Judge each issue on its own; don't take a verdict from a list. The question is
+narrower than "can I simulate the user's situation" — it is **can I put the code
+into the state where the defect occurs**. Those come apart more often than you'd
+expect, and mistaking the first for the second is the main way this step goes
+wrong in both directions.
 
-- `due_at` / `remaining_estimate` errors (#210, #307)
-- first-run timing after `save()` when `last_run_at` is unset (#154)
-- rrule start-time handling (#74)
-- JSON round-tripping of schedules and metadata (`redbeat/decoder.py`)
-- entry disappearing when its hash is gone but the ZSET member remains (#291) —
-  deletable directly through `self.app.redbeat_redis`
+Usually testable, because the trigger is arithmetic and the clock is injectable
+via `nowfun`: `due_at` and `remaining_estimate` errors, first-run timing after
+`save()` with `last_run_at` unset, rrule start handling, JSON round-tripping in
+`redbeat/decoder.py`.
 
-Not testable in this harness — these are outcome B:
+Often testable even when the *cause* isn't reproducible, because the state the
+cause produces is reachable directly through `self.app.redbeat_redis`. A key
+evicted by Redis and a key you deleted are indistinguishable to the client, so
+"entry vanished from the ZSET" or "the lock is gone" are reachable states even
+though eviction and host suspend are not reachable events. If the defect is what
+the code does *on discovering* that state, you can test it.
 
-- lock loss from a suspended host or clock jump (#218), re-election after a DST
-  transition (#306)
-- cluster key-slot behaviour (#296), sentinel failover (#156)
-- server-closed connections and retry behaviour (#252, #285) — fakeredis doesn't
-  model connection loss faithfully enough for the test to mean anything
+Genuinely out of reach — outcome B — is behaviour that depends on machinery
+fakeredis doesn't model: cluster key-slot routing, sentinel failover, connection
+loss and retry. Here you would have to mock the very thing that's broken, and the
+test would pass or fail for reasons unrelated to the bug.
 
-The line is whether fakeredis reproduces the *mechanism* or merely the *shape* of
-the failure. If you'd have to mock the thing that's actually broken, the test
-proves nothing.
+Before writing any of it, check the behaviour isn't intended. `docs/design.rst`
+documents deliberate choices that look like defects from the outside — beat
+exiting when it loses the lock is the notable one. A test asserting documented
+behaviour pins the design in place while claiming to be a bug report.
 
 ## Before opening the PR
 

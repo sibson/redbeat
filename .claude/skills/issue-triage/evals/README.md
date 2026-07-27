@@ -28,7 +28,7 @@ python .claude/skills/issue-triage/evals/check_no_writes.py \
 | Case | Guards against |
 |---|---|
 | `reproducible-bug-and-duplicate` (#307) | The happy path. Also the only case where a duplicate and a reproduction coexist — #210 is the same defect. |
-| `environmental-bug-not-unit-testable` (#218) | Writing a fakeredis test for a host-suspend bug, which would pass for the wrong reason. |
+| `documented-behaviour-not-a-bug` (#218) | Confirming a defect that `docs/design.rst` says is intentional, and writing a test that pins the design in place. |
 | `version-obsolescence-check` (#270) | Both failure directions: treating a celery 4.x trace as current, and dismissing a live bug because the report is old. |
 | `question-not-a-bug` (#98) | Labelling a usage question as a bug and asking for a traceback that will never exist. |
 | `idempotency-on-rerun` (#291) | Re-commenting on an already-triaged issue. |
@@ -49,3 +49,12 @@ the suite, but the expectations need re-pinning when it happens:
 
 Case 5 describes prior-triage state in the prompt rather than depending on #291
 actually having a triage comment, so it stays valid regardless of backlog state.
+
+A worked example of the above, from the suite's first run: case 2 originally
+asserted that #218 was a confirmed-but-untestable defect. The run showed that
+`docs/design.rst` documents the behaviour as intentional, so the assertion was
+encoding the author's assumption rather than testing the skill — and the skill
+had inherited the same wrong assumption as a hardcoded verdict in
+`repro-harness.md`. Both were corrected. Expect this: an eval that fails because
+your expectation was wrong is the suite paying for itself, so check which of the
+two is wrong before "fixing" the skill.

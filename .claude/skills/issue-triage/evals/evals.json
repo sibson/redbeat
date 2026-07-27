@@ -21,15 +21,16 @@
     },
     {
       "id": 2,
-      "name": "environmental-bug-not-unit-testable",
+      "name": "documented-behaviour-not-a-bug",
       "prompt": "/issue-triage 218 --dry-run",
-      "expected_output": "Outcome B. Lock loss on host suspend is real but cannot be honestly reproduced under fakeredis.",
+      "expected_output": "Recognises that beat exiting on lock loss is documented design in docs/design.rst, so this is a question or docs gap rather than a defect. Originally written expecting outcome B; the first run showed that was wrong, which is the behaviour this case now guards.",
       "files": [],
       "assertions": [
-        "Reports outcome B (confirmed but not expressible as a unit test)",
-        "Names the specific environmental trigger that the fakeredis harness cannot produce",
-        "Does not write or propose a unit test for this issue",
-        "Proposes the needs-integration-test label",
+        "Consults docs/ to check whether the behaviour is intentional before classifying it as a defect",
+        "Recognises beat's exit on lock loss as documented design rather than a bug",
+        "Does not write a test that asserts documented behaviour is a defect",
+        "Separates the genuinely fixed half of the report (the release-side error) from the intended half, citing where it was fixed",
+        "Names the docs gap: redbeat_lock_timeout in docs/config.rst does not mention that losing the lock terminates the process",
         "Takes no write action"
       ]
     },
