@@ -28,6 +28,34 @@ a key of ``<redbeat_key_prefix>:task-name``. It should contain a single key
 .. _`CELERYBEAT_SCHEDULE`: http://docs.celeryproject.org/en/3.1/userguide/periodic-tasks.html#beat-entries
 .. _`beat_schedule`: http://docs.celeryproject.org/en/4.0/userguide/periodic-tasks.html#beat-entries
 
+Listing Tasks
+~~~~~~~~~~~~~
+RedBeat keeps every saved entry in a sorted set at ``<redbeat_key_prefix>:schedule``,
+scored by the next time each task is due. To enumerate the whole schedule, read the
+keys out of that set and load each one with ``RedBeatSchedulerEntry.from_key()``::
+
+    from redbeat import RedBeatSchedulerEntry
+    from redbeat.schedulers import ensure_conf, get_redis
+
+    conf = ensure_conf(app)
+    keys = get_redis(app).zrange(conf.schedule_key, 0, -1)
+    entries = [RedBeatSchedulerEntry.from_key(key, app=app) for key in keys]
+
+A single entry can be loaded by name::
+
+    key = RedBeatSchedulerEntry.generate_key(app, 'task-name')
+    entry = RedBeatSchedulerEntry.from_key(key, app=app)
+
+``from_key()`` raises ``KeyError`` if no such task is stored.
+
+.. note::
+
+    ``RedBeatScheduler.schedule`` is **not** an accessor for the stored schedule. It
+    is the per-tick query Beat uses to find work: it returns only the tasks due now,
+    plus at most one task due within the next ``max_interval`` so Beat can size its
+    sleep. Called outside a running Beat it will usually return ``{}``, even when the
+    schedule holds many tasks. Use the sorted set walk above to list everything.
+
 Interval
 ~~~~~~~~
 An interval task is defined with the JSON like::

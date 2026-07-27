@@ -1,5 +1,8 @@
 2.4.3 (unreleased)
 ---------------------
+  - doc, document how to list every stored entry, and note that
+    `RedBeatScheduler.schedule` is a due-window query rather than the whole
+    schedule, fixes #155
 2.4.2 (2026-07-27)
 ---------------------
   - bugfix, restore the pre-2.4.0 handling of options inherited from
