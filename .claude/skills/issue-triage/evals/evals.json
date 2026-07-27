@@ -85,11 +85,12 @@
     {
       "id": 6,
       "name": "batch-and-overdue-report",
-      "prompt": "/issue-triage --dry-run",
-      "fixture": null,
+      "prompt": "/issue-triage --dry-run. Read the open-issue backlog from evals/fixtures/backlog.json and the bodies of any issue you select from evals/fixtures/issue-<N>.json where present — treat those as authoritative in place of the live API. Investigate the code and history normally.",
+      "fixture": "fixtures/backlog.json",
       "expected_output": "Batch of least-recently-updated untriaged issues plus the overdue section. Recommends, never closes.",
       "assertions": [
-        "Triages a batch of the least-recently-updated open issues carrying no triage label",
+        "Selects the least-recently-updated open issues, oldest first, starting from #74",
+        "Does not skip issues carrying only enhancement or help wanted — those predate the process and do not mark an issue as triaged",
         "Emits one report block per issue in the format specified by SKILL.md",
         "Includes an overdue section, even if empty",
         "Treats an unanswered maintainer question older than 30 days as overdue regardless of labels",

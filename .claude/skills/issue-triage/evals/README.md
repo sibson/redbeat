@@ -24,9 +24,10 @@ So each case reads a frozen snapshot of the issue as originally filed —
 are withheld, and `state` / `state_reason` / `labels` are stripped so a closed
 issue can't announce its own verdict.
 
-Case 6 is the deliberate exception: batch mode has to enumerate the real
-backlog. Its assertions are all about *shape* — report format, an overdue
-section, no state changes — which don't drift as the backlog does.
+Batch mode reads a frozen backlog the same way, from `fixtures/backlog.json`.
+Which issues it picks and what it calls overdue are judgments, and both change
+as the real backlog is worked — so they need pinning too, or the case measures
+the state of the repo rather than the quality of the selection.
 
 ## What a fixture does and doesn't freeze
 
@@ -41,10 +42,11 @@ checked against. When HEAD has moved well past it and a case starts failing,
 check whether the code changed under the expectation before treating it as a
 skill regression — those are opposite problems with opposite fixes.
 
-**What fixtures don't cover:** the live API path. A fixture run never exercises
-`issue_read`, label lookup, or comment posting, so integration breakage won't
-show up here. Case 6 is the only case that touches the real API; treat a
-periodic live single-issue dry run as the smoke test for the plumbing.
+These cases measure one thing: whether the skill reaches good triage judgments.
+They are not a functional or integration test, and shouldn't grow into one —
+if the API tools break you find out the moment you run the skill, and an
+assertion about them here would only add a way for the suite to go red for
+reasons that have nothing to do with triage quality.
 
 ## Running them
 

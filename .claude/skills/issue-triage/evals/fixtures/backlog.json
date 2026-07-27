@@ -1,0 +1,293 @@
+{
+  "_comment": "Eval fixture: open-issue backlog frozen as of 2026-07-27. Treat as the authoritative issue list in place of the live API.",
+  "as_of": "2026-07-27",
+  "issue_count": 28,
+  "issues": [
+    {
+      "number": 74,
+      "title": "rrule: first run delayed",
+      "user": {
+        "login": "yoch"
+      },
+      "created_at": "2017-12-09T21:36:40Z",
+      "updated_at": "2019-08-29T14:51:40Z",
+      "labels": [
+        "help wanted"
+      ],
+      "comments": 15
+    },
+    {
+      "number": 155,
+      "title": "Empty (i.e., {}) `redbeat.schedulers.RedBeatScheduler.schedule`",
+      "user": {
+        "login": "gduverger"
+      },
+      "created_at": "2020-03-29T02:18:47Z",
+      "updated_at": "2020-03-29T14:56:33Z",
+      "comments": 2
+    },
+    {
+      "number": 153,
+      "title": "crontab task not run right",
+      "user": {
+        "login": "chen-zhuohan"
+      },
+      "created_at": "2020-03-12T02:30:11Z",
+      "updated_at": "2020-04-26T17:16:48Z",
+      "comments": 1
+    },
+    {
+      "number": 159,
+      "title": "Adding a celery shared_task to redbeat results in the message being sent to the wrong queue",
+      "user": {
+        "login": "adamdelman"
+      },
+      "created_at": "2020-04-26T09:22:18Z",
+      "updated_at": "2020-05-11T17:33:34Z",
+      "comments": 4
+    },
+    {
+      "number": 154,
+      "title": "bug report: repeated execution of first task after establishing a new schedule(because of missing entry.last_run_at)",
+      "user": {
+        "login": "Mo-Xianyuan"
+      },
+      "created_at": "2020-03-25T03:53:45Z",
+      "updated_at": "2020-06-07T00:50:36Z",
+      "comments": 1
+    },
+    {
+      "number": 198,
+      "title": "setup_schedule called even if instance not holding lock",
+      "user": {
+        "login": "avilaton"
+      },
+      "created_at": "2021-03-10T14:35:36Z",
+      "updated_at": "2021-03-10T14:35:36Z"
+    },
+    {
+      "number": 98,
+      "title": "Clear tasks from Redis",
+      "user": {
+        "login": "willhunt"
+      },
+      "created_at": "2018-08-18T16:02:03Z",
+      "updated_at": "2021-07-01T03:54:33Z",
+      "labels": [
+        "help wanted"
+      ],
+      "comments": 2
+    },
+    {
+      "number": 202,
+      "title": "launch error while paassword contains special chars",
+      "user": {
+        "login": "ConleyKong"
+      },
+      "created_at": "2021-06-02T06:31:03Z",
+      "updated_at": "2022-03-29T15:31:57Z",
+      "comments": 3
+    },
+    {
+      "number": 210,
+      "title": "`due_at` date calculation appears to be incorrect",
+      "user": {
+        "login": "simonk52"
+      },
+      "created_at": "2021-10-13T18:00:46Z",
+      "updated_at": "2022-04-15T14:27:20Z",
+      "comments": 4
+    },
+    {
+      "number": 221,
+      "title": "Tasks wont run always after updating the schedule",
+      "user": {
+        "login": "thisiseddy-ab"
+      },
+      "created_at": "2022-07-11T11:54:22Z",
+      "updated_at": "2022-07-11T11:56:27Z"
+    },
+    {
+      "number": 129,
+      "title": "LockError: Cannot release an unlocked lock",
+      "user": {
+        "login": "davidjmemmett"
+      },
+      "created_at": "2019-06-03T10:32:17Z",
+      "updated_at": "2022-10-07T19:37:23Z",
+      "comments": 9
+    },
+    {
+      "number": 232,
+      "title": "Reschedule does not work correctly.",
+      "user": {
+        "login": "cikay"
+      },
+      "created_at": "2022-11-21T10:41:57Z",
+      "updated_at": "2022-11-21T10:52:45Z"
+    },
+    {
+      "number": 252,
+      "title": "Retry did not work after (104, 'Connection reset by peer')",
+      "user": {
+        "login": "aakashb09"
+      },
+      "created_at": "2023-06-21T06:41:42Z",
+      "updated_at": "2023-06-21T07:12:06Z"
+    },
+    {
+      "number": 230,
+      "title": "Cannot extend a lock that's no longer owned",
+      "user": {
+        "login": "cikay"
+      },
+      "created_at": "2022-11-21T06:34:43Z",
+      "updated_at": "2023-07-13T07:22:18Z",
+      "comments": 3
+    },
+    {
+      "number": 218,
+      "title": "\"LockNotOwnedError: Cannot extend a lock that's no longer owned\" When laptop goes to sleep.",
+      "user": {
+        "login": "Cediddi"
+      },
+      "created_at": "2022-06-15T14:07:41Z",
+      "updated_at": "2023-07-13T10:36:03Z",
+      "comments": 3
+    },
+    {
+      "number": 156,
+      "title": "how can I add multiple redis url and redbeat_broker_url rabbitmq",
+      "user": {
+        "login": "oguzhannkayaa"
+      },
+      "created_at": "2020-04-08T11:49:56Z",
+      "updated_at": "2024-03-05T13:18:24Z",
+      "comments": 2
+    },
+    {
+      "number": 92,
+      "title": "Documentation Improvement - REDBEAT_LOCK_TIMEOUT",
+      "user": {
+        "login": "jgerry2002"
+      },
+      "created_at": "2018-06-01T20:56:47Z",
+      "updated_at": "2025-02-24T00:48:40Z",
+      "labels": [
+        "enhancement",
+        "help wanted"
+      ],
+      "comments": 2
+    },
+    {
+      "number": 93,
+      "title": "Redbeat scheduler - Execute same task at same time interval but for different inputs",
+      "user": {
+        "login": "sands7788"
+      },
+      "created_at": "2018-06-12T06:15:31Z",
+      "updated_at": "2025-02-24T00:48:50Z",
+      "labels": [
+        "help wanted"
+      ]
+    },
+    {
+      "number": 270,
+      "title": "Usual way of defining periodic tasks in celery not working as expected",
+      "user": {
+        "login": "mrn-aglic"
+      },
+      "created_at": "2024-02-02T09:24:34Z",
+      "updated_at": "2025-02-24T00:59:16Z",
+      "comments": 1
+    },
+    {
+      "number": 285,
+      "title": "Beat crash after Redis SERVER_CLOSED_CONNECTION_ERROR",
+      "user": {
+        "login": "rainsville"
+      },
+      "created_at": "2025-03-19T12:52:09Z",
+      "updated_at": "2025-03-19T12:52:09Z"
+    },
+    {
+      "number": 199,
+      "title": "Support for Celery 4+ sentinel:// urls",
+      "user": {
+        "login": "ns-dthorman"
+      },
+      "created_at": "2021-04-01T19:15:15Z",
+      "updated_at": "2025-03-22T21:44:46Z",
+      "labels": [
+        "help wanted"
+      ],
+      "comments": 1
+    },
+    {
+      "number": 291,
+      "title": "\u201cFailed to load \u2026\u201d silently discards schedule entries",
+      "user": {
+        "login": "niksite"
+      },
+      "created_at": "2025-05-14T19:22:25Z",
+      "updated_at": "2025-06-07T01:58:42Z",
+      "comments": 4
+    },
+    {
+      "number": 301,
+      "title": "Add support for valkey / valkey-py",
+      "user": {
+        "login": "lmna"
+      },
+      "created_at": "2025-10-09T07:26:58Z",
+      "updated_at": "2025-10-09T07:26:58Z"
+    },
+    {
+      "number": 201,
+      "title": "Beat loop stops running and stops showing log output in DEBUG level",
+      "user": {
+        "login": "cooperbaird"
+      },
+      "created_at": "2021-05-31T01:42:32Z",
+      "updated_at": "2025-10-25T20:07:20Z",
+      "comments": 19
+    },
+    {
+      "number": 306,
+      "title": "DST change caused no worker node to have the lock",
+      "user": {
+        "login": "j00bar"
+      },
+      "created_at": "2025-11-02T21:08:17Z",
+      "updated_at": "2025-11-02T21:08:17Z"
+    },
+    {
+      "number": 307,
+      "title": "Bug: `due_at` property calculates incorrect next run time due to misuse of `remaining_estimate`",
+      "user": {
+        "login": "jasonyaodd"
+      },
+      "created_at": "2026-01-21T21:33:30Z",
+      "updated_at": "2026-01-21T21:33:30Z"
+    },
+    {
+      "number": 296,
+      "title": "Error ClusterCrossSlotError",
+      "user": {
+        "login": "ruipedroalmeida"
+      },
+      "created_at": "2025-09-04T16:42:02Z",
+      "updated_at": "2026-01-25T15:56:52Z",
+      "comments": 2
+    },
+    {
+      "number": 322,
+      "title": "2.5.0: stop inheriting broker settings; separate option namespaces fully",
+      "user": {
+        "login": "sibson"
+      },
+      "created_at": "2026-07-27T01:32:42Z",
+      "updated_at": "2026-07-27T01:32:42Z"
+    }
+  ]
+}

@@ -37,8 +37,13 @@ mildly annoyed to get the notification. Earn it.
 ## Invocation
 
 - `/issue-triage 307` — one issue, full depth.
-- `/issue-triage` — a batch of the least-recently-updated open issues that carry
-  no triage label (default 5), followed by the overdue report.
+- `/issue-triage` — a batch of the least-recently-updated open issues not yet
+  triaged (default 5), followed by the overdue report. "Not yet triaged" means
+  carrying none of `bug`, `confirmed`, `has-repro`, `needs-info`,
+  `probably-fixed`, `duplicate`, `documentation`, `question`,
+  `needs-integration-test`. `enhancement` and `help wanted` predate this process
+  and say nothing about whether an issue has been looked at — an issue carrying
+  only those is still untriaged, and several of the oldest ones are exactly that.
 - `--dry-run` on either — do the whole investigation and print the report and the
   exact comment you *would* post, but take no write action. Use this whenever
   you're unsure, and note that the evals in `evals/` run this way.
