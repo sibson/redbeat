@@ -106,6 +106,15 @@ grep -n '#<NNN>' CHANGES.txt                        # changelog references
 plus `search_issues` for PRs mentioning the number. A fix you can name beats a
 suspicion you can't.
 
+**A fix that isn't on `main` is not a fix.** An unmerged branch, an open PR, a
+commit sitting on a fork — none of those close anything for the person who filed
+the report, and `probably-fixed` on that basis tells them their live bug is
+handled. Before you call something fixed, confirm the commit is an ancestor of
+the default branch (`git merge-base --is-ancestor <sha> main`). If the fix
+exists but hasn't landed, that is a genuinely useful finding — report it as an
+unmerged fix and name the branch or PR, keep the outcome as confirmed, and let
+the maintainer decide whether to merge it.
+
 Check for a shallow clone first (`.git/shallow`, or a suspiciously short
 `git log`). In one, `git log -S` blames the graft boundary commit for everything
 older, which reads exactly like "changed recently" and will walk you into naming
@@ -126,10 +135,11 @@ Canonical = oldest with the best repro.
 Search the narrowest distinctive identifier **on its own** before adding
 qualifying terms. GitHub search ANDs the terms, so every word you add can only
 shrink the result set, and the duplicate you want is often the thread that
-described the same bug in different words. `due_at` finds #210; `due_at
-remaining_estimate` does not, because the 2021 report never used the second
-word. Add terms only to cut a result set that came back too large — never as
-your opening move.
+described the same bug in different words. Searching one bare symbol name will
+routinely surface a years-old report of the same defect; adding the second
+symbol from your own diagnosis loses it, because the original reporter described
+the behaviour without ever naming that internal. Add terms only to cut a result
+set that came back too large — never as your opening move.
 
 Recurring themes, as a starting point for the search and nothing more —
 verify against the actual threads before relying on any of it, because
@@ -224,3 +234,10 @@ End every run with this, whether dry-run or not:
 
 For a batch, one block per issue, then the overdue section. Keep it terse — this
 is a worklist, not an essay.
+
+On a dry run, the comment you print is a draft of something that has not
+happened. Write it in that tense. A draft saying "I've added a failing
+regression test in #PPP" is a false statement with a placeholder in it, and on
+the day someone pastes it into the thread it becomes a false statement without
+one. Describe what the comment would say about work you actually did; never
+narrate a comment, branch or PR you did not create.
