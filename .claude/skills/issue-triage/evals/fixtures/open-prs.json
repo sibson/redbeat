@@ -1,0 +1,113 @@
+{
+  "_comment": "Eval fixture: open pull requests frozen as of 2026-07-27. Treat as the authoritative list of open PRs in place of the live API when checking whether a fix is already proposed.",
+  "as_of": "2026-07-27",
+  "pr_count": 9,
+  "pull_requests": [
+    {
+      "number": 324,
+      "title": "test: reproduce #74 \u2014 rrule skips the occurrence at dtstart",
+      "body": "Adds a failing regression test for #74, reproduced on `main` (`2f96d0a`).\n\nAn `rrule` built without an explicit `dtstart` defaults it to the creation time (`redbeat/schedules.py:53`), and celery's `ScheduleEntry` defaults `last_run_at` to the same instant. `remaining_estimate` then asks dateutil for `rrule.after(last_run_at)` (`redbeat/schedules.py:93`), which is **exclusive** \u2014 so the occurrence sitting exactly on `dtstart` is passed over and the first run is delayed by a full interval.\n\n`tests/test_issue_74.py` holds the failing test, marked `@unittest.expectedFailure`, plus a companion that pins today's behaviour. This is a triage artifact: at fix time the first test moves into `tests/test_schedules.py`.\n\nNot addressed here: the second problem in #74 \u2014 an rrule whose occurrences are *all* in the past is never scheduled at all. That one is a design question, so I left it for the maintainer.",
+      "user": {
+        "login": "sibson"
+      },
+      "state": "open",
+      "draft": false,
+      "created_at": "2026-07-27T12:48:45Z",
+      "updated_at": "2026-07-27T12:48:45Z"
+    },
+    {
+      "number": 314,
+      "title": "make Lock operations retriable",
+      "body": "Right now, the `retry_period` config doesn't apply to the `self.lock` object so if the Redis connection breaks right before `tick()` runs, `self.lock.extend()` throws an exception and beat stops.\n\nThis PR makes lock operations retriable when `retry_period` is set.",
+      "user": {
+        "login": "phanky1"
+      },
+      "state": "open",
+      "draft": false,
+      "created_at": "2026-04-27T14:48:47Z",
+      "updated_at": "2026-04-28T03:16:28Z"
+    },
+    {
+      "number": 308,
+      "title": "Fix/due at calculation 307",
+      "user": {
+        "login": "sibson"
+      },
+      "state": "open",
+      "draft": false,
+      "created_at": "2026-03-03T15:46:12Z",
+      "updated_at": "2026-03-03T15:46:12Z"
+    },
+    {
+      "number": 305,
+      "title": "Use replace_ttl when extending beat lock",
+      "body": "## Summary\n- call `extend` with `replace_ttl=True` so lock expirations are replaced instead of extended\n- drop the custom Lua script override and rely on redis-py's default lock extension logic\n\n## Testing\n- not run",
+      "user": {
+        "login": "sibson"
+      },
+      "state": "open",
+      "draft": true,
+      "created_at": "2025-10-25T21:17:30Z",
+      "updated_at": "2025-10-25T21:17:31Z"
+    },
+    {
+      "number": 287,
+      "title": "fix #285",
+      "body": "Fix lock acquire\n#285 ",
+      "user": {
+        "login": "man4red"
+      },
+      "state": "open",
+      "draft": false,
+      "created_at": "2025-03-22T21:33:30Z",
+      "updated_at": "2025-08-15T23:57:41Z"
+    },
+    {
+      "number": 286,
+      "title": "fix #284 fix #199",
+      "body": "Fix sentinel connection\n#284 \n#199 ",
+      "user": {
+        "login": "man4red"
+      },
+      "state": "open",
+      "draft": false,
+      "created_at": "2025-03-22T20:44:28Z",
+      "updated_at": "2025-08-15T23:54:21Z"
+    },
+    {
+      "number": 217,
+      "title": "using uuid-$hostname-$pid replace default uuid as lock token.",
+      "body": "We run multiple redbeat instances for high availability, and sometimes we find that the service is not behaving as expected, we want to know which server is running, but it's hard to know right now, so we want to use uuid-$hostname-$pid as a lock token to aid troubleshooting.",
+      "user": {
+        "login": "pengwk"
+      },
+      "state": "open",
+      "draft": false,
+      "created_at": "2022-04-26T14:48:55Z",
+      "updated_at": "2025-03-24T09:14:28Z"
+    },
+    {
+      "number": 109,
+      "title": "fix disabling of distributed lock (#2)",
+      "user": {
+        "login": "bertosantamaria"
+      },
+      "state": "open",
+      "draft": false,
+      "created_at": "2019-02-13T22:21:33Z",
+      "updated_at": "2025-02-16T20:02:21Z"
+    },
+    {
+      "number": 94,
+      "title": "Fix bug: OverflowError: mktime argument out of range",
+      "body": "The variable use to call is_due->maybe_make_aware->is_navie->utcoffset->_isdst->_time.mktime\n\n, raise a exception on windows: OverflowError: mktime argument out of range\n\nThe min timestamp is 1970-1-1, considering timezone, if you are in east+8, 1970-1-1+8 turn into 0,\nso the best safe value is 1970-1-2",
+      "user": {
+        "login": "samwellzuk"
+      },
+      "state": "open",
+      "draft": false,
+      "created_at": "2018-07-06T11:11:15Z",
+      "updated_at": "2025-02-16T20:02:43Z"
+    }
+  ]
+}

@@ -16,6 +16,7 @@ where the grader reads it and the agent doesn't.
 Usage:
     <fetch issue JSON>  | python snapshot.py --number 307 --as-of 2026-01-21
     <fetch issue list>  | python snapshot.py --list --as-of 2026-07-27
+    <fetch PR list>     | python snapshot.py --prs --as-of 2026-07-27
 
 MCP tools aren't reachable from a script, so Claude does the fetching and
 pipes the result here to be normalized. Input is the `get` response, or a
@@ -42,6 +43,11 @@ KEEP_COMMENT = ('user', 'created_at', 'body')
 # selection rule under test, so stripping them would remove the judgment.
 KEEP_LISTED = ('number', 'title', 'user', 'created_at', 'updated_at', 'labels', 'comments')
 
+# `state` and `draft` survive here where they're stripped from an issue fixture,
+# and the asymmetry is deliberate: a closed issue announces its own verdict, but
+# for a PR "is it open, and is it a draft" *is* the fact under test.
+KEEP_PR = ('number', 'title', 'body', 'user', 'state', 'draft', 'created_at', 'updated_at')
+
 
 def prune(obj, keep):
     return {k: obj[k] for k in keep if k in obj}
@@ -57,6 +63,20 @@ def build_list(raw, as_of):
         'as_of': as_of,
         'issue_count': len(issues),
         'issues': [prune(i, KEEP_LISTED) for i in issues],
+    }
+
+
+def build_prs(raw, as_of):
+    prs = raw.get('pull_requests', raw) if isinstance(raw, dict) else raw
+    return {
+        '_comment': (
+            f'Eval fixture: open pull requests frozen as of {as_of or "now"}. '
+            'Treat as the authoritative list of open PRs in place of the live '
+            'API when checking whether a fix is already proposed.'
+        ),
+        'as_of': as_of,
+        'pr_count': len(prs),
+        'pull_requests': [prune(p, KEEP_PR) for p in prs],
     }
 
 
@@ -92,14 +112,15 @@ def build(raw, number, as_of):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--number', type=int, help='single issue; omit with --list')
+    p.add_argument('--number', type=int, help='single issue; omit with --list/--prs')
     p.add_argument('--list', action='store_true', help='freeze an open-issue backlog')
+    p.add_argument('--prs', action='store_true', help='freeze the open pull requests')
     p.add_argument('--as-of', help='ISO date; comments after it are withheld')
     p.add_argument('--out', help='defaults to fixtures/issue-<number>.json')
     args = p.parse_args()
 
-    if args.list == (args.number is not None):
-        print('ERROR  pass exactly one of --number or --list', file=sys.stderr)
+    if sum((args.list, args.prs, args.number is not None)) != 1:
+        print('ERROR  pass exactly one of --number, --list or --prs', file=sys.stderr)
         return 2
 
     try:
@@ -112,6 +133,10 @@ def main():
         fixture = build_list(raw, args.as_of)
         default = 'fixtures/backlog.json'
         summary = f'{fixture["issue_count"]} issues'
+    elif args.prs:
+        fixture = build_prs(raw, args.as_of)
+        default = 'fixtures/open-prs.json'
+        summary = f'{fixture["pr_count"]} open PRs'
     else:
         fixture = build(raw, args.number, args.as_of)
         leaked = [f for f in VERDICT_FIELDS if f in fixture['issue']]

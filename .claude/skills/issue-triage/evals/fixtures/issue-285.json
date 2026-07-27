@@ -1,0 +1,20 @@
+{
+  "_comment": "Eval fixture for issue #285, frozen as of 2025-03-19. Treat this as the authoritative issue content in place of the live API. Resolution is held out in ground-truth/ -- do not go looking for it, and do not post any of this anywhere.",
+  "issue_number": 285,
+  "as_of": "2025-03-19",
+  "comments_withheld": 0,
+  "issue": {
+    "number": 285,
+    "title": "Beat crash after Redis SERVER_CLOSED_CONNECTION_ERROR",
+    "body": "We have noticed that the beat process crashes occasionally after dealing with a Redis SERVER_CLOSED_CONNECTION_ERROR.\n\nAfter:\n\n```\n2025-02-26T10:38:56.177557+0000 ERROR signal.py:280 celery.utils.dispatch.signal Signal handler  raised: ConnectionError('Connection closed by server.')\n```\n\nThe beat process can crash with:\n\n```\n2025-02-26T10:38:56.371792+0000 CRITICAL beat.py:115 celery.beat beat raised exception : AttributeError(\"'NoneType' object has no attribute 'extend'\")\nTraceback (most recent call last):\n  File \"celery/apps/beat.py\", line 113, in start_scheduler\n    service.start()\n    ~~~~~~~~~~~~~^^\n  File \"celery/beat.py\", line 643, in start\n    interval = self.scheduler.tick()\n  File \"redbeat/schedulers.py\", line 485, in tick\n    self.lock.extend(int(self.lock_timeout))\n    ^^^^^^^^^^^^^^^^\nAttributeError: 'NoneType' object has no attribute 'extend'\n```",
+    "user": {
+      "login": "rainsville",
+      "id": 148077317,
+      "profile_url": "https://github.com/rainsville",
+      "avatar_url": "https://avatars.githubusercontent.com/u/148077317?v=4"
+    },
+    "created_at": "2025-03-19T12:52:09Z",
+    "comments": 0
+  },
+  "comments": []
+}

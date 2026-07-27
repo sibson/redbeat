@@ -9,9 +9,15 @@ issue that is genuinely both should say so.
 All eleven labels the outcomes below use exist on the repo. Apply them as-is —
 don't recreate or restyle them, and don't invent new ones.
 
+An open PR against the issue is not a ninth outcome — it changes the action
+inside whichever of A–G you land in. See the section at the end.
+
 ## A — Confirmed and reproducible
 
 You wrote a test, ran it, and it failed for the reason the reporter described.
+
+Settle step 6 before doing any of this: if a PR is already open against the
+issue, the branch-and-PR sequence below is off, and the last section governs.
 
 1. Branch `claude/triage-issue-NNN` off the default branch.
 2. Add `tests/test_issue_NNN.py` per `repro-harness.md`, marked
@@ -113,3 +119,36 @@ Not a defect. Summarise what it would take and what today's behaviour is, so the
 next reader doesn't restart from the title.
 
 Label: `enhancement`.
+
+## When a PR is already open
+
+Step 6 turned up an open PR against this issue. The classification doesn't
+change — #285 is still confirmed, #307 is still both confirmed and a duplicate
+of #210 — but two things about the action do.
+
+**Don't open a competing PR.** This overrides step 1 of outcome A. Someone is
+waiting on review for work you'd be duplicating, and a second PR against the
+same issue makes the maintainer arbitrate rather than merge. If your repro test
+is genuinely worth having and the open PR lacks one, say so in the issue comment
+and let the maintainer ask for it — the existing PR's author is better placed to
+add it than a parallel branch is.
+
+The one case where you still open yours: the PR predates a rewrite of the code
+it touches and no longer applies, and you say that plainly. "It's stale" is not
+enough; "it patches `acquire_distributed_beat_lock`, which `<sha>` deleted" is.
+
+**Say what you think of it.** A bare link is barely worth the notification. One
+or two sentences: does it address the mechanism, does it carry a test, does it
+contradict anything in `docs/`. Getting this wrong in the reporter's favour is
+the failure mode to avoid — "#287 fixes this" reads as a promise, and if it's
+actually blocked on a design question the reporter waits on something that isn't
+coming.
+
+Append to whichever outcome's template you're using:
+
+> There's an open PR that touches this: #NNN (`<title>`, opened `<date>`,
+> unreviewed). `<one or two sentences: what it changes, and whether it addresses
+> the mechanism above.>`
+>
+> I haven't opened a competing PR. `<If a repro test is still worth having, one
+> line saying so.>`
