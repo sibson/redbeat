@@ -1,5 +1,12 @@
 2.4.3 (unreleased)
 ---------------------
+  - bugfix, `_maybe_due_kwargs` is no longer a `cached_property`, so it no
+    longer pins beat's dispatch to a single kombu producer/connection for the
+    life of the process. Previously, once that connection broke (an idle
+    connection reaped by the broker, a proxy failover, ...), every subsequent
+    publish failed silently -- `maybe_due` only logs the exception -- while
+    RedBeat's own bookkeeping (via a separate redis-py client) kept advancing,
+    so the schedule looked healthy throughout
   - doc, document how to list every stored entry, and note that
     `RedBeatScheduler.schedule` is a due-window query rather than the whole
     schedule, fixes #155

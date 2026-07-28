@@ -3,7 +3,7 @@ import unittest
 from copy import deepcopy
 from datetime import datetime, timedelta
 from unittest import mock
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 import pytz
 from celery.beat import DEFAULT_MAX_INTERVAL
@@ -194,6 +194,21 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
             send_task.assert_called_with(e.task, e.args, e.kwargs, **self.s._maybe_due_kwargs)
 
         self.assertEqual(sleep, 1.0)
+
+    def test_maybe_due_kwargs_reflects_a_fresh_producer_each_tick(self):
+        # _maybe_due_kwargs must not be a cached_property: `producer` (from
+        # celery.beat.Scheduler) is itself a cached_property wrapping a single
+        # connection, and if beat pins that producer for the life of the
+        # process, a connection that later breaks fails every dispatch
+        # forever while RedBeat's own bookkeeping keeps advancing.
+        producers = [Mock(name='first'), Mock(name='second')]
+        with patch.object(type(self.s), 'producer', new_callable=PropertyMock) as producer:
+            producer.side_effect = producers
+            first = self.s._maybe_due_kwargs['producer']
+            second = self.s._maybe_due_kwargs['producer']
+
+        self.assertIs(first, producers[0])
+        self.assertIs(second, producers[1])
 
     def test_old_static_entries_are_removed(self):
         redis = self.app.redbeat_redis

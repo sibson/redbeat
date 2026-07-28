@@ -16,7 +16,6 @@ from celery.beat import DEFAULT_MAX_INTERVAL, ScheduleEntry, Scheduler
 from celery.signals import beat_init
 from celery.utils.log import get_logger
 from celery.utils.time import humanize_seconds
-from kombu.utils.objects import cached_property
 from kombu.utils.url import maybe_sanitize_url
 from redis import Redis
 from redis.sentinel import MasterNotFoundError, Sentinel
@@ -624,7 +623,7 @@ class RedBeatScheduler(Scheduler):
             )
         return '\n'.join(info)
 
-    @cached_property
+    @property
     def _maybe_due_kwargs(self):
         """handle rename of publisher to producer"""
         return {'producer': self.producer}
