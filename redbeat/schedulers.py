@@ -19,6 +19,7 @@ from celery.utils.time import humanize_seconds
 from kombu.utils.objects import cached_property
 from kombu.utils.url import maybe_sanitize_url
 from redis import Redis
+from redis.lock import Lock
 from redis.sentinel import MasterNotFoundError, Sentinel
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
 
@@ -87,7 +88,10 @@ class RetryingConnection:
 
         @retry(**self.retry_kwargs)
         def retrier(*args, **kwargs):
-            return method(*args, **kwargs)
+            obj = method(*args, **kwargs)
+            if isinstance(obj, Lock):
+                obj.redis = self
+            return obj
 
         return retrier
 
