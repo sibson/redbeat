@@ -82,7 +82,7 @@ introduces a major behaviour change RedBeat depends on, or an
 incompatibility upstream.
 
 RedBeat uses the `redis-py <https://github.com/redis/redis-py>`_ client to
-talk to either server.
+talk to either server; it is the only supported client library.
 
 Development
 --------------
