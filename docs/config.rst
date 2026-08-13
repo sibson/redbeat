@@ -7,7 +7,7 @@ You can add any of the following parameters to your Celery configuration:
 ~~~~~~~~~~~~~~~~~~~~~
 
 URL to redis server used to store the schedule, defaults to value of
-`broker_url`_.
+`broker_url`_. Both Redis and Valkey servers are supported.
 
 .. deprecated:: 2.4.2
    The fallback to `broker_url`_ is deprecated and will be removed in

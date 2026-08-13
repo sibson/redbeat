@@ -72,6 +72,18 @@ To disable this feature, set:
 
 More details available on `Read the Docs <https://redbeat.readthedocs.io/en/latest/>`_
 
+Server compatibility
+--------------------
+
+RedBeat works with both `Redis <https://redis.io/>`_ and
+`Valkey <https://valkey.io/>`_ servers -- point ``redbeat_redis_url`` at
+either. We intend to maintain support for both for as long as neither
+introduces a major behaviour change RedBeat depends on, or an
+incompatibility upstream.
+
+RedBeat uses the `redis-py <https://github.com/redis/redis-py>`_ client to
+talk to either server; it is the only supported client library.
+
 Development
 --------------
 RedBeat is available on `GitHub <https://github.com/sibson/redbeat>`_
