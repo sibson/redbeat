@@ -1,5 +1,7 @@
 2.4.3 (unreleased)
 ---------------------
+  - doc, document that RedBeat supports both Redis and Valkey servers, with
+    intent to maintain both absent major upstream behaviour changes, #301
   - doc, document how to list every stored entry, and note that
     `RedBeatScheduler.schedule` is a due-window query rather than the whole
     schedule, fixes #155
