@@ -99,6 +99,21 @@ class test_RedBeatScheduler_schedule(RedBeatSchedulerTestBase):
 
         self.assertEqual(sorted(e.name for e in entries), [due.name, later.name])
 
+    def test_missing_hash_for_zset_member_logs_error_and_is_removed(self):
+        # simulate Redis evicting the hash while the zset member survives
+        due = self.create_entry(name='due', s=due_now).save()
+        conf = ensure_conf(self.app)
+        get_redis(self.app).delete(due.key)
+
+        with self.assertLogs('celery.beat', level='ERROR') as cm:
+            schedule = self.s.schedule
+
+        self.assertNotIn(due.name, schedule)
+        self.assertTrue(any('Failed to load' in message for message in cm.output))
+
+        remaining = get_redis(self.app).zrange(conf.schedule_key, 0, -1)
+        self.assertNotIn(due.key, remaining)
+
     def test_entry_is_loadable_by_generated_key(self):
         entry = self.create_entry(name='findme', s=due_now).save()
 

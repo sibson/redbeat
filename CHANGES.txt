@@ -1,5 +1,9 @@
 2.4.3 (unreleased)
 ---------------------
+  - bugfix, raise the log level from warning to error when a scheduled
+    entry's hash is missing (e.g. evicted by Redis) and the entry is
+    dropped from the schedule, so operators notice instead of the loss
+    passing silently, fixes #291
   - doc, document that RedBeat supports both Redis and Valkey servers, with
     intent to maintain both absent major upstream behaviour changes, and
     that redis-py is the only supported client library, #301
