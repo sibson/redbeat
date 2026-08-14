@@ -1,5 +1,10 @@
 2.4.3 (unreleased)
 ---------------------
+  - bugfix, drop the cached broker producer/connection after a dispatch
+    fails with a connection-shaped error, so beat reconnects on the next
+    tick instead of retrying the same dead connection for the life of the
+    process; a non-connection dispatch failure (e.g. a bad task payload)
+    leaves a healthy connection alone, refs #201
   - doc, document that RedBeat supports both Redis and Valkey servers, with
     intent to maintain both absent major upstream behaviour changes, and
     that redis-py is the only supported client library, #301

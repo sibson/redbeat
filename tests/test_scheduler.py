@@ -3,12 +3,13 @@ import unittest
 from copy import deepcopy
 from datetime import datetime, timedelta
 from unittest import mock
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 import pytz
 from celery.beat import DEFAULT_MAX_INTERVAL
 from celery.schedules import schedstate, schedule
 from celery.utils.time import maybe_timedelta
+from kombu.exceptions import OperationalError
 from redis import CredentialProvider
 from redis.exceptions import ConnectionError
 
@@ -218,6 +219,115 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
         self.s.lock = None
         with self.assertRaises(AttributeError):
             self.s.tick()
+
+    def test_dispatch_failure_from_a_dead_connection_is_recovered_on_next_dispatch(self):
+        # celery.beat.Scheduler.producer/.connection are cached_property, so
+        # once resolved they pin dispatch to a single connection for the life
+        # of the process. If a dispatch fails because that connection died (an
+        # idle socket reaped by the broker, a proxy failover, ...) the failure
+        # is logged loudly (logger.exception) -- but every following dispatch
+        # keeps failing against the same dead connection unless the cached
+        # producer/connection are dropped so the next tick reconnects.
+        entry = self.create_entry(
+            name='now', s=due_now, last_run_at=datetime.utcnow() - timedelta(seconds=1)
+        ).save()
+
+        dead_connection = Mock(name='dead-connection')
+        dead_connection.connection_errors = (ConnectionError,)
+        dead_connection.channel_errors = ()
+        dead_producer = Mock(name='dead-producer')
+        self.s.__dict__['connection'] = dead_connection
+        self.s.__dict__['producer'] = dead_producer
+
+        with patch.object(self.s, 'send_task', side_effect=ConnectionError('boom')):
+            self.s.maybe_due(entry, producer=dead_producer)
+
+        # the dead connection is released (not just discarded, kombu.Connection
+        # has no __del__) and both cached values are gone
+        dead_connection.release.assert_called_once()
+        self.assertNotIn('connection', self.s.__dict__)
+        self.assertNotIn('producer', self.s.__dict__)
+
+        # and the *next* dispatch actually gets a different producer object --
+        # this is the behaviour, not just the absence of __dict__ keys. It
+        # also exercises _maybe_due_kwargs being a plain property rather than
+        # a cached_property: a cached_property here would keep handing out
+        # the stale producer even after the pops above (see also PR #329,
+        # which independently makes this same _maybe_due_kwargs change).
+        fresh_producer = Mock(name='fresh-producer')
+        with patch.object(
+            type(self.s), 'producer', new_callable=PropertyMock, return_value=fresh_producer
+        ):
+            with patch.object(self.s, 'send_task') as send_task:
+                self.s.maybe_due(entry, **self.s._maybe_due_kwargs)
+
+        used_producer = send_task.call_args.kwargs.get('producer')
+        self.assertIs(used_producer, fresh_producer)
+        self.assertIsNot(used_producer, dead_producer)
+
+    def test_maybe_due_kwargs_reflects_a_fresh_producer_each_call(self):
+        # _maybe_due_kwargs must not be a cached_property (see PR #329, which
+        # independently makes this same change): `producer` is itself a
+        # cached_property, and pinning `_maybe_due_kwargs` on top of it would
+        # keep handing out a stale producer dict forever, even after
+        # `producer` itself has been discarded and re-resolved.
+        producers = [Mock(name='first'), Mock(name='second')]
+        with patch.object(type(self.s), 'producer', new_callable=PropertyMock) as producer:
+            producer.side_effect = producers
+            first = self.s._maybe_due_kwargs['producer']
+            second = self.s._maybe_due_kwargs['producer']
+
+        self.assertIs(first, producers[0])
+        self.assertIs(second, producers[1])
+
+    def test_dispatch_failure_from_a_bad_payload_keeps_a_healthy_connection(self):
+        # A pure serialization/scheduling error against an otherwise healthy
+        # broker (e.g. an entry whose args aren't JSON-serializable) must not
+        # tear down the cached producer/connection -- unlike a real connection
+        # failure, discarding here buys nothing and would open a fresh broker
+        # connection on every tick for as long as the bad entry stays due.
+        self.create_entry(
+            name='now', s=due_now, last_run_at=datetime.utcnow() - timedelta(seconds=1)
+        ).save()
+
+        connection = Mock(name='healthy-connection')
+        connection.connection_errors = (ConnectionError,)
+        connection.channel_errors = ()
+        producer = Mock(name='healthy-producer')
+        self.s.__dict__['connection'] = connection
+        self.s.__dict__['producer'] = producer
+
+        with patch.object(
+            self.s,
+            'send_task',
+            side_effect=TypeError('Object of type set is not JSON serializable'),
+        ):
+            self.s.tick()
+
+        self.assertIs(self.s.__dict__.get('connection'), connection)
+        self.assertIs(self.s.__dict__.get('producer'), producer)
+        connection.release.assert_not_called()
+
+    def test_reconnect_failure_during_tick_does_not_escape_or_stall(self):
+        # After a prior dispatch failure has discarded the cache, the next
+        # tick's attempt to re-resolve self.producer goes through celery's
+        # _ensure_connected(), which can itself raise OperationalError if the
+        # broker is still unreachable. That must not escape tick() -- it would
+        # otherwise crash the beat loop (or, uncaught by the caller, leave the
+        # redbeat lock unextended) instead of just trying again next tick.
+        self.create_entry(
+            name='now', s=due_now, last_run_at=datetime.utcnow() - timedelta(seconds=1)
+        ).save()
+
+        with patch.object(
+            type(self.s),
+            'producer',
+            new_callable=PropertyMock,
+            side_effect=OperationalError('still down'),
+        ):
+            sleep = self.s.tick()  # must not raise
+
+        self.assertEqual(sleep, self.s.max_interval)
 
 
 class TestRedBeatSchedulerUpdateFromDict(RedBeatSchedulerTestBase):
