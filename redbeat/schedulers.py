@@ -489,7 +489,16 @@ class RedBeatScheduler(Scheduler):
         # constructor, before beat_init fires and acquire_distributed_beat_lock has
         # had a chance to run, so an instance that never gets the lock would still
         # clobber the static schedule installed by whichever instance holds it.
-        kwargs.setdefault('lazy', True)
+        #
+        # This must be unconditional, not kwargs.setdefault(...): celery's
+        # beat.Service.get_scheduler() -- the only code path celery itself uses to
+        # build a scheduler -- always passes lazy= explicitly (default lazy=False),
+        # so setdefault would never take effect there. One consequence: anyone
+        # constructing RedBeatScheduler directly, outside celery beat, no longer
+        # gets the static schedule installed for free -- it's only installed when
+        # beat_init fires (i.e. via celery beat's own startup) or by calling
+        # setup_schedule() by hand.
+        kwargs['lazy'] = True
         super(RedBeatScheduler, self).__init__(app, **kwargs)
 
         self.lock_key = lock_key or app.redbeat_conf.lock_key
@@ -641,8 +650,17 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     """
     Attempt to acquire lock on startup
 
-    Celery will squash any exceptions raised here. If one is raised
-    scheduler.lock will be None while scheduler.lock_key is set
+    Celery will squash any exceptions raised here (Signal.send logs and
+    swallows receiver exceptions). If one is raised, scheduler.lock will be
+    None while scheduler.lock_key is set.
+
+    Note this also means a setup_schedule() failure here -- e.g. a bad static
+    schedule entry -- no longer crashes beat loudly at construction the way it
+    did before setup_schedule() was deferred out of __init__. Instead beat
+    keeps running, holding the lock, with a stale or empty schedule. If that
+    silent-degradation risk matters for your deployment, monitor beat_init
+    failures (logged at whatever level Signal.send uses) rather than relying
+    on a hard crash.
     """
     scheduler = sender.scheduler
     if not scheduler.lock_key:

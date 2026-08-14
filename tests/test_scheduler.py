@@ -685,11 +685,17 @@ class RedBeatStartupAcquiresLock(RedBeatSchedulerTestBase):
 
 
 class test_RedBeatScheduler_setup_schedule_deferred_until_lock(RedBeatCase):
+    # celery.beat.Service.get_scheduler() always constructs the scheduler with
+    # an explicit `lazy=` keyword (default lazy=False), so these tests build
+    # RedBeatScheduler the same way -- constructing with no `lazy` kwarg at
+    # all would pass even with the underlying bug, since it's not how celery
+    # ever actually calls this constructor.
+
     def test_construction_does_not_install_static_schedule(self):
         conf = ensure_conf(self.app)
         conf.schedule = {'task-old': {'task': 'old', 'schedule': mocked_schedule(60)}}
 
-        RedBeatScheduler(app=self.app)
+        RedBeatScheduler(app=self.app, lazy=False)
 
         redis = self.app.redbeat_redis
         self.assertEqual(redis.smembers(conf.statics_key), set())
@@ -706,7 +712,7 @@ class test_RedBeatScheduler_setup_schedule_deferred_until_lock(RedBeatCase):
         conf.schedule = {
             'task-old': {'task': 'old', 'schedule': mocked_schedule(60)}
         }
-        winner = RedBeatScheduler(app=self.app)
+        winner = RedBeatScheduler(app=self.app, lazy=False)
         acquire_distributed_beat_lock(Mock(scheduler=winner))
         self.assertEqual(redis.smembers(statics_key), {'task-old'})
 
@@ -717,6 +723,50 @@ class test_RedBeatScheduler_setup_schedule_deferred_until_lock(RedBeatCase):
         self.app.redbeat_conf.schedule = {
             'task-new': {'task': 'new', 'schedule': mocked_schedule(60)}
         }
-        RedBeatScheduler(app=self.app)
+        RedBeatScheduler(app=self.app, lazy=False)
 
         self.assertEqual(redis.smembers(statics_key), {'task-old'})
+
+    def test_setup_schedule_without_lock_leaves_schedule_alone(self):
+        # Moved from the #198 triage artifact (tests/test_issue_198.py on
+        # origin/claude/triage-issue-198, PR #327) and adapted to drive the
+        # lock acquisition through acquire_distributed_beat_lock -- the
+        # actual beat_init receiver -- rather than poking `.lock` directly,
+        # so it exercises the real mechanism the fix relies on.
+        redis = self.app.redbeat_redis
+        conf = ensure_conf(self.app)
+
+        conf.schedule = {'task-old': {'task': 'tasks.old', 'schedule': mocked_schedule(60)}}
+        winner = RedBeatScheduler(app=self.app, lazy=False)
+        acquire_distributed_beat_lock(Mock(scheduler=winner))
+
+        self.assertEqual(redis.smembers(conf.statics_key), {'task-old'})
+
+        conf.schedule = {'task-new': {'task': 'tasks.new', 'schedule': mocked_schedule(60)}}
+        loser = RedBeatScheduler(app=self.app, lazy=False)
+        self.assertIsNone(loser.lock)
+
+        self.assertEqual(redis.smembers(conf.statics_key), {'task-old'})
+
+    def test_service_construction_defers_schedule_until_beat_init(self):
+        # Builds the scheduler the way celery's own beat.Service does --
+        # Service(...).scheduler -- rather than instantiating RedBeatScheduler
+        # directly, so this catches a regression on the actual production
+        # startup path (Service.start() touches .scheduler, which calls
+        # get_scheduler(lazy=False), before beat_init is sent).
+        from celery.beat import Service
+        from celery.signals import beat_init
+
+        conf = ensure_conf(self.app)
+        conf.schedule = {'task-old': {'task': 'old', 'schedule': mocked_schedule(60)}}
+
+        service = Service(app=self.app, scheduler_cls=RedBeatScheduler)
+        scheduler = service.scheduler  # celery.beat.Service.get_scheduler(lazy=False)
+
+        redis = self.app.redbeat_redis
+        self.assertEqual(redis.smembers(conf.statics_key), set())
+
+        beat_init.send(sender=service)
+
+        self.assertEqual(redis.smembers(conf.statics_key), {'task-old'})
+        self.assertIsNotNone(scheduler.lock)
