@@ -710,28 +710,11 @@ class test_RedBeatScheduler_setup_schedule_deferred_until_lock(RedBeatCase):
         self.assertEqual(redis.smembers(statics_key), {'task-old'})
 
         # winner still holds the lock, so this never fires the beat_init receiver
-        self.app.redbeat_conf.schedule = {
-            'task-new': {'task': 'new', 'schedule': mocked_schedule(60)}
-        }
-        RedBeatScheduler(app=self.app, lazy=False)
-
-        self.assertEqual(redis.smembers(statics_key), {'task-old'})
-
-    def test_setup_schedule_without_lock_leaves_schedule_alone(self):
-        redis = self.app.redbeat_redis
-        conf = ensure_conf(self.app)
-
-        conf.schedule = {'task-old': {'task': 'tasks.old', 'schedule': mocked_schedule(60)}}
-        winner = RedBeatScheduler(app=self.app, lazy=False)
-        acquire_distributed_beat_lock(Mock(scheduler=winner))
-
-        self.assertEqual(redis.smembers(conf.statics_key), {'task-old'})
-
-        conf.schedule = {'task-new': {'task': 'tasks.new', 'schedule': mocked_schedule(60)}}
+        conf.schedule = {'task-new': {'task': 'new', 'schedule': mocked_schedule(60)}}
         loser = RedBeatScheduler(app=self.app, lazy=False)
-        self.assertIsNone(loser.lock)
 
-        self.assertEqual(redis.smembers(conf.statics_key), {'task-old'})
+        self.assertIsNone(loser.lock)
+        self.assertEqual(redis.smembers(statics_key), {'task-old'})
 
     def test_service_construction_defers_schedule_until_beat_init(self):
         # drive the real startup path: Service.start() resolves .scheduler
