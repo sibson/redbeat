@@ -55,6 +55,23 @@ A prefix for all keys created by RedBeat, defaults to ``'redbeat'``.
 Key used to ensure only a single beat instance runs at a time,
 defaults to ``'<redbeat_key_prefix>:lock'``.
 
+``redbeat_key_expiry_check``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+What RedBeat does at startup when it finds Redis configured to let its keys
+expire or be evicted, see requirements_ below. One of:
+
+``'ignore'``
+    Skip the checks entirely, and the two commands they cost.
+``'warn'``
+    Log any finding at ``WARNING``.
+``'error'``
+    Log any finding at ``ERROR``. The default.
+``'raise'``
+    Log any finding at ``ERROR``, then refuse to start.
+
+.. versionadded:: 2.4.3
+
 ``redbeat_lock_timeout``
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -134,3 +151,53 @@ Some notes about the configuration:
   uses the ``startup_nodes`` option, and the remaining options are sent
   as keyword arguments to ``RedisCluster()``.
 
+.. _requirements:
+
+Redis requirements
+------------------
+
+RedBeat's keys are the schedule, not a cache of it. Nothing recreates them:
+an entry whose hash disappears stops running, and RedBeat notices only when
+the entry next comes due, at which point it logs
+
+.. code-block:: text
+
+    beat: Failed to load redbeat:some-task, removing; its hash is gone, which
+    usually means Redis evicted or expired it
+
+Entries defined in ``beat_schedule`` come back at the next beat restart;
+entries created through the API are gone for good. So RedBeat's keys must
+never expire, and the Redis holding them must never evict them.
+
+Two ways deployments break that:
+
+* an eviction policy. With ``maxmemory`` set and a ``maxmemory-policy`` in
+  the ``allkeys-*`` family, Redis may drop any key, including the schedule,
+  once memory runs short. The ``volatile-*`` policies only drop keys carrying
+  an expiry.
+* an expiry on the keys themselves, usually housekeeping on a shared Redis,
+  or a ``redbeat:*`` sweep modelled on the lock key.
+
+Use the ``noeviction`` policy, or give RedBeat a Redis instance or database
+of its own. ``redbeat::lock`` is the one deliberate exception: it is supposed
+to expire, that is what releases the lock when a beat process dies.
+
+At startup RedBeat checks what it can afford to check: whether
+``redbeat::schedule`` or ``redbeat::statics`` carry an expiry, and whether
+the server reports an evicting ``maxmemory-policy``. Findings are logged and
+repeated in the beat banner, under the control of ``redbeat_key_expiry_check``
+above. It does not walk the individual entry hashes, which would cost a round
+trip per entry on every beat startup. To check those by hand::
+
+    redis-cli --scan --pattern 'redbeat:*' | while read key; do
+        ttl=$(redis-cli ttl "$key")
+        test "$ttl" -ge 0 && echo "$key expires in ${ttl}s"
+    done
+
+The startup check needs no more than ``CONFIG GET``, and quietly skips the
+policy half when the server refuses it, as several managed Redis offerings
+do. A server RedBeat cannot ask is never reported as unsafe, so on those
+deployments check ``maxmemory-policy`` yourself through the provider console.
+
+Programs that create entries through the API without running beat never reach
+the startup check, since it is beat that runs it.

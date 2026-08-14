@@ -42,6 +42,24 @@ class test_RedBeatConfig(AppCase):
         self.conf = RedBeatConfig(self.app)
         self.assertEqual(self.conf.lock_key, 'redbeat::custom')
 
+    def test_key_expiry_check_default(self):
+        self.assertEqual(self.conf.key_expiry_check, 'error')
+
+    def test_key_expiry_check_override(self):
+        self.app.conf.redbeat_key_expiry_check = 'RAISE'
+        self.conf = RedBeatConfig(self.app)
+        self.assertEqual(self.conf.key_expiry_check, 'raise')
+
+    def test_key_expiry_check_unknown_value_falls_back_to_the_default(self):
+        self.app.conf.redbeat_key_expiry_check = 'shout'
+
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            self.conf = RedBeatConfig(self.app)
+
+        self.assertEqual(self.conf.key_expiry_check, 'error')
+        self.assertTrue(any("'shout'" in str(w.message) for w in caught))
+
     def test_schedule(self):
         schedule = {'foo': 'bar'}
         self.conf.schedule = schedule
