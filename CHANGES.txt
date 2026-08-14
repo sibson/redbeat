@@ -1,5 +1,10 @@
 2.4.3 (unreleased)
 ---------------------
+  - bugfix, defer installing the static schedule until an instance actually
+    holds the distributed lock, so an instance that loses the race (e.g.
+    during a rolling deploy) no longer overwrites the lock holder's schedule
+    with its own config before it even attempts to acquire the lock, fixes
+    #198
   - doc, document that RedBeat supports both Redis and Valkey servers, with
     intent to maintain both absent major upstream behaviour changes, and
     that redis-py is the only supported client library, #301
