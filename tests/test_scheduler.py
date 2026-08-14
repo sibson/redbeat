@@ -447,6 +447,45 @@ class SentinelRedBeatCase(AppCase):
         assert client_connection_kwargs.get('username') == 'acl-user'
 
 
+class SentinelSchemeAliasRedBeatCase(AppCase):
+    """Celery natively supports `sentinel://` and kombu supports `redis+sentinel://`
+    as broker URL schemes for Redis Sentinel; redbeat should accept the same
+    aliases for redbeat_redis_url so the same DSN can be reused (#199)."""
+
+    config_dict = {
+        'REDBEAT_KEY_PREFIX': 'rb-tests:',
+        'redbeat_key_prefix': 'rb-tests:',
+    }
+    BROKER_TRANSPORT_OPTIONS = {
+        'sentinels': [('192.168.1.1', 26379), ('192.168.1.2', 26379), ('192.168.1.3', 26379)],
+        'service_name': 'master',
+        'socket_timeout': 0.1,
+    }
+
+    def setup(self):  # celery3
+        self.app.conf.add_defaults(deepcopy(self.config_dict))
+
+    def test_sentinel_scheme_alias(self):
+        self.app.conf.update(
+            {
+                'BROKER_URL': 'sentinel://redis-sentinel:26379/0',
+                'BROKER_TRANSPORT_OPTIONS': self.BROKER_TRANSPORT_OPTIONS,
+            }
+        )
+        redis_client = get_redis(app=self.app)
+        assert 'Sentinel' in str(redis_client.connection_pool)
+
+    def test_redis_plus_sentinel_scheme_alias(self):
+        self.app.conf.update(
+            {
+                'BROKER_URL': 'redis+sentinel://redis-sentinel:26379/0',
+                'BROKER_TRANSPORT_OPTIONS': self.BROKER_TRANSPORT_OPTIONS,
+            }
+        )
+        redis_client = get_redis(app=self.app)
+        assert 'Sentinel' in str(redis_client.connection_pool)
+
+
 class SeparateOptionsForSchedulerCase(AppCase):
     config_dict = {
         'REDBEAT_KEY_PREFIX': 'rb-tests:',

@@ -1,5 +1,8 @@
 2.4.3 (unreleased)
 ---------------------
+  - feature, accept celery's `sentinel://` and kombu's `redis+sentinel://` as
+    scheme aliases for `redis-sentinel://` in `redbeat_redis_url`, so the same
+    broker DSN can be reused for `redbeat_redis_url`, fixes #199
   - doc, document that RedBeat supports both Redis and Valkey servers, with
     intent to maintain both absent major upstream behaviour changes, and
     that redis-py is the only supported client library, #301
