@@ -237,12 +237,31 @@ Couldn't add entry %r to redis schedule: %r. Contents: %r
 """
 
 
+def has_redis_hash_tag(key):
+    """True if *key* contains a non-empty Redis hash tag ``{...}``."""
+    start = key.find('{')
+    if start < 0:
+        return False
+    end = key.find('}', start + 1)
+    return end > start + 1
+
+
+def ensure_redis_hash_tag(prefix):
+    """Wrap *prefix* in ``{...}`` so related keys share a Redis Cluster slot.
+
+    Pipelines in RedBeat touch both the entry hash (``prefix + name``) and the
+    schedule ZSET (``prefix + ':schedule'``). Without a shared hash tag those
+    keys land in different slots and Redis Cluster raises CROSSSLOT (#296).
+    """
+    if has_redis_hash_tag(prefix):
+        return prefix
+    return '{' + prefix + '}'
+
+
 class RedBeatConfig:
     def __init__(self, app=None):
         self.app = app_or_default(app)
         self.key_prefix = self.either_or('redbeat_key_prefix', 'redbeat:')
-        self.schedule_key = self.key_prefix + ':schedule'
-        self.statics_key = self.key_prefix + ':statics'
         self.redis_url = self.either_or('redbeat_redis_url', app.conf['BROKER_URL'])
         if not self.is_key_in_conf('redbeat_redis_url'):
             # also log it: DeprecationWarning is silenced by default and beat
@@ -264,6 +283,10 @@ class RedBeatConfig:
             )
             warnings.warn(message, DeprecationWarning, stacklevel=2)
             logger.warning(message)
+        if self._uses_redis_cluster():
+            self.key_prefix = ensure_redis_hash_tag(self.key_prefix)
+        self.schedule_key = self.key_prefix + ':schedule'
+        self.statics_key = self.key_prefix + ':statics'
         self.lock_key = self.either_or('redbeat_lock_key', self.key_prefix + ':lock')
         if self.lock_key and not self.lock_key.startswith(self.key_prefix):
             self.lock_key = self.key_prefix + self.lock_key
@@ -276,6 +299,13 @@ class RedBeatConfig:
     @schedule.setter
     def schedule(self, value):
         self.app.conf.beat_schedule = value
+
+    def _uses_redis_cluster(self):
+        options = self.redbeat_redis_options or {}
+        if options.get('cluster'):
+            return True
+        url = self.redis_url or ''
+        return url.startswith('redis-cluster')
 
     def either_or(self, name, default=None):
         if name == name.upper():
