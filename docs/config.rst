@@ -93,7 +93,16 @@ configuration syntax is inspired from `celery-redis-sentinel
 
 Some notes about the configuration:
 
-* note the use of ``redis-sentinel`` schema within the URL.
+* note the use of ``redis-sentinel`` schema within the URL. ``sentinel://``
+  (celery's native broker scheme) and ``redis+sentinel://`` (kombu's) are
+  also accepted as aliases here, but only as a scheme match: RedBeat still
+  requires the ``sentinels`` setting shown above (and ignores
+  ``master_name``/``service_name`` derivation from the URL). A
+  ``broker_url`` such as ``sentinel://h1:26379;sentinel://h2:26379`` with
+  ``broker_transport_options = {'master_name': 'mymaster'}`` -- a purely
+  celery-native sentinel config with no explicit ``sentinels`` list -- is
+  not enough on its own; you still need to set ``REDBEAT_REDIS_OPTIONS``
+  (or ``BROKER_TRANSPORT_OPTIONS``) with ``sentinels`` as above.
 
 * hostname and port are ignored within the actual URL. Sentinel uses
   the ``sentinels`` setting to create a ``Sentinel()`` instead of
