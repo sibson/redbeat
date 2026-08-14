@@ -484,6 +484,12 @@ class RedBeatScheduler(Scheduler):
 
     def __init__(self, app, lock_key=None, lock_timeout=None, **kwargs):
         ensure_conf(app)  # set app.redbeat_conf
+        # Defer setup_schedule() until we hold the distributed lock (or know we're
+        # not using one): the base class would otherwise call it here in the
+        # constructor, before beat_init fires and acquire_distributed_beat_lock has
+        # had a chance to run, so an instance that never gets the lock would still
+        # clobber the static schedule installed by whichever instance holds it.
+        kwargs.setdefault('lazy', True)
         super(RedBeatScheduler, self).__init__(app, **kwargs)
 
         self.lock_key = lock_key or app.redbeat_conf.lock_key
@@ -640,6 +646,10 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     """
     scheduler = sender.scheduler
     if not scheduler.lock_key:
+        # No distributed lock configured, so there's no contention to worry about:
+        # install the static schedule now, since setup_schedule() was deferred
+        # out of the constructor.
+        scheduler.setup_schedule()
         return
 
     logger.debug('beat: Acquiring lock...')
@@ -656,3 +666,6 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     lock.acquire()
     logger.info('beat: Acquired lock')
     scheduler.lock = lock
+    # Only the instance that actually holds the lock installs/prunes the static
+    # schedule, so an instance that loses the race can't clobber the winner's.
+    scheduler.setup_schedule()

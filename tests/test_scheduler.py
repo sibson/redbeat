@@ -682,3 +682,41 @@ class RedBeatStartupAcquiresLock(RedBeatSchedulerTestBase):
 
         self.assertIsNone(self.s.lock)
         self.assertIsNone(get_redis(app=self.app).get(self.s.lock_key))
+
+
+class test_RedBeatScheduler_setup_schedule_deferred_until_lock(RedBeatCase):
+    def test_construction_does_not_install_static_schedule(self):
+        conf = ensure_conf(self.app)
+        conf.schedule = {'task-old': {'task': 'old', 'schedule': mocked_schedule(60)}}
+
+        RedBeatScheduler(app=self.app)
+
+        redis = self.app.redbeat_redis
+        self.assertEqual(redis.smembers(conf.statics_key), set())
+
+    def test_instance_without_lock_leaves_winners_schedule_alone(self):
+        # Regression test for #198: a second scheduler instance that never
+        # acquires the distributed lock (e.g. a rolling deploy where the old
+        # instance still holds it) must not overwrite the static schedule
+        # installed by the instance that does hold the lock.
+        redis = self.app.redbeat_redis
+        conf = ensure_conf(self.app)
+        statics_key = conf.statics_key
+
+        conf.schedule = {
+            'task-old': {'task': 'old', 'schedule': mocked_schedule(60)}
+        }
+        winner = RedBeatScheduler(app=self.app)
+        acquire_distributed_beat_lock(Mock(scheduler=winner))
+        self.assertEqual(redis.smembers(statics_key), {'task-old'})
+
+        # A second instance comes up with a different config, but the lock is
+        # still held by `winner`, so this instance never fires
+        # acquire_distributed_beat_lock. Merely constructing it must not touch
+        # the schedule.
+        self.app.redbeat_conf.schedule = {
+            'task-new': {'task': 'new', 'schedule': mocked_schedule(60)}
+        }
+        RedBeatScheduler(app=self.app)
+
+        self.assertEqual(redis.smembers(statics_key), {'task-old'})
