@@ -47,7 +47,12 @@ Additional SSL options used when using the ``rediss`` scheme in
 ``redbeat_key_prefix``
 ~~~~~~~~~~~~~~~~~~~~~~
 
-A prefix for all keys created by RedBeat, defaults to ``'redbeat'``.
+A prefix for all keys created by RedBeat, defaults to ``'redbeat:'``.
+
+On Redis Cluster, RedBeat wraps an untagged prefix in ``{...}`` so the
+entry hash and the schedule ZSET land in the same hash slot. Supply your
+own tag (for example ``'{redbeat:}'``) if you want to control the slot.
+Standalone Redis is unchanged.
 
 ``redbeat_lock_key``
 ~~~~~~~~~~~~~~~~~~~~
@@ -133,4 +138,12 @@ Some notes about the configuration:
 * hostname and port are ignored within the actual URL. Redis Cluster
   uses the ``startup_nodes`` option, and the remaining options are sent
   as keyword arguments to ``RedisCluster()``.
+
+* Redis Cluster requires keys used together in a pipeline to share a
+  hash slot. Saving an entry writes both ``<prefix><name>`` and
+  ``<prefix>:schedule`` in one ``MULTI``, so an untagged prefix raises
+  ``CROSSSLOT``. When cluster mode is detected (``redis-cluster://`` or
+  ``redbeat_redis_options['cluster'] = True``), RedBeat wraps the prefix
+  in ``{...}`` unless it already contains a hash tag. Standalone and
+  Sentinel deployments are not rewritten.
 
