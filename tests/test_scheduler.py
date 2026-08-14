@@ -709,9 +709,7 @@ class test_RedBeatScheduler_setup_schedule_deferred_until_lock(RedBeatCase):
         conf = ensure_conf(self.app)
         statics_key = conf.statics_key
 
-        conf.schedule = {
-            'task-old': {'task': 'old', 'schedule': mocked_schedule(60)}
-        }
+        conf.schedule = {'task-old': {'task': 'old', 'schedule': mocked_schedule(60)}}
         winner = RedBeatScheduler(app=self.app, lazy=False)
         acquire_distributed_beat_lock(Mock(scheduler=winner))
         self.assertEqual(redis.smembers(statics_key), {'task-old'})
