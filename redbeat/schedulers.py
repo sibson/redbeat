@@ -582,13 +582,8 @@ class RedBeatScheduler(Scheduler):
                 result = self.apply_async(entry, **kwargs)
             except Exception as exc:
                 logger.exception('Scheduler: Message Error: %s', exc)
-                # self.producer/self.connection (celery.beat.Scheduler
-                # cached_properties) pin dispatch to one connection for the
-                # life of the process. If the failure looks connection-shaped
-                # -- as opposed to e.g. a bad/unserializable task payload
-                # against an otherwise healthy broker -- drop the cached
-                # values so the next tick reconnects instead of retrying the
-                # same dead connection forever.
+                # celery caches producer/connection for the life of the process,
+                # so a dead connection never heals unless we drop it
                 if self._is_connection_error(exc):
                     self._discard_connection()
             else:
@@ -609,12 +604,8 @@ class RedBeatScheduler(Scheduler):
                 try:
                     due_kwargs = self._maybe_due_kwargs
                 except Exception as exc:
-                    # _maybe_due_kwargs resolves self.producer, which -- after
-                    # a prior dispatch failure discarded it -- reconnects via
-                    # celery's _ensure_connected(). That can itself raise
-                    # (kombu.exceptions.OperationalError) if the broker is
-                    # still unreachable; it must not escape tick() and stall
-                    # the redbeat lock renewal for the rest of the entries.
+                    # resolving .producer reconnects, which can raise if the
+                    # broker is still down; must not stall lock renewal
                     logger.exception('Scheduler: Reconnect Error: %s', exc)
                     if self._is_connection_error(exc):
                         self._discard_connection()
@@ -632,14 +623,8 @@ class RedBeatScheduler(Scheduler):
     def _is_connection_error(self, exc):
         """Is exc (or the error it wraps) a broker connection failure?
 
-        celery.beat.Scheduler.apply_async wraps *every* exception raised by
-        send_task/apply_async -- serialization errors, unknown tasks, a bad
-        broker connection, anything -- in SchedulingError, with the original
-        exception available via implicit chaining as ``__context__`` (or, on
-        celery versions that raise it with `from`, ``__cause__``). Treating
-        every SchedulingError as connection-shaped would tear down a healthy
-        producer/connection just because e.g. one entry's payload isn't
-        JSON-serializable, so unwrap it and check the real cause.
+        apply_async wraps every exception in SchedulingError, so unwrap it --
+        a bad task payload must not tear down a healthy connection.
         """
         candidates = (exc, exc.__cause__, exc.__context__)
         errors = (OperationalError,)
@@ -651,11 +636,8 @@ class RedBeatScheduler(Scheduler):
     def _discard_connection(self):
         """Drop the cached producer/connection so the next tick reconnects.
 
-        celery.beat.Scheduler.producer/.connection are cached_property, so
-        once resolved they pin dispatch to one connection for the life of
-        the process. kombu.Connection defines no __del__, so just popping it
-        out of __dict__ leaks the socket -- release it first (best-effort;
-        it may already be dead).
+        kombu.Connection has no __del__, so release before popping or the
+        socket leaks.
         """
         connection = self.__dict__.pop('connection', None)
         if connection is not None:

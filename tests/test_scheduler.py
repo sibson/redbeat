@@ -221,13 +221,8 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
             self.s.tick()
 
     def test_dispatch_failure_from_a_dead_connection_is_recovered_on_next_dispatch(self):
-        # celery.beat.Scheduler.producer/.connection are cached_property, so
-        # once resolved they pin dispatch to a single connection for the life
-        # of the process. If a dispatch fails because that connection died (an
-        # idle socket reaped by the broker, a proxy failover, ...) the failure
-        # is logged loudly (logger.exception) -- but every following dispatch
-        # keeps failing against the same dead connection unless the cached
-        # producer/connection are dropped so the next tick reconnects.
+        # a dispatch against a dead connection must drop the cached
+        # producer/connection, or every later dispatch fails the same way
         entry = self.create_entry(
             name='now', s=due_now, last_run_at=datetime.utcnow() - timedelta(seconds=1)
         ).save()
@@ -242,18 +237,13 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
         with patch.object(self.s, 'send_task', side_effect=ConnectionError('boom')):
             self.s.maybe_due(entry, producer=dead_producer)
 
-        # the dead connection is released (not just discarded, kombu.Connection
-        # has no __del__) and both cached values are gone
+        # released, not just discarded -- kombu.Connection has no __del__
         dead_connection.release.assert_called_once()
         self.assertNotIn('connection', self.s.__dict__)
         self.assertNotIn('producer', self.s.__dict__)
 
-        # and the *next* dispatch actually gets a different producer object --
-        # this is the behaviour, not just the absence of __dict__ keys. It
-        # also exercises _maybe_due_kwargs being a plain property rather than
-        # a cached_property: a cached_property here would keep handing out
-        # the stale producer even after the pops above (see also PR #329,
-        # which independently makes this same _maybe_due_kwargs change).
+        # the next dispatch gets a different producer -- the behaviour, not
+        # just the absence of __dict__ keys
         fresh_producer = Mock(name='fresh-producer')
         with patch.object(
             type(self.s), 'producer', new_callable=PropertyMock, return_value=fresh_producer
@@ -266,11 +256,8 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
         self.assertIsNot(used_producer, dead_producer)
 
     def test_maybe_due_kwargs_reflects_a_fresh_producer_each_call(self):
-        # _maybe_due_kwargs must not be a cached_property (see PR #329, which
-        # independently makes this same change): `producer` is itself a
-        # cached_property, and pinning `_maybe_due_kwargs` on top of it would
-        # keep handing out a stale producer dict forever, even after
-        # `producer` itself has been discarded and re-resolved.
+        # a cached_property here would keep handing out a stale producer even
+        # after the underlying one is discarded and re-resolved
         producers = [Mock(name='first'), Mock(name='second')]
         with patch.object(type(self.s), 'producer', new_callable=PropertyMock) as producer:
             producer.side_effect = producers
@@ -281,11 +268,8 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
         self.assertIs(second, producers[1])
 
     def test_dispatch_failure_from_a_bad_payload_keeps_a_healthy_connection(self):
-        # A pure serialization/scheduling error against an otherwise healthy
-        # broker (e.g. an entry whose args aren't JSON-serializable) must not
-        # tear down the cached producer/connection -- unlike a real connection
-        # failure, discarding here buys nothing and would open a fresh broker
-        # connection on every tick for as long as the bad entry stays due.
+        # a bad payload against a healthy broker must not tear down the
+        # connection -- that would reconnect every tick for nothing
         self.create_entry(
             name='now', s=due_now, last_run_at=datetime.utcnow() - timedelta(seconds=1)
         ).save()
@@ -309,12 +293,8 @@ class test_RedBeatScheduler_tick(RedBeatSchedulerTestBase):
         connection.release.assert_not_called()
 
     def test_reconnect_failure_during_tick_does_not_escape_or_stall(self):
-        # After a prior dispatch failure has discarded the cache, the next
-        # tick's attempt to re-resolve self.producer goes through celery's
-        # _ensure_connected(), which can itself raise OperationalError if the
-        # broker is still unreachable. That must not escape tick() -- it would
-        # otherwise crash the beat loop (or, uncaught by the caller, leave the
-        # redbeat lock unextended) instead of just trying again next tick.
+        # re-resolving .producer reconnects and can raise if the broker is
+        # still down; that must not escape tick() and stall lock renewal
         self.create_entry(
             name='now', s=due_now, last_run_at=datetime.utcnow() - timedelta(seconds=1)
         ).save()
