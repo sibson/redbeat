@@ -6,11 +6,16 @@ test: unittests
 
 setup:
 	python -m pip install --upgrade pip
-	pip install -r requirements-dev.txt
-	pip install -e .
+	python -m pip install -r requirements-dev.txt
+	python -m pip install -e .
 
+# invoke via `python -m` rather than the bare `flake8`/`pip` console scripts, so
+# the linter runs under the same interpreter as `make setup` and `make
+# unittests`. A bare `flake8` resolves through PATH and can land in an unrelated
+# environment (a pipx/uv tool venv, say) that lacks flake8-black/flake8-isort --
+# in which case flake8 still exits 0, silently skipping every check CI enforces.
 lint:
-	flake8 redbeat tests
+	python -m flake8 redbeat tests
 
 build:
 	python -m pip install --upgrade build && python -m build
