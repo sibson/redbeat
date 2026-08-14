@@ -1,5 +1,10 @@
 2.4.3 (unreleased)
 ---------------------
+  - bugfix, `RedBeatSchedulerEntry.due_at` added the remaining-time delta to
+    `last_run_at` instead of to the current time, so `due_at` (and the ZSET
+    score derived from it) reported a time earlier than the actual next
+    occurrence by the age of `last_run_at`, causing entries to be re-read
+    from Redis on every tick until they next ran, fixes #210
   - doc, document that RedBeat supports both Redis and Valkey servers, with
     intent to maintain both absent major upstream behaviour changes, and
     that redis-py is the only supported client library, #301
