@@ -240,45 +240,25 @@ Couldn't add entry %r to redis schedule: %r. Contents: %r
 KEY_EXPIRY_CHECK_MODES = ('ignore', 'warn', 'error', 'raise')
 DEFAULT_KEY_EXPIRY_CHECK = 'error'
 
-EXPIRING_KEY_MESSAGE = (
-    "%s has an expiry set (%s), RedBeat's keys hold the schedule itself "
-    "and must never expire"
-)
 EVICTABLE_MESSAGE = (
     "Redis%s is configured with maxmemory %s and maxmemory-policy '%s', which lets "
     "RedBeat's keys be evicted, silently stopping scheduled tasks; use the "
     "'noeviction' policy or give RedBeat a Redis instance or db of its own"
 )
-VOLATILE_MESSAGE = (
-    "Redis%s is configured with maxmemory %s and maxmemory-policy '%s', which evicts "
-    "keys that carry an expiry, and RedBeat keys with an expiry were found; use the "
-    "'noeviction' policy or give RedBeat a Redis instance or db of its own"
-)
 
 
 class RedBeatKeyExpiryError(RuntimeError):
-    """Redis is configured to let RedBeat's keys expire or be evicted."""
+    """Redis is configured to let RedBeat's keys be evicted."""
 
 
 def check_key_expiry(app=None):
-    """Report Redis configuration that lets RedBeat's keys disappear.
-
-    Runs two O(1) checks against the keys RedBeat owns: an expiry on the
-    schedule and statics keys, and a maxmemory policy that can evict them.
-    Individual entry hashes are deliberately not inspected, that would cost a
-    round trip per entry, see the docs for a redis-cli recipe.
-
-    Returns the findings as a list of strings, empty when nothing is wrong,
-    when the check is disabled, or when Redis would not answer.
-    """
+    """Report Redis configuration that lets RedBeat's keys disappear."""
     app = app_or_default(app)
     conf = ensure_conf(app)
     if conf.key_expiry_check == 'ignore':
         return []
 
-    client = get_redis(app)
-    findings = _find_expiring_keys(client, conf)
-    findings.extend(_find_evictable_policies(client, bool(findings)))
+    findings = _find_evictable_policies(get_redis(app))
     if not findings:
         return []
 
@@ -296,41 +276,15 @@ def check_key_expiry(app=None):
     return findings
 
 
-def _find_expiring_keys(client, conf):
-    """Look for an expiry on the keys holding the schedule.
-
-    The lock key is skipped, it is meant to expire.
-    """
-    keys = [conf.schedule_key, conf.statics_key]
+def _find_evictable_policies(client):
     try:
-        with client.pipeline() as pipe:
-            for key in keys:
-                pipe.pttl(key)
-            ttls = pipe.execute()
-    except redis.exceptions.RedisError as exc:
-        logger.debug('beat: could not check RedBeat keys for an expiry: %s', exc)
-        return []
-
-    # pttl answers -1 for a key without an expiry and -2 for a missing one
-    return [
-        EXPIRING_KEY_MESSAGE % (key, humanize_seconds(ttl / 1000.0))
-        for key, ttl in zip(keys, ttls)
-        if isinstance(ttl, int) and ttl >= 0
-    ]
-
-
-def _find_evictable_policies(client, keys_expire):
-    """Look for a maxmemory policy that can evict RedBeat's keys.
-
-    CONFIG is disabled or renamed on several managed Redis offerings, so
-    failing to read it is not a finding: unknown never means unsafe.
-    """
-    try:
-        # a glob, rather than CONFIG GET with several parameters, which needs
-        # Redis 7.0; a cluster client answers per node
+        # a glob, supported by every server since 2.0, rather than CONFIG GET
+        # with several parameters, which needs Redis 7.0
         config = client.config_get('maxmemory*')
     except redis.exceptions.RedisError as exc:
-        logger.debug('beat: could not read the Redis maxmemory policy: %s', exc)
+        # CONFIG is disabled or renamed on several managed Redis offerings,
+        # and a server we cannot ask is not a server we call unsafe
+        logger.warning('beat: could not read the Redis maxmemory policy: %s', exc)
         return []
 
     findings = []
@@ -340,24 +294,21 @@ def _find_evictable_policies(client, keys_expire):
         except (AttributeError, TypeError, ValueError):
             continue
 
-        policy = (node_config.get('maxmemory-policy') or '').lower()
         if not maxmemory:
             # without a memory limit nothing is ever evicted, whatever the policy
             continue
 
+        # volatile-* only evicts keys carrying an expiry, and RedBeat sets one
+        # on the lock alone, which is meant to expire
+        policy = (node_config.get('maxmemory-policy') or '').lower()
         if policy.startswith('allkeys'):
             findings.append(EVICTABLE_MESSAGE % (label, maxmemory, policy))
-        elif policy.startswith('volatile') and keys_expire:
-            findings.append(VOLATILE_MESSAGE % (label, maxmemory, policy))
 
     return findings
 
 
 def _per_node(config):
-    """Normalise a CONFIG GET reply into (label, config) pairs.
-
-    A cluster client answers with a dict of replies keyed by node.
-    """
+    # a cluster client answers CONFIG GET with a reply per node
     if not isinstance(config, dict) or not config:
         return []
 
@@ -650,12 +601,9 @@ class RedBeatScheduler(Scheduler):
             or self.max_interval * 5
             or self.lock_timeout
         )
-
-    def setup_schedule(self):
-        # a schedule that Redis is free to drop is worth saying out loud, and
-        # saying it once at startup rather than per tick
         self.key_expiry_findings = check_key_expiry(self.app)
 
+    def setup_schedule(self):
         # cleanup old static schedule entries
         client = get_redis(self.app)
         previous = {key for key in client.smembers(self.app.redbeat_conf.statics_key)}

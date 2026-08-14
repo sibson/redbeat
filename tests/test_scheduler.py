@@ -708,11 +708,8 @@ class test_key_expiry_check(RedBeatCase):
         self.redis = self.app.redbeat_redis
 
     def check(self, maxmemory=None, policy=None, mode=None):
-        """Run the check with Redis reporting the given maxmemory settings.
-
-        fakeredis has no CONFIG GET, so the reply is stubbed; passing neither
-        setting leaves it raising, the same as a Redis that hides CONFIG.
-        """
+        # fakeredis has no CONFIG GET, so the reply is stubbed; passing neither
+        # setting leaves it raising, the same as a Redis that hides CONFIG
         if mode is not None:
             self.conf.key_expiry_check = mode
 
@@ -736,80 +733,35 @@ class test_key_expiry_check(RedBeatCase):
         # eviction never triggers while maxmemory is 0, whatever the policy
         self.assertEqual(self.check(maxmemory=0, policy='allkeys-lru'), [])
 
-    def test_volatile_policy_alone_is_ignored(self):
-        # volatile-* only evicts keys carrying an expiry, and ours carry none
+    def test_volatile_policy_is_ignored(self):
+        # volatile-* only evicts keys carrying an expiry, and the lock is the
+        # only RedBeat key that has one
         self.assertEqual(self.check(maxmemory=100000, policy='volatile-lru'), [])
 
-    def test_volatile_policy_with_an_expiring_key_is_reported(self):
-        self.create_entry().save()
-        self.redis.expire(self.conf.schedule_key, 300)
-
-        findings = self.check(maxmemory=100000, policy='volatile-lru')
-
-        self.assertEqual(len(findings), 2)
-        self.assertIn(self.conf.schedule_key, findings[0])
-        self.assertIn('volatile-lru', findings[1])
-
-    def test_expiry_on_the_schedule_key_is_reported(self):
-        self.create_entry().save()
-        self.redis.expire(self.conf.schedule_key, 300)
-
-        findings = self.check()
-
-        self.assertEqual(len(findings), 1)
-        self.assertIn(self.conf.schedule_key, findings[0])
-
-    def test_expiry_on_the_statics_key_is_reported(self):
-        self.redis.sadd(self.conf.statics_key, 'test')
-        self.redis.expire(self.conf.statics_key, 300)
-
-        findings = self.check()
-
-        self.assertEqual(len(findings), 1)
-        self.assertIn(self.conf.statics_key, findings[0])
-
-    def test_expiry_on_the_lock_key_is_ignored(self):
-        # the lock is the one RedBeat key that is supposed to expire
-        self.redis.set(self.conf.lock_key, 'token', ex=300)
-
-        self.assertEqual(self.check(), [])
-
     def test_findings_are_logged_as_errors(self):
-        self.redis.sadd(self.conf.statics_key, 'test')
-        self.redis.expire(self.conf.statics_key, 300)
-
         with self.assertLogs('celery.beat', level='ERROR') as cm:
-            self.check()
+            self.check(maxmemory=100000, policy='allkeys-lru')
 
-        self.assertTrue(any('must never expire' in message for message in cm.output))
+        self.assertTrue(any('allkeys-lru' in message for message in cm.output))
 
     def test_warn_mode_logs_a_warning(self):
-        self.redis.sadd(self.conf.statics_key, 'test')
-        self.redis.expire(self.conf.statics_key, 300)
-
         with self.assertLogs('celery.beat', level='WARNING') as cm:
-            self.check(mode='warn')
+            self.check(maxmemory=100000, policy='allkeys-lru', mode='warn')
 
         self.assertTrue(all(record.startswith('WARNING') for record in cm.output))
 
     def test_raise_mode_raises(self):
-        self.redis.sadd(self.conf.statics_key, 'test')
-        self.redis.expire(self.conf.statics_key, 300)
-
         with self.assertRaises(RedBeatKeyExpiryError):
-            self.check(mode='raise')
+            self.check(maxmemory=100000, policy='allkeys-lru', mode='raise')
 
     def test_raise_mode_is_quiet_when_nothing_is_wrong(self):
         self.assertEqual(self.check(maxmemory=0, policy='noeviction', mode='raise'), [])
 
     def test_ignore_mode_asks_redis_nothing(self):
-        self.redis.sadd(self.conf.statics_key, 'test')
-        self.redis.expire(self.conf.statics_key, 300)
-
-        with patch.object(self.redis, 'pipeline') as pipeline:
+        with patch.object(self.redis, 'config_get') as config_get:
             self.assertEqual(self.check(mode='ignore'), [])
 
-        self.assertFalse(pipeline.called)
+        self.assertFalse(config_get.called)
 
     def test_unreadable_config_is_not_a_finding(self):
         # CONFIG is disabled or renamed on several managed Redis offerings;
@@ -817,10 +769,10 @@ class test_key_expiry_check(RedBeatCase):
         with self.assertRaises(ResponseError):
             self.redis.config_get('maxmemory*')
 
-        self.assertEqual(self.check(mode='raise'), [])
+        with self.assertLogs('celery.beat', level='WARNING'):
+            self.assertEqual(self.check(mode='raise'), [])
 
     def test_cluster_config_reply_is_reported_per_node(self):
-        # a cluster client answers CONFIG GET with a reply per node
         config = {
             'node-1': {'maxmemory': '100000', 'maxmemory-policy': 'noeviction'},
             'node-2': {'maxmemory': '100000', 'maxmemory-policy': 'allkeys-lfu'},
@@ -833,18 +785,18 @@ class test_key_expiry_check(RedBeatCase):
         self.assertIn('allkeys-lfu', findings[0])
 
 
-class test_key_expiry_check_at_startup(RedBeatSchedulerTestBase):
+class test_key_expiry_check_at_startup(RedBeatCase):
     def test_findings_appear_in_the_beat_banner(self):
-        redis = self.app.redbeat_redis
-        redis.sadd(self.app.redbeat_conf.statics_key, 'test')
-        redis.expire(self.app.redbeat_conf.statics_key, 300)
+        config = {'maxmemory': '100000', 'maxmemory-policy': 'allkeys-lru'}
+        with patch.object(self.app.redbeat_redis, 'config_get', return_value=config):
+            scheduler = RedBeatScheduler(app=self.app)
 
-        self.s.setup_schedule()
-
-        self.assertIn('must never expire', self.s.info)
+        self.assertIn('allkeys-lru', scheduler.info)
 
     def test_banner_is_clean_when_nothing_is_wrong(self):
-        self.s.setup_schedule()
+        config = {'maxmemory': '0', 'maxmemory-policy': 'noeviction'}
+        with patch.object(self.app.redbeat_redis, 'config_get', return_value=config):
+            scheduler = RedBeatScheduler(app=self.app)
 
-        self.assertEqual(self.s.key_expiry_findings, [])
-        self.assertNotIn('WARNING', self.s.info)
+        self.assertEqual(scheduler.key_expiry_findings, [])
+        self.assertNotIn('WARNING', scheduler.info)
