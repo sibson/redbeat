@@ -484,20 +484,9 @@ class RedBeatScheduler(Scheduler):
 
     def __init__(self, app, lock_key=None, lock_timeout=None, **kwargs):
         ensure_conf(app)  # set app.redbeat_conf
-        # Defer setup_schedule() until we hold the distributed lock (or know we're
-        # not using one): the base class would otherwise call it here in the
-        # constructor, before beat_init fires and acquire_distributed_beat_lock has
-        # had a chance to run, so an instance that never gets the lock would still
-        # clobber the static schedule installed by whichever instance holds it.
-        #
-        # This must be unconditional, not kwargs.setdefault(...): celery's
-        # beat.Service.get_scheduler() -- the only code path celery itself uses to
-        # build a scheduler -- always passes lazy= explicitly (default lazy=False),
-        # so setdefault would never take effect there. One consequence: anyone
-        # constructing RedBeatScheduler directly, outside celery beat, no longer
-        # gets the static schedule installed for free -- it's only installed when
-        # beat_init fires (i.e. via celery beat's own startup) or by calling
-        # setup_schedule() by hand.
+        # defer setup_schedule() to acquire_distributed_beat_lock, so an instance
+        # that loses the lock race can't clobber the holder's static schedule.
+        # unconditional, not setdefault: get_scheduler() always passes lazy=
         kwargs['lazy'] = True
         super(RedBeatScheduler, self).__init__(app, **kwargs)
 
@@ -650,24 +639,13 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     """
     Attempt to acquire lock on startup
 
-    Celery will squash any exceptions raised here (Signal.send logs and
-    swallows receiver exceptions). If one is raised, scheduler.lock will be
-    None while scheduler.lock_key is set.
-
-    Note this also means a setup_schedule() failure here -- e.g. a bad static
-    schedule entry -- no longer crashes beat loudly at construction the way it
-    did before setup_schedule() was deferred out of __init__. Instead beat
-    keeps running, holding the lock, with a stale or empty schedule. If that
-    silent-degradation risk matters for your deployment, monitor beat_init
-    failures (logged at whatever level Signal.send uses) rather than relying
-    on a hard crash.
+    Celery will squash any exceptions raised here. If one is raised
+    scheduler.lock will be None while scheduler.lock_key is set, and the
+    static schedule installed here will be stale or empty.
     """
     scheduler = sender.scheduler
     if not scheduler.lock_key:
-        # No distributed lock configured, so there's no contention to worry about:
-        # install the static schedule now, since setup_schedule() was deferred
-        # out of the constructor.
-        scheduler.setup_schedule()
+        scheduler.setup_schedule()  # no lock, no contention
         return
 
     logger.debug('beat: Acquiring lock...')
@@ -684,6 +662,4 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     lock.acquire()
     logger.info('beat: Acquired lock')
     scheduler.lock = lock
-    # Only the instance that actually holds the lock installs/prunes the static
-    # schedule, so an instance that loses the race can't clobber the winner's.
-    scheduler.setup_schedule()
+    scheduler.setup_schedule()  # only the lock holder installs/prunes statics
