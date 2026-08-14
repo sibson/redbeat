@@ -1,5 +1,9 @@
 2.4.3 (unreleased)
 ---------------------
+  - bugfix, `RedBeatSchedulerEntry.due_at` added the remaining-time delta to
+    `last_run_at` instead of to the current time, so it (and the ZSET score
+    derived from it) understated how soon a task was due by exactly the age
+    of `last_run_at`, fixes #210
   - doc, document that RedBeat supports both Redis and Valkey servers, with
     intent to maintain both absent major upstream behaviour changes, and
     that redis-py is the only supported client library, #301

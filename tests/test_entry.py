@@ -1,7 +1,8 @@
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
+from celery.schedules import schedule
 from celery.utils.time import maybe_make_aware
 
 from redbeat import RedBeatSchedulerEntry
@@ -96,15 +97,28 @@ class test_RedBeatEntry(RedBeatCase):
         self.assertLess(due_at, after)
 
     def test_due_at(self):
-        entry = self.create_entry()
+        # pin the clock so the assertion isn't at the mercy of how much
+        # wall-clock time elapses between the two `now()` calls below.
+        now = datetime(2021, 9, 1, 0, 0, 0, tzinfo=timezone.utc)
+        run_every = 60
+        s = schedule(run_every=run_every, nowfun=lambda: now)
+        entry = self.create_entry(s=s, last_run_at=now)
 
-        now = entry._default_now()
-
-        entry.last_run_at = now
         due_at = entry.due_at
 
-        self.assertLess(now, due_at)
-        self.assertLess(due_at, now + entry.schedule.run_every)
+        self.assertEqual(due_at, now + timedelta(seconds=run_every))
+
+    def test_due_at_remaining_estimate_from_now(self):
+        # last ran at midnight, it's now 00:45, task runs hourly -> due at 1am.
+        # remaining_estimate() measures the delta from *now*, not from
+        # last_run_at, so due_at must add that delta to now as well.
+        now = datetime(2021, 9, 1, 0, 45, 0, tzinfo=timezone.utc)
+        last_run_at = datetime(2021, 9, 1, 0, 0, 0, tzinfo=timezone.utc)
+        s = schedule(run_every=3600, nowfun=lambda: now)
+
+        entry = self.create_entry(s=s, last_run_at=last_run_at)
+
+        self.assertEqual(entry.due_at, datetime(2021, 9, 1, 1, 0, 0, tzinfo=timezone.utc))
 
     def test_due_at_overdue(self):
         last_run_at = self.app.now() - timedelta(hours=10)
