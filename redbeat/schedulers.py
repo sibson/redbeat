@@ -565,7 +565,7 @@ class RedBeatScheduler(Scheduler):
             try:
                 entry = self.Entry.from_key(key, app=self.app)
             except KeyError:
-                logger.warning('beat: Failed to load %s, removing', key)
+                logger.error('beat: Failed to load %s, removing', key)
                 client.zrem(self.app.redbeat_conf.schedule_key, key)
                 continue
 
