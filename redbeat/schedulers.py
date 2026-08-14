@@ -153,9 +153,10 @@ def get_redis(app=None):
             from redis.cluster import RedisCluster
 
             connection = RedisCluster.from_url(conf.redis_url, **passthrough_options)
-        elif conf.redis_url.startswith(
-            ('redis-sentinel', 'sentinel://', 'redis+sentinel://')
-        ) and 'sentinels' in redis_options:
+        elif (
+            conf.redis_url.startswith(('redis-sentinel', 'sentinel://', 'redis+sentinel://'))
+            and 'sentinels' in redis_options
+        ):
             connection_kwargs = {}
             if isinstance(conf.redis_use_ssl, dict):
                 connection_kwargs['ssl'] = True

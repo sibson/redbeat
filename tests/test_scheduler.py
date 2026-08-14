@@ -485,6 +485,21 @@ class SentinelSchemeAliasRedBeatCase(AppCase):
         redis_client = get_redis(app=self.app)
         assert 'Sentinel' in str(redis_client.connection_pool)
 
+    def test_celery_native_sentinel_config_without_sentinels_option_still_fails(self):
+        """A purely celery-native sentinel config -- multiple `;`-joined
+        sentinel:// hosts in broker_url and `master_name` in
+        broker_transport_options, with no redbeat-shaped `sentinels` list --
+        is still not accepted: the scheme alias only helps once `sentinels`
+        is set explicitly (#199)."""
+        self.app.conf.update(
+            {
+                'BROKER_URL': 'sentinel://h1:26379;sentinel://h2:26379',
+                'BROKER_TRANSPORT_OPTIONS': {'master_name': 'mymaster'},
+            }
+        )
+        with self.assertRaises(ValueError):
+            get_redis(app=self.app)
+
 
 class SeparateOptionsForSchedulerCase(AppCase):
     config_dict = {
