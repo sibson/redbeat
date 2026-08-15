@@ -29,6 +29,15 @@ rename it for the behaviour it checks rather than the issue number. Organising
 tests by issue number ages badly -- the number stops mattering the moment the
 bug is fixed.
 
+# Comments
+
+Default to no comments. Add one only when the WHY is non-obvious: a hidden
+constraint, a subtle invariant, a workaround for a specific bug, behaviour
+that would surprise a reader. Don't explain WHAT the code does -- well-named
+identifiers already do that. Don't reference the current task, fix, or
+callers ("used by X", "added for the Y flow", "handles the case from issue
+#123") -- that belongs in the commit message, not the code.
+
 # Release Process
 
 Version is derived from git tags via pbr, not stored in any file. Always
