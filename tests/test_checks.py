@@ -67,7 +67,7 @@ class test_key_expiry_check(TestCase):
 class test_unreadable_config(TestCase):
     def test_is_not_a_finding(self):
         with self.assertLogs('celery.beat', level='WARNING'):
-            self.assertEqual(check_key_expiry(unreadable_client(), 'raise'), [])
+            self.assertEqual(check_key_expiry(unreadable_client()), [])
 
     def test_is_logged_as_a_warning(self):
         with self.assertLogs('celery.beat', level='WARNING') as cm:
@@ -75,11 +75,11 @@ class test_unreadable_config(TestCase):
 
         self.assertTrue(all(record.startswith('WARNING') for record in cm.output))
 
-    def test_is_logged_as_an_error_in_raise_mode(self):
-        with self.assertLogs('celery.beat', level='ERROR') as cm:
+    def test_raises_in_raise_mode(self):
+        # asking to be strict about eviction means being strict about not
+        # knowing whether keys can be evicted
+        with self.assertRaises(RedBeatKeyExpiryError):
             check_key_expiry(unreadable_client(), 'raise')
-
-        self.assertTrue(any('maxmemory policy' in message for message in cm.output))
 
 
 class test_cluster_config(TestCase):

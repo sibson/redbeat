@@ -68,7 +68,8 @@ keys, see requirements_ below. One of:
 ``'error'``
     Log any finding at ``ERROR``. The default.
 ``'raise'``
-    Log any finding at ``ERROR``, then refuse to start.
+    Log any finding at ``ERROR``, then refuse to start. Also refuses to start
+    when the policy cannot be read at all, see requirements_ below.
 
 .. versionadded:: 2.4.3
 
@@ -188,10 +189,12 @@ applies expiries to ``redbeat:*``, look for them yourself::
         test "$ttl" -ge 0 && echo "$key expires in ${ttl}s"
     done
 
-Several managed Redis offerings disable or rename ``CONFIG``. RedBeat logs
-that it could not read the policy and starts anyway, even in ``'raise'``
-mode: a server it cannot ask is not a server it calls unsafe. Check
-``maxmemory-policy`` through the provider console instead.
+Several managed Redis offerings disable or rename ``CONFIG``. RedBeat logs a
+warning that it could not read the policy and starts anyway, since a server
+it cannot ask is not a server it calls unsafe. Under ``'raise'`` it refuses
+to start instead: asking RedBeat to be strict about eviction is asking it to
+be strict about not knowing. Check ``maxmemory-policy`` through the provider
+console, and use one of the other modes if it cannot be read from RedBeat.
 
 Programs that create entries through the API without running beat never reach
 the check, since it runs when the scheduler is built.

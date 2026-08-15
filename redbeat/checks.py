@@ -28,8 +28,17 @@ def check_key_expiry(client, mode=DEFAULT_KEY_EXPIRY_CHECK):
     if mode == 'ignore':
         return []
 
-    strict = mode == 'raise'
-    findings = _find_evictable_policies(client, strict)
+    try:
+        config = client.config_get('maxmemory*')
+    except redis.exceptions.RedisError as exc:
+        message = 'could not read the Redis maxmemory policy: %s' % exc
+        if mode == 'raise':
+            raise RedBeatKeyExpiryError(message)
+
+        logger.warning('beat: %s', message)
+        return []
+
+    findings = _find_evictable_policies(config)
     if not findings:
         return []
 
@@ -37,21 +46,13 @@ def check_key_expiry(client, mode=DEFAULT_KEY_EXPIRY_CHECK):
     for finding in findings:
         log('beat: %s', finding)
 
-    if strict:
+    if mode == 'raise':
         raise RedBeatKeyExpiryError('; '.join(findings))
 
     return findings
 
 
-def _find_evictable_policies(client, strict=False):
-    try:
-        config = client.config_get('maxmemory*')
-    except redis.exceptions.RedisError as exc:
-        # a server we cannot ask is not a server we call unsafe
-        log = logger.error if strict else logger.warning
-        log('beat: could not read the Redis maxmemory policy: %s', exc)
-        return []
-
+def _find_evictable_policies(config):
     evicting = {}
     for node, node_config in _per_node(config):
         try:
