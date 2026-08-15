@@ -22,6 +22,7 @@ from redis import Redis
 from redis.sentinel import MasterNotFoundError, Sentinel
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_exponential
 
+from .checks import DEFAULT_KEY_EXPIRY_CHECK, KEY_EXPIRY_CHECK_MODES, check_key_expiry
 from .decoder import RedBeatJSONDecoder, RedBeatJSONEncoder, to_timestamp
 
 logger = get_logger('celery.beat')
@@ -268,6 +269,30 @@ class RedBeatConfig:
         if self.lock_key and not self.lock_key.startswith(self.key_prefix):
             self.lock_key = self.key_prefix + self.lock_key
         self.lock_timeout = self.either_or('redbeat_lock_timeout', None)
+        self.key_expiry_check = self._key_expiry_check_mode()
+
+    def _key_expiry_check_mode(self):
+        configured = self.either_or('redbeat_key_expiry_check', DEFAULT_KEY_EXPIRY_CHECK)
+        try:
+            mode = configured.lower()
+        except AttributeError:
+            mode = None
+
+        if mode not in KEY_EXPIRY_CHECK_MODES:
+            message = (
+                'Ignoring unknown redbeat_key_expiry_check %r, using %r; '
+                'valid values are %s'
+                % (
+                    configured,
+                    DEFAULT_KEY_EXPIRY_CHECK,
+                    ', '.join(repr(m) for m in KEY_EXPIRY_CHECK_MODES),
+                )
+            )
+            warnings.warn(message, UserWarning, stacklevel=2)
+            logger.warning('beat: %s', message)
+            mode = DEFAULT_KEY_EXPIRY_CHECK
+
+        return mode
 
     @property
     def schedule(self):
@@ -482,6 +507,8 @@ class RedBeatScheduler(Scheduler):
     #: The default lock timeout in seconds.
     lock_timeout = DEFAULT_MAX_INTERVAL * 5
 
+    key_expiry_findings = ()
+
     def __init__(self, app, lock_key=None, lock_timeout=None, **kwargs):
         ensure_conf(app)  # set app.redbeat_conf
         super(RedBeatScheduler, self).__init__(app, **kwargs)
@@ -492,6 +519,9 @@ class RedBeatScheduler(Scheduler):
             or app.redbeat_conf.lock_timeout
             or self.max_interval * 5
             or self.lock_timeout
+        )
+        self.key_expiry_findings = check_key_expiry(
+            get_redis(self.app), app.redbeat_conf.key_expiry_check
         )
 
     def setup_schedule(self):
@@ -565,7 +595,11 @@ class RedBeatScheduler(Scheduler):
             try:
                 entry = self.Entry.from_key(key, app=self.app)
             except KeyError:
-                logger.error('beat: Failed to load %s, removing', key)
+                logger.error(
+                    'beat: Failed to load %s, removing; its hash is gone, which usually '
+                    'means Redis evicted or expired it',
+                    key,
+                )
                 client.zrem(self.app.redbeat_conf.schedule_key, key)
                 continue
 
@@ -622,6 +656,8 @@ class RedBeatScheduler(Scheduler):
                     self.lock_key, humanize_seconds(self.lock_timeout), self.lock_timeout
                 )
             )
+        for finding in self.key_expiry_findings:
+            info.append('       . WARNING -> {}'.format(finding))
         return '\n'.join(info)
 
     @cached_property

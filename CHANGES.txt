@@ -1,5 +1,8 @@
 2.4.3 (unreleased)
 ---------------------
+  - feature, check at startup for a Redis maxmemory-policy that can evict
+    RedBeat's keys, and report it in the log and the beat banner; controlled
+    by redbeat_key_expiry_check, #291
   - bugfix, raise the log level from warning to error when a scheduled
     entry's hash is missing (e.g. evicted by Redis) and the entry is
     dropped from the schedule, so operators notice instead of the loss

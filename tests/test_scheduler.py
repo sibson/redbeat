@@ -697,3 +697,20 @@ class RedBeatStartupAcquiresLock(RedBeatSchedulerTestBase):
 
         self.assertIsNone(self.s.lock)
         self.assertIsNone(get_redis(app=self.app).get(self.s.lock_key))
+
+
+class test_key_expiry_check_at_startup(RedBeatCase):
+    def test_findings_appear_in_the_beat_banner(self):
+        config = {'maxmemory': '100000', 'maxmemory-policy': 'allkeys-lru'}
+        with patch.object(self.app.redbeat_redis, 'config_get', return_value=config):
+            scheduler = RedBeatScheduler(app=self.app)
+
+        self.assertIn('allkeys-lru', scheduler.info)
+
+    def test_banner_is_clean_when_nothing_is_wrong(self):
+        config = {'maxmemory': '0', 'maxmemory-policy': 'noeviction'}
+        with patch.object(self.app.redbeat_redis, 'config_get', return_value=config):
+            scheduler = RedBeatScheduler(app=self.app)
+
+        self.assertEqual(scheduler.key_expiry_findings, [])
+        self.assertNotIn('WARNING', scheduler.info)
