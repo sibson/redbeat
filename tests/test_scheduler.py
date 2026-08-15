@@ -10,15 +10,13 @@ from celery.beat import DEFAULT_MAX_INTERVAL
 from celery.schedules import schedstate, schedule
 from celery.utils.time import maybe_timedelta
 from redis import CredentialProvider
-from redis.exceptions import ConnectionError, ResponseError
+from redis.exceptions import ConnectionError
 
 from redbeat import RedBeatScheduler
 from redbeat.schedulers import (
-    RedBeatKeyExpiryError,
     RedBeatSchedulerEntry,
     RetryingConnection,
     acquire_distributed_beat_lock,
-    check_key_expiry,
     ensure_conf,
     get_redis,
 )
@@ -699,85 +697,6 @@ class RedBeatStartupAcquiresLock(RedBeatSchedulerTestBase):
 
         self.assertIsNone(self.s.lock)
         self.assertIsNone(get_redis(app=self.app).get(self.s.lock_key))
-
-
-class test_key_expiry_check(RedBeatCase):
-    def setup(self):
-        super().setup()
-        self.conf = ensure_conf(self.app)
-        self.redis = self.app.redbeat_redis
-
-    def check(self, maxmemory=None, policy=None, mode=None):
-        # fakeredis has no CONFIG GET, so a reply is stubbed in; passing no
-        # settings leaves it raising, as a Redis that hides CONFIG does
-        if mode is not None:
-            self.conf.key_expiry_check = mode
-
-        if maxmemory is None and policy is None:
-            return check_key_expiry(self.app)
-
-        config = {'maxmemory': str(maxmemory), 'maxmemory-policy': policy}
-        with patch.object(self.redis, 'config_get', return_value=config):
-            return check_key_expiry(self.app)
-
-    def test_nothing_to_report_by_default(self):
-        self.assertEqual(self.check(maxmemory=0, policy='noeviction'), [])
-
-    def test_evicting_policy_is_reported(self):
-        findings = self.check(maxmemory=100000, policy='allkeys-lru')
-
-        self.assertEqual(len(findings), 1)
-        self.assertIn('allkeys-lru', findings[0])
-
-    def test_evicting_policy_without_a_memory_limit_is_ignored(self):
-        self.assertEqual(self.check(maxmemory=0, policy='allkeys-lru'), [])
-
-    def test_volatile_policy_is_ignored(self):
-        self.assertEqual(self.check(maxmemory=100000, policy='volatile-lru'), [])
-
-    def test_findings_are_logged_as_errors(self):
-        with self.assertLogs('celery.beat', level='ERROR') as cm:
-            self.check(maxmemory=100000, policy='allkeys-lru')
-
-        self.assertTrue(any('allkeys-lru' in message for message in cm.output))
-
-    def test_warn_mode_logs_a_warning(self):
-        with self.assertLogs('celery.beat', level='WARNING') as cm:
-            self.check(maxmemory=100000, policy='allkeys-lru', mode='warn')
-
-        self.assertTrue(all(record.startswith('WARNING') for record in cm.output))
-
-    def test_raise_mode_raises(self):
-        with self.assertRaises(RedBeatKeyExpiryError):
-            self.check(maxmemory=100000, policy='allkeys-lru', mode='raise')
-
-    def test_raise_mode_is_quiet_when_nothing_is_wrong(self):
-        self.assertEqual(self.check(maxmemory=0, policy='noeviction', mode='raise'), [])
-
-    def test_ignore_mode_asks_redis_nothing(self):
-        with patch.object(self.redis, 'config_get') as config_get:
-            self.assertEqual(self.check(mode='ignore'), [])
-
-        self.assertFalse(config_get.called)
-
-    def test_unreadable_config_is_not_a_finding(self):
-        with self.assertRaises(ResponseError):
-            self.redis.config_get('maxmemory*')
-
-        with self.assertLogs('celery.beat', level='WARNING'):
-            self.assertEqual(self.check(mode='raise'), [])
-
-    def test_cluster_config_reply_is_reported_per_node(self):
-        config = {
-            'node-1': {'maxmemory': '100000', 'maxmemory-policy': 'noeviction'},
-            'node-2': {'maxmemory': '100000', 'maxmemory-policy': 'allkeys-lfu'},
-        }
-        with patch.object(self.redis, 'config_get', return_value=config):
-            findings = check_key_expiry(self.app)
-
-        self.assertEqual(len(findings), 1)
-        self.assertIn('node-2', findings[0])
-        self.assertIn('allkeys-lfu', findings[0])
 
 
 class test_key_expiry_check_at_startup(RedBeatCase):
