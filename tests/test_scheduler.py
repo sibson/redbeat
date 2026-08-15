@@ -708,8 +708,8 @@ class test_key_expiry_check(RedBeatCase):
         self.redis = self.app.redbeat_redis
 
     def check(self, maxmemory=None, policy=None, mode=None):
-        # fakeredis has no CONFIG GET, so the reply is stubbed; passing neither
-        # setting leaves it raising, the same as a Redis that hides CONFIG
+        # fakeredis has no CONFIG GET, so a reply is stubbed in; passing no
+        # settings leaves it raising, as a Redis that hides CONFIG does
         if mode is not None:
             self.conf.key_expiry_check = mode
 
@@ -730,12 +730,9 @@ class test_key_expiry_check(RedBeatCase):
         self.assertIn('allkeys-lru', findings[0])
 
     def test_evicting_policy_without_a_memory_limit_is_ignored(self):
-        # eviction never triggers while maxmemory is 0, whatever the policy
         self.assertEqual(self.check(maxmemory=0, policy='allkeys-lru'), [])
 
     def test_volatile_policy_is_ignored(self):
-        # volatile-* only evicts keys carrying an expiry, and the lock is the
-        # only RedBeat key that has one
         self.assertEqual(self.check(maxmemory=100000, policy='volatile-lru'), [])
 
     def test_findings_are_logged_as_errors(self):
@@ -764,8 +761,6 @@ class test_key_expiry_check(RedBeatCase):
         self.assertFalse(config_get.called)
 
     def test_unreadable_config_is_not_a_finding(self):
-        # CONFIG is disabled or renamed on several managed Redis offerings;
-        # fakeredis rejects it too, which is what self.check() leaves in place
         with self.assertRaises(ResponseError):
             self.redis.config_get('maxmemory*')
 

@@ -278,12 +278,9 @@ def check_key_expiry(app=None):
 
 def _find_evictable_policies(client):
     try:
-        # a glob, supported by every server since 2.0, rather than CONFIG GET
-        # with several parameters, which needs Redis 7.0
         config = client.config_get('maxmemory*')
     except redis.exceptions.RedisError as exc:
-        # CONFIG is disabled or renamed on several managed Redis offerings,
-        # and a server we cannot ask is not a server we call unsafe
+        # a server we cannot ask is not a server we call unsafe
         logger.warning('beat: could not read the Redis maxmemory policy: %s', exc)
         return []
 
@@ -298,8 +295,8 @@ def _find_evictable_policies(client):
             # without a memory limit nothing is ever evicted, whatever the policy
             continue
 
-        # volatile-* only evicts keys carrying an expiry, and RedBeat sets one
-        # on the lock alone, which is meant to expire
+        # volatile-* is safe, it only evicts keys carrying an expiry and the
+        # lock, which is meant to expire, is the only RedBeat key that has one
         policy = (node_config.get('maxmemory-policy') or '').lower()
         if policy.startswith('allkeys'):
             findings.append(EVICTABLE_MESSAGE % (label, maxmemory, policy))
@@ -587,7 +584,6 @@ class RedBeatScheduler(Scheduler):
     #: The default lock timeout in seconds.
     lock_timeout = DEFAULT_MAX_INTERVAL * 5
 
-    #: Redis expiry problems found at startup, reported in the beat banner.
     key_expiry_findings = ()
 
     def __init__(self, app, lock_key=None, lock_timeout=None, **kwargs):
