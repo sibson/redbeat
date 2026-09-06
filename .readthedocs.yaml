@@ -27,10 +27,9 @@ sphinx:
 #    - pdf
 #    - epub
 
-# Read the Docs no longer installs the package by default, so declare it
-# explicitly -- without this, Sphinx builds against an environment lacking
-# celery-redbeat and its dependencies.
-python:
-  install:
-    - method: pip
-      path: .
+# Optional but recommended, declare the Python requirements required
+# to build your documentation
+# See https://docs.readthedocs.io/en/stable/guides/reproducible-builds.html
+# python:
+#    install:
+#    - requirements: docs/requirements.txt
