@@ -1,9 +1,8 @@
 # Conventions
 
-Tests are stdlib `unittest`, not pytest -- the `[tool:pytest]` stub in
-`setup.cfg` is vestigial and pytest is not installed. Run them with `make test`
-(`python -m unittest discover tests`); no live Redis is needed, `fakeredis`
-covers it.
+Tests are stdlib `unittest`, not pytest -- pytest is not installed. Run them
+with `make test` (`uv run python -m unittest discover tests`); no live Redis
+is needed, `fakeredis` covers it.
 
 Two harness conventions in `tests/basecase.py` are easy to get wrong, and both
 fail silently rather than loudly:
@@ -40,16 +39,16 @@ callers ("used by X", "added for the Y flow", "handles the case from issue
 
 # Release Process
 
-Version is derived from git tags via pbr, not stored in any file. Always
-release from the `main` branch using the make target, which ensures tests
-pass before tagging:
+Version is a committed field in `pyproject.toml`, managed with `uv version`.
+Always release from the `main` branch using the make target, which ensures
+tests pass before tagging:
 
     make release
 
-By default this releases the next patch version. For a minor/major release,
-first tag the target version so pbr picks it up (this is the one deliberate
-human decision in the process -- pbr can only auto-advance the patch number
-on its own):
+This releases the current version (stripping its `.devN` suffix) and bumps
+`pyproject.toml` to the next patch `.dev0` for further development. For a
+minor/major release, bump the version first -- this is the one deliberate
+human decision in the process:
 
-    make bump-version VERSION='M.m.p'
+    make bump-version BUMP=minor   # or BUMP=major
     make release

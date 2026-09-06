@@ -6,10 +6,9 @@ possible outcome for a regression test.
 
 ## The conventions that will catch you out
 
-**stdlib `unittest`, not pytest.** `setup.cfg` has a vestigial `[tool:pytest]`
-stub, but pytest isn't installed and isn't used. Runner is
-`python -m unittest discover tests`. Use `self.assertEqual` and friends, not bare
-`assert`.
+**stdlib `unittest`, not pytest.** pytest isn't installed and isn't used.
+Runner is `python -m unittest discover tests` (or `uv run python -m unittest
+discover tests`). Use `self.assertEqual` and friends, not bare `assert`.
 
 **Override `setup()`, not `setUp()`.** `AppCase.setUp` builds the celery test app
 and then calls `self.setup()`. Define `setUp` instead of `setup` and you silently
@@ -165,9 +164,8 @@ ResponseError: unknown command 'evalsha', ...
 
 This is a missing dev dependency, not a fact about the bug — reading it as
 "unreproducible" would be wrong. `fakeredis[lua]` (which pulls in `lupa`) makes
-these work. `requirements-dev.txt` currently pins plain `fakeredis>=2.27.0`, so a
-PR containing a lock-related test needs to bump that in the same change, or CI
-will fail on an error that has nothing to do with the test.
+these work, and `pyproject.toml`'s `dev` dependency group already pins it that
+way -- `uv sync` picks it up automatically.
 
 ## Before opening the PR
 

@@ -17,6 +17,10 @@
     in docs/conf.py, so built docs show a real version instead of a blank
     one; declare `python.install` in .readthedocs.yaml so Read the Docs
     installs the package before Sphinx imports it
+  - build, migrate packaging from setuptools/pbr to hatchling with a
+    committed version in pyproject.toml, and dev tooling from pip to uv
+    (matching sibson/vncdotool); the version is now bumped by `make release`
+    / `make bump-version` instead of derived from git tags
 2.4.2 (2026-07-27)
 ---------------------
   - bugfix, restore the pre-2.4.0 handling of options inherited from

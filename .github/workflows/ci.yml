@@ -9,10 +9,6 @@ on:
 permissions:
   contents: read
 
-env:
-  PIP_DISABLE_PIP_VERSION_CHECK: '1'
-  PIP_NO_PYTHON_VERSION_WARNING: '1'
-
 defaults:
   run:
     shell: bash
@@ -28,22 +24,20 @@ jobs:
       matrix:
         os: [ubuntu-latest] #, windows-latest] tests fail on windows
         python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
 
     steps:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: requirements-dev.txt
+          enable-cache: true
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+        run: uv sync --locked
 
       - name: Run unittests
         run: make unittests
@@ -56,17 +50,13 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          python-version: '3.13'
-          cache: pip
-          cache-dependency-path: requirements-dev.txt
+          enable-cache: true
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8 flake8-black flake8-isort
+        run: uv sync --locked
 
       - name: Run flake8
-        run: flake8 --count --statistics redbeat tests
+        run: make lint
