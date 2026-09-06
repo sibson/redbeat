@@ -18,14 +18,15 @@
 
 # -- Project information -----------------------------------------------------
 
+from redbeat import __version__ as release
+
 project = 'Celery Redbeat'
 copyright = '2019, Marc Sibson'
 author = 'Marc Sibson'
 
 # The short X.Y version
-version = ''
-# The full version, including alpha/beta/rc tags
-release = ''
+version = '.'.join(release.split('.')[:2])
+# The full version, including alpha/beta/rc tags, is imported as `release` above
 
 
 # -- General configuration ---------------------------------------------------
