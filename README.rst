@@ -93,10 +93,10 @@ Once you have the source you can run the tests with make (recommended)::
     make setup
     make test
 
-Or using pip directly::
+Or using uv directly::
 
-    pip install -r requirements-dev.txt
-    python -m unittest discover tests
+    uv sync
+    uv run python -m unittest discover tests
 
 Optional: if you use mise to manage Python, it will read `.mise.toml` and install the pinned Python version. After that, still use make for tasks::
 

@@ -9,16 +9,16 @@ Environment
 
 Testing
 ---------
- - Use make for setup and running tests:
+ - uv (https://astral.sh/uv) manages the virtualenv and dependencies. Install
+   it, then use make for setup and running tests:
 
     make setup
     make test
 
- - Or use pip manually:
+ - Or use uv manually:
 
-    pip install -r requirements-dev.txt
-    pip install -e .
-    python -m unittest discover tests
+    uv sync
+    uv run python -m unittest discover tests
 
 Linting
 ---------
@@ -31,10 +31,15 @@ CI
 
 Release
 ---------
- - bump version and release to pypi
+ - release the next patch version to PyPI (runs tests before tagging):
 
-    make release-check
-    VERSION='M.m.p' make release
+    make release
+
+ - for a minor/major release, bump the version first -- this is the one
+   deliberate human decision in the process:
+
+    make bump-version BUMP=minor   # or BUMP=major
+    make release
 
  - create release in GitHub
 

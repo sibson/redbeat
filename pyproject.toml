@@ -1,6 +1,72 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "celery-redbeat"
+version = "2.4.3.dev0"
+description = "A Celery Beat Scheduler using Redis for persistent storage"
+readme = "README.rst"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Marc Sibson" }]
+keywords = ["python", "celery", "beat", "redis", "scheduler"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: System :: Distributed Computing",
+    "Topic :: Software Development :: Object Brokering",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "redis>=3.2",
+    "celery>=5.0",
+    "python-dateutil",
+    "tenacity",
+]
+
+[project.urls]
+Homepage = "https://github.com/sibson/redbeat"
+
+[dependency-groups]
+dev = [
+    "pytz",
+    "backports.zoneinfo>=0.2.1; python_version < '3.9'",
+    "black",
+    "flake8",
+    "flake8-black",
+    "flake8-isort",
+    "fakeredis[lua]>=2.27.0",
+    "sphinx",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["redbeat"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "redbeat",
+    "tests",
+    "docs",
+    "*.rst",
+    "*.txt",
+    "exampleconf.py",
+    "LICENSE",
+    "pyproject.toml",
+]
+
 [tool.black]
 line-length = 100
-target_version = ['py38']
+target_version = ['py39']
 skip-string-normalization = true
 
 [tool.isort]
