@@ -1,5 +1,8 @@
 2.4.3 (unreleased)
 ---------------------
+  - bugfix, the beat_init receiver logs a warning naming -S redbeat.RedBeatScheduler
+    and returns when beat runs another scheduler, instead of raising
+    AttributeError on lock_key, fixes #342
   - feature, check at startup for a Redis maxmemory-policy that can evict
     RedBeat's keys, and report it in the log and the beat banner; controlled
     by redbeat_key_expiry_check, #291
