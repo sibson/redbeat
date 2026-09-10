@@ -675,6 +675,13 @@ def acquire_distributed_beat_lock(sender=None, **kwargs):
     scheduler.lock will be None while scheduler.lock_key is set
     """
     scheduler = sender.scheduler
+    if not isinstance(scheduler, RedBeatScheduler):
+        logger.warning(
+            'beat: redbeat is imported but beat runs %s; start beat with '
+            '-S redbeat.RedBeatScheduler to use RedBeat',
+            type(scheduler).__name__,
+        )
+        return
     if not scheduler.lock_key:
         return
 

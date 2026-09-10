@@ -699,6 +699,22 @@ class RedBeatStartupAcquiresLock(RedBeatSchedulerTestBase):
         self.assertIsNone(get_redis(app=self.app).get(self.s.lock_key))
 
 
+class OtherScheduler:
+    pass
+
+
+class RedBeatStartupWithAnotherScheduler(RedBeatCase):
+    def test_warns_and_returns_instead_of_raising(self):
+        sender = Mock(scheduler=OtherScheduler())
+
+        with self.assertLogs('celery.beat', level='WARNING') as logs:
+            acquire_distributed_beat_lock(sender)
+
+        self.assertEqual(1, len(logs.output))
+        self.assertIn('OtherScheduler', logs.output[0])
+        self.assertIn('-S redbeat.RedBeatScheduler', logs.output[0])
+
+
 class test_key_expiry_check_at_startup(RedBeatCase):
     def test_findings_appear_in_the_beat_banner(self):
         config = {'maxmemory': '100000', 'maxmemory-policy': 'allkeys-lru'}
