@@ -1,5 +1,7 @@
 2.4.3 (unreleased)
 ---------------------
+  - doc, explain saving task schedule changes and resetting the last run time,
+    fixes #232.
   - bugfix, the beat_init receiver logs a warning naming -S redbeat.RedBeatScheduler
     and returns when beat runs another scheduler, instead of raising
     AttributeError on lock_key, fixes #342

@@ -56,6 +56,51 @@ A single entry can be loaded by name::
     sleep. Called outside a running Beat it will usually return ``{}``, even when the
     schedule holds many tasks. Use the sorted set walk above to list everything.
 
+Updating tasks
+~~~~~~~~~~~~~~
+Load an existing entry to change its frequency. Assign the new schedule and call
+``save()``. Here, ``app`` is Beat's configured Celery application and ``task-name``
+is an existing entry::
+
+    from celery.schedules import schedule
+    from redbeat import RedBeatSchedulerEntry
+    from redbeat.schedulers import ensure_conf
+
+    ensure_conf(app)
+    key = RedBeatSchedulerEntry.generate_key(app, 'task-name')
+    entry = RedBeatSchedulerEntry.from_key(key, app=app)
+    entry.schedule = schedule(run_every=30, app=app)
+    entry.args = ['updated', 2]
+    entry.save()
+
+For a crontab schedule, replace the schedule in the same way::
+
+    from celery.schedules import crontab
+
+    entry.schedule = crontab(minute='*/2', app=app)
+    entry.save()
+
+``save()`` writes the definition and updates the entry's position in the schedule.
+It preserves existing runtime metadata, including ``last_run_at`` and
+``total_run_count``. Beat can use the updated definition without restarting.
+Call ``save()`` after changing ``schedule``, ``args``, ``kwargs``, ``options`` or
+``enabled``.
+
+Resetting the last run time
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``reschedule()`` sets ``last_run_at`` to the current time and updates the entry's
+position in the schedule. It leaves the saved task definition unchanged, so it
+does not persist a new frequency or arguments::
+
+    entry.reschedule()
+
+Pass ``last_run_at`` explicitly to use a particular timestamp::
+
+    entry.reschedule(last_run_at=app.now())
+
+``reschedule()`` replaces the stored metadata with ``last_run_at``. A stored
+``total_run_count`` is therefore reset when the entry is loaded again.
+
 Interval
 ~~~~~~~~
 An interval task is defined with the JSON like::
