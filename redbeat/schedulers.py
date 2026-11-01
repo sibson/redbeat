@@ -374,7 +374,7 @@ class RedBeatSchedulerEntry(ScheduleEntry):
 
     @staticmethod
     def generate_key(app: Any, name: str) -> str:
-        return app.redbeat_conf.key_prefix + name
+        return ensure_conf(app).key_prefix + name
 
     @classmethod
     def from_key(cls, key, app=None):
