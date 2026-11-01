@@ -137,6 +137,11 @@ class test_RedBeatEntry(RedBeatCase):
 
         self.assertEqual(key, "redbeat:mock_task_name")
 
+    def test_generate_key_without_prior_entry(self) -> None:
+        key = RedBeatSchedulerEntry.generate_key(app=self.app, name="mock_task_name")
+
+        self.assertEqual(key, self.app.redbeat_conf.key_prefix + "mock_task_name")
+
     @patch.object(RedBeatSchedulerEntry, "generate_key")
     def test_key(self, mock_generate_key: MagicMock) -> None:
         entry = self.create_entry()
