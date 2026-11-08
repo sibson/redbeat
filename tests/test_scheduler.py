@@ -336,6 +336,23 @@ class ExplicitOptionsRedBeatCase(AppCase):
         self.assertNotIn('service_name', kwargs)
 
 
+class NamespacedOptionsRedBeatCase(AppCase):
+    def setup(self):
+        class Settings:
+            CELERY_BROKER_URL = 'redis://broker/0'
+            CELERY_REDBEAT_REDIS_URL = 'redis://redbeat/1'
+            CELERY_REDBEAT_REDIS_OPTIONS = {'max_connections': 10}
+
+        self.app.config_from_object(Settings, namespace='CELERY')
+
+    def test_namespaced_options_pass_through(self):
+        with mock.patch('redis.Redis.from_url') as from_url:
+            get_redis(app=self.app)
+
+        self.assertEqual(from_url.call_args.args[0], 'redis://redbeat/1')
+        self.assertEqual(from_url.call_args.kwargs.get('max_connections'), 10)
+
+
 class InheritedClusterOptionsRedBeatCase(AppCase):
     config_dict = {
         'BROKER_URL': 'redis-cluster://redis-cluster:30001/0',
