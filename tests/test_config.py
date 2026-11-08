@@ -105,3 +105,24 @@ class test_BrokerFallbackDeprecation(AppCase):
     def test_no_options_warning_when_broker_options_empty(self):
         messages = self.deprecation_messages({'redbeat_redis_url': 'redis://'})
         self.assertFalse(any('redbeat_redis_options' in m for m in messages))
+
+    def test_no_warning_for_redbeat_settings_under_a_namespace(self):
+        # Django projects load settings with namespace='CELERY', and app.conf.keys()
+        # then lists them under their prefixed names
+        class Settings:
+            CELERY_BROKER_URL = 'redis://broker/0'
+            CELERY_BROKER_TRANSPORT_OPTIONS = {'visibility_timeout': 3600}
+            CELERY_REDBEAT_REDIS_URL = 'redis://redbeat/1'
+            CELERY_REDBEAT_REDIS_OPTIONS = {'socket_timeout': 1}
+
+        app = TestApp()
+        app.config_from_object(Settings, namespace='CELERY')
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            conf = RedBeatConfig(app)
+
+        messages = [str(w.message) for w in caught if issubclass(w.category, DeprecationWarning)]
+        self.assertEqual(messages, [])
+        self.assertEqual(conf.redis_url, 'redis://redbeat/1')
+        self.assertEqual(conf.redbeat_redis_options, {'socket_timeout': 1})
+        self.assertFalse(conf.is_key_in_conf('redbeat_lock_key'))

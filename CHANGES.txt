@@ -1,5 +1,9 @@
 2.4.3 (unreleased)
 ---------------------
+  - bugfix, settings loaded under a namespace (config_from_object(..., namespace='CELERY'),
+    as Django projects do) count as explicitly set: no false deprecation warnings for
+    redbeat_redis_url and redbeat_redis_options, and redbeat_redis_options reach the redis
+    client instead of being treated as inherited broker options, fixes #347
   - bugfix, the beat_init receiver logs a warning naming -S redbeat.RedBeatScheduler
     and returns when beat runs another scheduler, instead of raising
     AttributeError on lock_key, fixes #342

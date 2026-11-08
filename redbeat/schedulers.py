@@ -315,8 +315,12 @@ class RedBeatConfig:
             return self.app.conf.first(name, name.upper()) or default
 
     def is_key_in_conf(self, name):
-        if name.upper() in map(lambda k: k.upper(), self.app.conf.keys()):
-            return True
+        names = {name.upper()}
+        namespace = getattr(self.app, 'namespace', None)
+        if namespace:
+            # config_from_object(namespace=...) keeps the prefixed names in app.conf.keys()
+            names.add(f'{namespace}_{name}'.upper())
+        return any(key.upper() in names for key in self.app.conf.keys())
 
 
 class RedBeatSchedulerEntry(ScheduleEntry):
