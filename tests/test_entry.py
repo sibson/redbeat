@@ -1,7 +1,9 @@
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
+from zoneinfo import ZoneInfo
 
+from celery.schedules import crontab
 from celery.utils.time import maybe_make_aware
 
 from redbeat import RedBeatSchedulerEntry
@@ -146,3 +148,25 @@ class test_RedBeatEntry(RedBeatCase):
         mock_generate_key.assert_called_once_with(app=self.app, name="test")
 
         self.assertEqual(key, mock_generate_key.return_value)
+
+
+class test_RedBeatEntryDST(RedBeatCase):
+    config_dict = {'timezone': 'Europe/Paris'}
+
+    def assert_due_at(self, last_run_at, expected):
+        s = crontab(hour=10, minute=0, nowfun=lambda: last_run_at, app=self.app)
+        entry = self.create_entry(s=s, last_run_at=last_run_at)
+
+        self.assertEqual(entry.due_at, expected)
+
+    def test_due_at_when_the_clocks_go_back(self):
+        paris = ZoneInfo('Europe/Paris')
+        last_run_at = datetime(2027, 10, 30, 10, 0, 1, tzinfo=paris)
+
+        self.assert_due_at(last_run_at, datetime(2027, 10, 31, 9, 0, tzinfo=timezone.utc))
+
+    def test_due_at_when_the_clocks_go_forward(self):
+        paris = ZoneInfo('Europe/Paris')
+        last_run_at = datetime(2027, 3, 27, 10, 0, 1, tzinfo=paris)
+
+        self.assert_due_at(last_run_at, datetime(2027, 3, 28, 8, 0, tzinfo=timezone.utc))
