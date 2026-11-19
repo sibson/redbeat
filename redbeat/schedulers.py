@@ -7,7 +7,7 @@
 import json
 import ssl
 import warnings
-from datetime import MINYEAR, datetime
+from datetime import MINYEAR, datetime, timezone
 from typing import Any
 
 import redis.exceptions
@@ -412,7 +412,11 @@ class RedBeatSchedulerEntry(ScheduleEntry):
         if delta.total_seconds() < 0:
             return self._default_now()
 
-        return self.last_run_at + delta
+        last_run_at = self.last_run_at
+        if last_run_at.tzinfo:
+            last_run_at = last_run_at.astimezone(timezone.utc)
+
+        return last_run_at + delta
 
     @property
     def key(self):
